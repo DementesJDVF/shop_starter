@@ -19,9 +19,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('action', models.CharField(max_length=255)),
+                ('model_name', models.CharField(max_length=100)),
+                ('object_id', models.CharField(max_length=100)),
                 ('timestamp', models.DateTimeField(auto_now_add=True)),
                 ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='review_audit_logs', to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='system_audit_logs', to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]
