@@ -1,25 +1,15 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-class User(AbstractUser):
-
-    class Role(models.TextChoices):
-        ADMIN = "ADMIN", "Admin"
-        VENDEDOR = "VENDEDOR", "Vendedor"
-        CLIENTE = "CLIENTE", "Cliente"
-
-    class Status(models.TextChoices):
-        ACTIVE = "ACTIVE", "Activo"
-        INACTIVE = "INACTIVE", "Inactivo"
-        BLOCKED = "BLOCKED", "Bloqueado"
-
+class User(AbstractUser):  # ← DEBE DECIR "User", NO "CustomUser"
+    ROLE_CHOICES = (
+        ('ADMIN', 'Admin'),
+        ('VENDOR', 'Vendor'),
+        ('CUSTOMER', 'Customer'),
+    )
+    
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=20, choices=Role.choices)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
-
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='CUSTOMER')
+    
     def __str__(self):
-        return self.email
+        return f"{self.username} - {self.role}"
