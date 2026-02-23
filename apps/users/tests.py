@@ -11,7 +11,7 @@ class AuthTests(APITestCase):
             'email': 'test@example.com',
             'password': 'password123',
             'password_confirm': 'password123',
-            'role': 'CUSTOMER'
+            'role': 'CLIENTE'
         }
         response = self.client.post('/auth/register/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -34,7 +34,7 @@ class AuthTests(APITestCase):
             username='testuser',
             email='test@example.com',
             password='password123',
-            role='CUSTOMER'
+            role='CLIENTE'
         )
         data = {'email': 'test@example.com', 'password': 'password123'}
         response = self.client.post('/auth/login/', data)
