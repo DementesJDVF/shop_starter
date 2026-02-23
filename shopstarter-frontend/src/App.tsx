@@ -22,14 +22,14 @@ function App() {
                     </ProtectedRoute>
                 } />
                 
-                <Route path="/vendor/dashboard" element={
-                    <ProtectedRoute allowedRoles={['VENDOR', 'ADMIN']}>
+                <Route path="/vendedor/dashboard" element={
+                    <ProtectedRoute allowedRoles={['VENDEDOR', 'ADMIN']}>
                         <VendorDashboard />
                     </ProtectedRoute>
                 } />
                 
-                <Route path="/customer/dashboard" element={
-                    <ProtectedRoute allowedRoles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+                <Route path="/cliente/dashboard" element={
+                    <ProtectedRoute allowedRoles={['CLIENTE', 'VENDEDOR', 'ADMIN']}>
                         <CustomerDashboard />
                     </ProtectedRoute>
                 } />
