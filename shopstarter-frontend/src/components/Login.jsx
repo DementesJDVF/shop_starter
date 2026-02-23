@@ -28,11 +28,11 @@ const Login = () => {
                 case 'ADMIN':
                     navigate('/admin/dashboard');
                     break;
-                case 'VENDOR':
-                    navigate('/vendor/dashboard');
+                case 'VENDEDOR':
+                    navigate('/vendedor/dashboard');
                     break;
-                case 'CUSTOMER':
-                    navigate('/customer/dashboard');
+                case 'CLIENTE':
+                    navigate('/cliente/dashboard');
                     break;
                 default:
                     navigate('/');
