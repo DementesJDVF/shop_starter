@@ -5,7 +5,7 @@ class User(AbstractUser):  # ← DEBE DECIR "User", NO "CustomUser"
     ROLE_CHOICES = (
         ('ADMIN', 'Admin'),
         ('VENDOR', 'Vendor'),
-        ('CUSTOMER', 'Customer'),
+        ('CUSTOMER', 'Cliente'),
     )
     
     email = models.EmailField(unique=True)
