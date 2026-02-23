@@ -9,7 +9,7 @@ const Register = () => {
         email: '',
         password: '',
         password_confirm: '',
-        role: 'CUSTOMER'
+        role: 'CLIENTE'
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -103,8 +103,8 @@ const Register = () => {
                 <div className="form-group">
                     <label>Rol:</label>
                     <select name="role" value={formData.role} onChange={handleChange}>
-                        <option value="CUSTOMER">Cliente</option>
-                        <option value="VENDOR">Vendedor</option>
+                        <option value="CLIENTE">Cliente</option>
+                        <option value="VENDEDOR">Vendedor</option>
                         <option value="ADMIN">Admin</option>
                     </select>
                 </div>
