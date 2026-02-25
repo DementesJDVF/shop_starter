@@ -1,48 +1,45 @@
-# ==============================
 # Entornos virtuales
-# ==============================
 venv/
 env/
 ENV/
 
-# ==============================
 # Archivos de Python
-# ==============================
 __pycache__/
 *.py[cod]
 *$py.class
 
-# ==============================
 # Base de datos
-# ==============================
 db.sqlite3
 *.sqlite3
 
-# ==============================
 # Archivos de entorno
-# ==============================
 .env
 .env.*
 
-# ==============================
 # Archivos de IDE
-# ==============================
 .vscode/
 .idea/
 
-# ==============================
 # Archivos del sistema (Windows)
-# ==============================
 Thumbs.db
 desktop.ini
 
-# ==============================
 # Logs
-# ==============================
 *.log
 
-# ==============================
 # Archivos estáticos compilados
-# ==============================
 staticfiles/
 media/
+
+# Archivos de cobertura de tests
+.coverage
+htmlcov/
+
+# Archivos de pytest
+.pytest_cache/
+
+# Archivos de migraciones compiladas
+**/migrations/__pycache__/
+
+# MacOS
+.DS_Store
