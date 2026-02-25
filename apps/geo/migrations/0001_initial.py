@@ -12,14 +12,12 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='AuditLog',
+            name='Location',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('action', models.CharField(max_length=255)),
-                ('model_name', models.CharField(max_length=100)),
-                ('object_id', models.CharField(max_length=100)),
+                ('latitude', models.FloatField()),
+                ('longitude', models.FloatField()),
                 ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
             ],
         ),
     ]
