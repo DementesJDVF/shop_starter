@@ -18,6 +18,9 @@ class SoftDeleteQuerySet(models.QuerySet):
     def deleted(self):
         return self.filter(is_deleted=True)
 
+    def all_with_deleted(self):
+        return super().get_queryset()
+
 
 class ActiveManager(models.Manager):
     def get_queryset(self):

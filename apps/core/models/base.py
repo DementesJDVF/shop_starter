@@ -1,5 +1,6 @@
 from django.db import models
-from .managers import SoftDeleteManager
+from .managers import SoftDeleteManager, AllObjectsManager
+
 
 class BaseModel(models.Model):
 
@@ -8,7 +9,7 @@ class BaseModel(models.Model):
     is_deleted = models.BooleanField(default=False, db_index=True)
 
     objects = SoftDeleteManager()
-    all_objects = models.Manager()
+    all_objects = AllObjectsManager()
 
     class Meta:
         abstract = True
@@ -16,9 +17,13 @@ class BaseModel(models.Model):
             models.Index(fields=["is_deleted"]),
         ]
 
+    def delete(self, using=None, keep_parents=False):
+        self.is_deleted = True
+        self.save()
+
     def hard_delete(self):
         super().delete()
 
     def restore(self):
         self.is_deleted = False
-        self.save(update_fields=["is_deleted"])
+        self.save()
