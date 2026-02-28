@@ -1,12 +1,15 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from .constants import UserRoles
+
 
 class User(AbstractUser):
 
-    class Role(models.TextChoices):
-        ADMIN = "ADMIN", "Admin"
-        VENDEDOR = "VENDEDOR", "Vendedor"
-        CLIENTE = "CLIENTE", "Cliente"
+    role = models.CharField(
+        max_length=20,
+        choices=UserRoles.CHOICES,
+        default=UserRoles.CLIENTE
+    )
 
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Activo"
@@ -14,7 +17,7 @@ class User(AbstractUser):
         BLOCKED = "BLOCKED", "Bloqueado"
 
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=20, choices=Role.choices)
+    role = models.CharField(max_length=20, choices=UserRoles.CHOICES)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
 
