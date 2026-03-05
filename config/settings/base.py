@@ -53,6 +53,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.BlockInactiveUserMiddleware",
+    "apps.core.middleware.CurrentUserMiddleware",
 ]
 
 AUTH_USER_MODEL = "users.User"
