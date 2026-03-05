@@ -13,6 +13,7 @@ class AuditLog(BaseModel):
         UPDATE = "UPDATE"
         DELETE = "DELETE"
         SOFT_DELETE = "SOFT_DELETE"
+        RESTORE = "RESTORE"
         STATUS_CHANGE = "STATUS_CHANGE"
         ROLE_CHANGE = "ROLE_CHANGE"
         LOGIN = "LOGIN"
