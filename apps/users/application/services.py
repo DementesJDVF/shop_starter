@@ -14,7 +14,7 @@ class UserService:
             username=validated_data["username"],
             email=validated_data["email"],
             password=validated_data["password"],
-            role=validated_data.get("role", "CLIENTE"),
+            role="CLIENTE",
         )
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user
