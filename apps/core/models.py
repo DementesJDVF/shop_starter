@@ -29,10 +29,10 @@ class ActiveManager(models.Manager):
 
 class BaseModel(models.Model):
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    is_deleted = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     objects = ActiveManager()                # Solo activos
@@ -46,7 +46,7 @@ class BaseModel(models.Model):
         self.deleted_at = timezone.now()
         self.save(update_fields=["is_deleted", "deleted_at"])
 
-    def hard_delete(self):
+    def hard_delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
 
     def restore(self):
