@@ -19,7 +19,7 @@ class BaseModel(models.Model):
         self.is_deleted = True
         self.save(update_fields=["is_deleted"])
 
-    def hard_delete(self):
+    def hard_delete(self, using=None, keep_parents=False):
         """Physical delete"""
         super().delete(using=using, keep_parents=keep_parents)
 
