@@ -1,9 +1,9 @@
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.audit.application.services import AuditService
+from apps.core.middleware import get_client_ip_from_request
+from apps.users.application.services import UserService
 from apps.users.serializers import LoginSerializer, UserSerializer
 
 
@@ -15,11 +15,9 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
 
-        refresh = RefreshToken.for_user(user)
-
-        AuditService.log_login(
+        refresh = UserService.login_user(
             user=user,
-            ip_address=self._get_client_ip(request),
+            ip_address=get_client_ip_from_request(request),
         )
 
         return Response({
@@ -28,6 +26,3 @@ class LoginView(APIView):
             "refresh_token": str(refresh),
             "user": UserSerializer(user).data
         }, status=status.HTTP_200_OK)
-
-    def _get_client_ip(self, request):
-        return request.META.get("REMOTE_ADDR")

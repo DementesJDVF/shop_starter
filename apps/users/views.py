@@ -2,9 +2,10 @@ from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.middleware import get_client_ip_from_request
 from .serializers import RegisterSerializer, UserSerializer
 from .permissions import IsAdmin
-from apps.audit.application.services import AuditService
+from .application.services import UserService
 
 
 class RegisterView(generics.CreateAPIView):
@@ -14,22 +15,16 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
 
-        # 🔎 Auditoría CREATE
-        AuditService.log_create(
-            user=user,  # él mismo se crea
-            instance=user,
-            ip_address=self._get_client_ip(request),
+        user = UserService.register_user(
+            validated_data=serializer.validated_data,
+            ip_address=get_client_ip_from_request(request),
         )
 
         return Response({
             "message": "Usuario registrado exitosamente",
             "user": UserSerializer(user).data
         }, status=status.HTTP_201_CREATED)
-
-    def _get_client_ip(self, request):
-        return request.META.get("REMOTE_ADDR")
 
 
 class MeView(APIView):

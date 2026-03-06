@@ -1,8 +1,10 @@
-from django.contrib.contenttypes.models import ContentType
-from apps.audit.infrastructure.models import AuditLog
-from django.forms.models import model_to_dict
-from django.core.serializers.json import DjangoJSONEncoder
 import json
+from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.json import DjangoJSONEncoder
+from django.forms.models import model_to_dict
+
+from apps.audit.infrastructure.models import AuditLog
+from apps.core.middleware import get_current_ip, get_current_user
 
 
 class AuditService:
@@ -17,6 +19,11 @@ class AuditService:
         new_data=None,
         ip_address=None,
     ):
+        if not user:
+            user = get_current_user()
+        if not ip_address:
+            ip_address = get_current_ip()
+
         content_type = ContentType.objects.get_for_model(instance.__class__)
 
         AuditLog.objects.create(
@@ -52,11 +59,45 @@ class AuditService:
         )
 
     @classmethod
-    def log_soft_delete(cls, user, instance, ip_address=None):
+    def log_delete(cls, user, instance, previous_data=None, ip_address=None):
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.DELETE,
+            instance=instance,
+            previous_data=previous_data or cls._serialize(instance),
+            ip_address=ip_address,
+        )
+
+    @classmethod
+    def log_soft_delete(cls, user, instance, previous_data=None, new_data=None, ip_address=None):
         cls._log(
             user=user,
             action_type=AuditLog.ActionType.SOFT_DELETE,
             instance=instance,
+            previous_data=previous_data,
+            new_data=new_data,
+            ip_address=ip_address,
+        )
+
+    @classmethod
+    def log_restore(cls, user, instance, previous_data=None, new_data=None, ip_address=None):
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.RESTORE,
+            instance=instance,
+            previous_data=previous_data,
+            new_data=new_data,
+            ip_address=ip_address,
+        )
+
+    @classmethod
+    def log_role_change(cls, user, instance, previous_role, ip_address=None):
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.ROLE_CHANGE,
+            instance=instance,
+            previous_data={"role": previous_role},
+            new_data={"role": instance.role},
             ip_address=ip_address,
         )
 
