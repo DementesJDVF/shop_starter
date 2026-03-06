@@ -13,6 +13,7 @@ class AuditLog(BaseModel):
         UPDATE = "UPDATE"
         DELETE = "DELETE"
         SOFT_DELETE = "SOFT_DELETE"
+        RESTORE = "RESTORE"
         STATUS_CHANGE = "STATUS_CHANGE"
         ROLE_CHANGE = "ROLE_CHANGE"
         LOGIN = "LOGIN"
@@ -67,8 +68,8 @@ class AuditLog(BaseModel):
     class Meta:
         indexes = [
             models.Index(fields=["action_type"]),
+            models.Index(fields=["content_type", "object_id"]),
             models.Index(fields=["content_type", "object_id", "-created_at"]),
-            models.Index(fields=["-created_at"]),
         ]
         ordering = ["-created_at"]
 
