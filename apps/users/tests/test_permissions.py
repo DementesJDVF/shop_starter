@@ -62,4 +62,14 @@ class PermissionTests(APITestCase):
         url = reverse("admin_test")
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_vendor_cannot_access_admin_features(self):
+        vendor_user = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("admin_test")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
