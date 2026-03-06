@@ -42,7 +42,6 @@ class AuditHU04Tests(TestCase):
             "email": "newuser@test.com",
             "password": self.password,
             "password_confirm": self.password,
-            "role": "CLIENTE",
         }
 
         response = self.client.post("/api/auth/register/", payload, format="json")
