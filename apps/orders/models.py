@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
+from apps.core.models import BaseModel
 
 
-class Order(models.Model):
+class Order(BaseModel):
 
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -34,13 +35,11 @@ class Order(models.Model):
         default=0
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"Order #{self.id}"
 
 
-class OrderItem(models.Model):
+class OrderItem(BaseModel):
 
     order = models.ForeignKey(
         Order,
