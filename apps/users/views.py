@@ -1,10 +1,13 @@
 from rest_framework import status, generics, permissions
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import RegisterSerializer, UserSerializer
+from apps.core.middleware import get_client_ip_from_request
+from .serializers import RegisterSerializer, UserSerializer, ChangeUserRoleSerializer
 from .permissions import IsAdmin
-from apps.audit.application.services import AuditService
+from .application.services import UserService
+from .models import User
 
 
 class RegisterView(generics.CreateAPIView):
@@ -14,22 +17,16 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
 
-        # 🔎 Auditoría CREATE
-        AuditService.log_create(
-            user=user,  # él mismo se crea
-            instance=user,
-            ip_address=self._get_client_ip(request),
+        user = UserService.register_user(
+            validated_data=serializer.validated_data,
+            ip_address=get_client_ip_from_request(request),
         )
 
         return Response({
             "message": "Usuario registrado exitosamente",
             "user": UserSerializer(user).data
         }, status=status.HTTP_201_CREATED)
-
-    def _get_client_ip(self, request):
-        return request.META.get("REMOTE_ADDR")
 
 
 class MeView(APIView):
@@ -45,3 +42,25 @@ class AdminOnlyView(APIView):
 
     def get(self, request):
         return Response({"message": "Acceso permitido solo para ADMIN"})
+
+
+class ChangeUserRoleView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, user_id):
+        serializer = ChangeUserRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target_user = get_object_or_404(User, id=user_id)
+
+        updated_user = UserService.change_role(
+            admin_user=request.user,
+            target_user=target_user,
+            new_role=serializer.validated_data["role"],
+            ip_address=get_client_ip_from_request(request),
+        )
+
+        return Response({
+            "message": "Rol actualizado",
+            "user": UserSerializer(updated_user).data,
+        }, status=status.HTTP_200_OK)
