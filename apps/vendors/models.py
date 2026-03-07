@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
+from apps.core.models import BaseModel
 
 
-class Vendor(models.Model):
+class Vendor(BaseModel):
 
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pendiente"
