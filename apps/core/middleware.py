@@ -10,11 +10,11 @@ class BlockInactiveUserMiddleware:
         user = getattr(request, "user", None)
 
         if user and user.is_authenticated:
-            if not user.is_active:
+            if not user.is_active or getattr(user, "status", "ACTIVE") != "ACTIVE":
                 from django.http import JsonResponse
                 return JsonResponse(
-                    {"detail": "Usuario inactivo"},
-                    status=403
+                    {"detail": "Usuario inactivo o bloqueado"},
+                    status=403,
                 )
 
         return self.get_response(request)
