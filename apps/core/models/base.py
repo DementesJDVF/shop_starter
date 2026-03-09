@@ -2,7 +2,6 @@ from django.db import models
 from .managers import SoftDeleteManager, AllObjectsManager
 
 
-
 class BaseModel(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -14,19 +13,16 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
-        indexes = [
-            models.Index(fields=["is_deleted"]),
-        ]
 
     def delete(self, using=None, keep_parents=False):
         """Soft delete"""
         self.is_deleted = True
         self.save(update_fields=["is_deleted"])
 
-    def hard_delete(self):
+    def hard_delete(self, using=None, keep_parents=False):
         """Physical delete"""
-        super().delete()
+        super().delete(using=using, keep_parents=keep_parents)
 
     def restore(self):
         self.is_deleted = False
-        self.save()
+        self.save(update_fields=["is_deleted"])
