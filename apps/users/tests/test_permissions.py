@@ -96,3 +96,30 @@ class PermissionTests(APITestCase):
         response = self.client.patch(url, {"role": "ADMIN"}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_vendor_can_access_vendor_endpoint(self):
+        vendor = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("vendor_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_customer_can_access_customer_endpoint(self):
+        customer = self.create_user_with_role("CLIENTE")
+        token = self.get_token(customer)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("customer_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_vendor_cannot_access_customer_endpoint(self):
+        vendor = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("customer_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

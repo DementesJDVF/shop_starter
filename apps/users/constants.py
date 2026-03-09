@@ -1,10 +1,15 @@
 class UserRoles:
     ADMIN = "ADMIN"
-    VENDEDOR = "VENDEDOR"
-    CLIENTE = "CLIENTE"
+    VENDOR = "VENDEDOR"
+    CUSTOMER = "CLIENTE"
+
+    VENDEDOR = VENDOR
+    CLIENTE = CUSTOMER
 
     CHOICES = [
         (ADMIN, "Administrador"),
-        (VENDEDOR, "Vendedor"),
-        (CLIENTE, "Cliente"),
+        (VENDOR, "Vendedor"),
+        (CUSTOMER, "Cliente"),
     ]
+
+    SELF_ASSIGNABLE = [VENDOR, CUSTOMER]

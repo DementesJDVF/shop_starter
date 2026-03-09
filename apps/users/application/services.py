@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.application.services import AuditService
+from apps.users.constants import UserRoles
 from apps.users.models import User
 
 
@@ -14,7 +15,7 @@ class UserService:
             username=validated_data["username"],
             email=validated_data["email"],
             password=validated_data["password"],
-            role="CLIENTE",
+            role=validated_data.get("role", UserRoles.CUSTOMER),
         )
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user

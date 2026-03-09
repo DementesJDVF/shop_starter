@@ -1,18 +1,20 @@
-from rest_framework import status, generics, permissions
 from django.shortcuts import get_object_or_404
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.middleware import get_client_ip_from_request
-from .serializers import RegisterSerializer, UserSerializer, ChangeUserRoleSerializer
-from .permissions import IsAdmin
 from .application.services import UserService
 from .models import User
+from .permissions import IsAdmin, IsClient, IsVendor
+from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
+from .throttles import RegisterRateThrottle
 
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = (RegisterRateThrottle,)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -23,10 +25,13 @@ class RegisterView(generics.CreateAPIView):
             ip_address=get_client_ip_from_request(request),
         )
 
-        return Response({
-            "message": "Usuario registrado exitosamente",
-            "user": UserSerializer(user).data
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "message": "Usuario registrado exitosamente",
+                "user": UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class MeView(APIView):
@@ -42,6 +47,20 @@ class AdminOnlyView(APIView):
 
     def get(self, request):
         return Response({"message": "Acceso permitido solo para ADMIN"})
+
+
+class VendorOnlyView(APIView):
+    permission_classes = [IsVendor]
+
+    def get(self, request):
+        return Response({"message": "Acceso permitido solo para VENDEDOR"})
+
+
+class CustomerOnlyView(APIView):
+    permission_classes = [IsClient]
+
+    def get(self, request):
+        return Response({"message": "Acceso permitido solo para CLIENTE"})
 
 
 class ChangeUserRoleView(APIView):
@@ -60,7 +79,10 @@ class ChangeUserRoleView(APIView):
             ip_address=get_client_ip_from_request(request),
         )
 
-        return Response({
-            "message": "Rol actualizado",
-            "user": UserSerializer(updated_user).data,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": "Rol actualizado",
+                "user": UserSerializer(updated_user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
