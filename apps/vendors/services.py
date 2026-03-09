@@ -1,6 +1,6 @@
-from django.core.exceptions import ValidationError, PermissionDenied
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from apps.users.models import User
-from .models import VendorProfile
+from .models import Vendor
 
 
 class VendorService:
@@ -8,13 +8,13 @@ class VendorService:
     @staticmethod
     def create_vendor_profile(user, data):
 
-        if user.role != User.Role.VENDOR:
+        if user.role != User.Role.VENDEDOR:
             raise PermissionDenied("Solo vendedores pueden crear perfil.")
 
-        if hasattr(user, "vendor_profile"):
+        if hasattr(user, "vendor"):
             raise ValidationError("Ya existe un perfil para este usuario.")
 
-        profile = VendorProfile.objects.create(
+        profile = Vendor.objects.create(
             user=user,
             **data
         )

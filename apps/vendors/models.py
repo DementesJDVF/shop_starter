@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from apps.core.models import BaseModel  # Ajustar import real
+from apps.core.models import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -18,7 +18,7 @@ class Vendor(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="Vendor"
+        related_name="vendor"  # ✅ Cambiar a minúscula
     )
 
     status = models.CharField(
