@@ -1,15 +1,15 @@
-from .models import VendorProfile
+from .models import Vendor
 
 
 class VendorSelectors:
 
     @staticmethod
     def get_active_public_profiles():
-        return VendorProfile.objects.filter(
-            status=VendorProfile.Status.ACTIVE,
+        return Vendor.objects.filter(
+            status=Vendor.Status.ACTIVE,
             is_deleted=False
         )
 
     @staticmethod
     def get_vendor_profile_by_user(user):
-        return VendorProfile.objects.filter(user=user).first()
+        return Vendor.objects.filter(user=user).first()

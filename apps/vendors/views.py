@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from .permissions import IsVendor
-from .serializers import VendorProfileSerializer
+from .serializers import VendorSerializer
 from .services import VendorService
 from .selectors import VendorSelectors
 
@@ -14,7 +14,7 @@ class VendorProfileCreateView(APIView):
     permission_classes = [IsAuthenticated, IsVendor]
 
     def post(self, request):
-        serializer = VendorProfileSerializer(data=request.data)
+        serializer = VendorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         profile = VendorService.create_vendor_profile(
@@ -23,7 +23,7 @@ class VendorProfileCreateView(APIView):
         )
 
         return Response(
-            VendorProfileSerializer(profile).data,
+            VendorSerializer(profile).data,
             status=status.HTTP_201_CREATED
         )
 
@@ -35,7 +35,7 @@ class VendorProfileDetailView(APIView):
     def patch(self, request):
         profile = VendorSelectors.get_vendor_profile_by_user(request.user)
 
-        serializer = VendorProfileSerializer(
+        serializer = VendorSerializer(
             profile,
             data=request.data,
             partial=True
@@ -48,4 +48,4 @@ class VendorProfileDetailView(APIView):
             serializer.validated_data
         )
 
-        return Response(VendorProfileSerializer(updated).data)
+        return Response(VendorSerializer(updated).data)

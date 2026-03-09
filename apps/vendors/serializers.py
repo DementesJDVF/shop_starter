@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import VendorProfile
+from .models import Vendor
 
 
-class VendorProfileSerializer(serializers.ModelSerializer):
+class VendorSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = VendorProfile
+        model = Vendor
         fields = [
             "id",
             "status",
