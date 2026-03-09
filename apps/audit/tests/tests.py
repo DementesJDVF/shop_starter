@@ -119,3 +119,36 @@ class AuditHU04Tests(TestCase):
                 object_id=str(self.client_user.id),
             ).exists()
         )
+
+
+    def test_base_model_create_is_audited_automatically(self):
+        product = Product.objects.create(
+            name="Prod signal",
+            price=10,
+            stock=2,
+            vendor=self.vendor,
+        )
+
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action_type=AuditLog.ActionType.CREATE,
+                object_id=str(product.id),
+            ).exists()
+        )
+
+    def test_base_model_update_is_audited_automatically(self):
+        product = Product.objects.create(
+            name="Prod signal update",
+            price=10,
+            stock=2,
+            vendor=self.vendor,
+        )
+        product.stock = 4
+        product.save(update_fields=["stock"])
+
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action_type=AuditLog.ActionType.UPDATE,
+                object_id=str(product.id),
+            ).exists()
+        )
