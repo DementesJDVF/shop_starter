@@ -164,3 +164,97 @@ class ProductCrudTests(APITestCase):
         self.assertIn("name", response.data)
         self.assertIn("description", response.data)
         self.assertIn("price", response.data)
+
+    def test_vendor_can_soft_delete_product(self):
+        product = Product.objects.create(
+            vendor=self.active_vendor,
+            name="Sal",
+            description="Sal fina",
+            price="2.00",
+            stock=10,
+        )
+        self.client.force_authenticate(self.vendor_user)
+
+        response = self.client.delete(reverse("product-detail", kwargs={"product_id": product.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        product.refresh_from_db()
+        self.assertTrue(product.is_deleted)
+        self.assertTrue(Product.all_objects.filter(id=product.id).exists())
+
+    def test_deleted_product_not_returned_in_list(self):
+        visible_product = Product.objects.create(
+            vendor=self.active_vendor,
+            name="Arroz",
+            description="Arroz integral",
+            price="4.00",
+            stock=5,
+        )
+        deleted_product = Product.objects.create(
+            vendor=self.active_vendor,
+            name="Azucar",
+            description="Azúcar blanca",
+            price="3.00",
+            stock=7,
+        )
+        deleted_product.is_deleted = True
+        deleted_product.save(update_fields=["is_deleted", "updated_at"])
+
+        self.client.force_authenticate(self.vendor_user)
+        response = self.client.get(reverse("vendor-products"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], visible_product.id)
+
+    def test_vendor_cannot_delete_other_vendor_product(self):
+        owner_user = User.objects.create_user(
+            username="owner_vendor",
+            email="owner_vendor@example.com",
+            password="secure-pass-123",
+            role="VENDEDOR",
+        )
+        owner_vendor = Vendor.objects.create(
+            user=owner_user,
+            location_type=Vendor.LocationType.FIJA,
+            status=Vendor.Status.ACTIVE,
+        )
+        product = Product.objects.create(
+            vendor=owner_vendor,
+            name="Aceite",
+            description="Aceite de oliva",
+            price="10.00",
+            stock=4,
+        )
+
+        self.client.force_authenticate(self.vendor_user)
+        response = self.client.delete(reverse("product-detail", kwargs={"product_id": product.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(str(response.data["detail"]), "You do not own this product")
+        product.refresh_from_db()
+        self.assertFalse(product.is_deleted)
+
+    def test_deleted_product_cannot_be_updated(self):
+        product = Product.objects.create(
+            vendor=self.active_vendor,
+            name="Leche",
+            description="Leche deslactosada",
+            price="6.00",
+            stock=10,
+            is_deleted=True,
+        )
+
+        self.client.force_authenticate(self.vendor_user)
+        response = self.client.put(
+            reverse("product-detail", kwargs={"product_id": product.id}),
+            {
+                "name": "Leche actualizada",
+                "description": "Leche entera",
+                "price": "7.00",
+                "stock": 9,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
