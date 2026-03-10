@@ -31,11 +31,13 @@ class Product(BaseModel):
         default=Status.DRAFT,
         db_index=True,
     )
+    is_deleted = models.BooleanField(default=False, db_index=False)
 
     class Meta:
         indexes = [
             models.Index(fields=["vendor"], name="products_vendor_idx"),
             models.Index(fields=["status"], name="products_status_idx"),
+            models.Index(fields=["is_deleted"], name="products_is_deleted_idx"),
         ]
 
     def __str__(self) -> str:
