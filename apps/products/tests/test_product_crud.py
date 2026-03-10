@@ -1,4 +1,4 @@
-"""Tests for product CRUD endpoints."""
+"""API integration tests for product CRUD endpoints."""
 
 from django.urls import reverse
 from rest_framework import status
@@ -25,7 +25,6 @@ class ProductCrudTests(APITestCase):
             status=Vendor.Status.ACTIVE,
         )
         self.create_url = reverse("product-create")
-        self.list_url = reverse("vendor-products")
 
     def test_create_product_success(self):
         self.client.force_authenticate(self.vendor_user)
@@ -41,6 +40,7 @@ class ProductCrudTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 1)
+
         product = Product.objects.get()
         self.assertEqual(product.vendor, self.active_vendor)
         self.assertEqual(product.status, Product.Status.DRAFT)
@@ -78,8 +78,8 @@ class ProductCrudTests(APITestCase):
 
         response = self.client.post(self.create_url, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"], "Only vendor users can manage products")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(str(response.data["detail"]), "Only vendor users can manage products")
 
     def test_create_product_error_when_vendor_is_not_active(self):
         inactive_vendor_user = User.objects.create_user(
@@ -105,7 +105,7 @@ class ProductCrudTests(APITestCase):
         response = self.client.post(self.create_url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"], "Vendor profile must be active")
+        self.assertEqual(str(response.data["detail"]), "Vendor profile must be active")
 
     def test_only_owner_can_update_product(self):
         product = Product.objects.create(
@@ -141,4 +141,26 @@ class ProductCrudTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["detail"], "You do not own this product")
+        self.assertEqual(str(response.data["detail"]), "You do not own this product")
+
+    def test_create_product_requires_authentication(self):
+        payload = {
+            "name": "Harina",
+            "description": "Harina de trigo",
+            "price": "2.50",
+            "stock": 12,
+        }
+
+        response = self.client.post(self.create_url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_product_validates_required_fields(self):
+        self.client.force_authenticate(self.vendor_user)
+
+        response = self.client.post(self.create_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertIn("description", response.data)
+        self.assertIn("price", response.data)

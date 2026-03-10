@@ -117,3 +117,13 @@ class ProductSoftDeleteTestCase(TestCase):
         product.hard_delete()
 
         self.assertFalse(Product.all_objects.filter(id=product.id).exists())
+
+    def test_default_status_is_draft_on_create(self):
+        product = self.create_product()
+
+        self.assertEqual(product.status, Product.Status.DRAFT)
+
+    def test_product_string_representation_is_name(self):
+        product = self.create_product(name="Café")
+
+        self.assertEqual(str(product), "Café")
