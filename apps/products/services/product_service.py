@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from django.db import transaction
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.products.models import Product
 from apps.users.constants import UserRoles
@@ -60,6 +60,9 @@ class ProductService:
     @transaction.atomic
     def update_product(*, product: Product, data: dict[str, Any]) -> Product:
         """Update mutable product fields for the owner vendor."""
+        if product.is_deleted:
+            raise ValidationError("Deleted products cannot be updated")
+
         ProductService._validate_create_payload(data=data)
 
         for field in ("name", "description", "price", "stock", "status"):
@@ -71,14 +74,24 @@ class ProductService:
 
     @staticmethod
     @transaction.atomic
-    def delete_product(*, product: Product) -> None:
-        """Soft-delete a product."""
-        product.delete()
+    def delete_product(*, product_id: int, user: Any) -> None:
+        """Soft-delete an owned product for an authenticated active vendor."""
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=user)
+
+        try:
+            product = Product.objects.get(id=product_id, is_deleted=False)
+        except Product.DoesNotExist as exc:
+            raise NotFound("Product not found") from exc
+
+        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+
+        product.is_deleted = True
+        product.save(update_fields=["is_deleted", "updated_at"])
 
     @staticmethod
     def get_vendor_products(*, vendor_profile: Vendor):
-        """Return products owned by a vendor profile."""
-        return Product.objects.filter(vendor=vendor_profile).order_by("-created_at")
+        """Return non-deleted products owned by a vendor profile."""
+        return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by("-created_at")
 
     @staticmethod
     def validate_product_ownership(*, product: Product, vendor_profile: Vendor) -> None:
