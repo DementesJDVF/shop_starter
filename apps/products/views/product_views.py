@@ -53,10 +53,5 @@ class ProductDetailView(APIView):
         return Response(ProductSerializer(updated_product).data, status=status.HTTP_200_OK)
 
     def delete(self, request, product_id: int):
-        product = get_object_or_404(Product, id=product_id)
-
-        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
-        ProductService.delete_product(product=product)
-
+        ProductService.delete_product(product_id=product_id, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
