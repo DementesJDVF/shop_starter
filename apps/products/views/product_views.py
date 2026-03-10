@@ -19,11 +19,8 @@ class ProductCreateView(APIView):
         serializer = ProductCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-            product = ProductService.create_product(vendor_profile=vendor_profile, data=serializer.validated_data)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
+        product = ProductService.create_product(vendor_profile=vendor_profile, data=serializer.validated_data)
 
         return Response(ProductSerializer(product).data, status=status.HTTP_201_CREATED)
 
@@ -34,11 +31,7 @@ class VendorProductListView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        try:
-            vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
         products = ProductService.get_vendor_products(vendor_profile=vendor_profile)
         return Response(ProductSerializer(products, many=True).data, status=status.HTTP_200_OK)
 
@@ -53,28 +46,17 @@ class ProductDetailView(APIView):
         serializer.is_valid(raise_exception=True)
 
         product = get_object_or_404(Product, id=product_id)
-
-        try:
-            vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-            ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
-            updated_product = ProductService.update_product(product=product, data=serializer.validated_data)
-        except PermissionError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
+        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+        updated_product = ProductService.update_product(product=product, data=serializer.validated_data)
 
         return Response(ProductSerializer(updated_product).data, status=status.HTTP_200_OK)
 
     def delete(self, request, product_id: int):
         product = get_object_or_404(Product, id=product_id)
 
-        try:
-            vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-            ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
-            ProductService.delete_product(product=product)
-        except PermissionError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
+        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+        ProductService.delete_product(product=product)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
