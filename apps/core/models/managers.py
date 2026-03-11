@@ -1,6 +1,7 @@
 from django.db import models
 from .querysets import SoftDeleteQuerySet
 
+
 class SoftDeleteManager(models.Manager):
 
     def get_queryset(self):
@@ -11,6 +12,7 @@ class SoftDeleteManager(models.Manager):
 
     def deleted_only(self):
         return self.get_queryset().deleted()
+
 
 class AllObjectsManager(models.Manager):
 

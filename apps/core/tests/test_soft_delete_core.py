@@ -13,7 +13,7 @@ class CoreSoftDeleteTestCase(TestCase):
             username="vendor1",
             email="vendor@test.com",
             password="StrongPass123",
-            role="VENDOR"
+            role="VENDEDOR"
         )
 
         self.vendor = Vendor.objects.create(
@@ -132,3 +132,15 @@ class CoreSoftDeleteTestCase(TestCase):
         self.assertFalse(
             Product.all_objects.filter(id=product.id).exists()
         )
+
+
+    def test_soft_delete_hides_record(self):
+        product = self.create_product()
+        product.delete()
+        self.assertFalse(Product.objects.filter(id=product.id).exists())
+
+    def test_restore_reactivates_record(self):
+        product = self.create_product()
+        product.delete()
+        product.restore()
+        self.assertTrue(Product.objects.filter(id=product.id).exists())

@@ -63,3 +63,63 @@ class PermissionTests(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_status_user_cannot_access(self):
+        blocked_user = self.create_user_with_role("ADMIN", is_active=True)
+        blocked_user.status = "BLOCKED"
+        blocked_user.save(update_fields=["status"])
+        token = self.get_token(blocked_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("admin_test")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_vendor_cannot_access_admin_features(self):
+        vendor_user = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("admin_test")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_non_admin_cannot_change_role(self):
+        client_user = self.create_user_with_role("CLIENTE")
+        target_user = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(client_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("change_user_role", kwargs={"user_id": target_user.id})
+        response = self.client.patch(url, {"role": "ADMIN"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_vendor_can_access_vendor_endpoint(self):
+        vendor = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("vendor_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_customer_can_access_customer_endpoint(self):
+        customer = self.create_user_with_role("CLIENTE")
+        token = self.get_token(customer)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("customer_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_vendor_cannot_access_customer_endpoint(self):
+        vendor = self.create_user_with_role("VENDEDOR")
+        token = self.get_token(vendor)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(reverse("customer_test"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
