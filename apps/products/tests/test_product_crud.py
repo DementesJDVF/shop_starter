@@ -235,6 +235,26 @@ class ProductCrudTests(APITestCase):
         product.refresh_from_db()
         self.assertFalse(product.is_deleted)
 
+    def test_vendor_can_patch_own_product(self):
+        product = Product.objects.create(
+            vendor=self.active_vendor,
+            name="Galletas",
+            description="Galletas de vainilla",
+            price="5.00",
+            stock=11,
+        )
+
+        self.client.force_authenticate(self.vendor_user)
+        response = self.client.patch(
+            reverse("product-detail", kwargs={"product_id": product.id}),
+            {"price": "6.25"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product.refresh_from_db()
+        self.assertEqual(str(product.price), "6.25")
+
     def test_deleted_product_cannot_be_updated(self):
         product = Product.objects.create(
             vendor=self.active_vendor,
@@ -257,4 +277,4 @@ class ProductCrudTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
