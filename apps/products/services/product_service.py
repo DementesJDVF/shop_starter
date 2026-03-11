@@ -38,8 +38,31 @@ class ProductService:
     @staticmethod
     def _validate_create_payload(*, data: dict[str, Any]) -> None:
         """Run domain-level validations for product creation/update."""
-        if Decimal(str(data["price"])) <= 0:
+        if "price" in data and Decimal(str(data["price"])) <= 0:
             raise ValidationError("Product price must be greater than zero")
+
+    @staticmethod
+    def validate_product_ownership(*, product: Product, vendor_profile: Vendor) -> None:
+        """Ensure the product belongs to the acting vendor."""
+        if product.vendor_id != vendor_profile.id:
+            raise PermissionDenied("You do not own this product")
+
+    @staticmethod
+    def get_vendor_product_for_update(*, product_id: int, user: Any) -> tuple[Product, Vendor]:
+        """Resolve and validate a vendor-owned product for update workflows."""
+        vendor_profile = ProductService.validate_vendor_can_manage_products(user=user)
+
+        try:
+            product = Product.all_objects.get(id=product_id)
+        except Product.DoesNotExist as exc:
+            raise NotFound("Product not found") from exc
+
+        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+
+        if product.is_deleted:
+            raise ValidationError("Deleted products cannot be updated")
+
+        return product, vendor_profile
 
     @staticmethod
     @transaction.atomic
@@ -53,15 +76,14 @@ class ProductService:
             description=data["description"],
             price=data["price"],
             stock=data.get("stock", 0),
-            status=Product.Status.DRAFT,
+            status=Product.ProductStatus.DRAFT,
         )
 
     @staticmethod
     @transaction.atomic
-    def update_product(*, product: Product, data: dict[str, Any]) -> Product:
+    def update_product(*, product_id: int, user: Any, data: dict[str, Any]) -> Product:
         """Update mutable product fields for the owner vendor."""
-        if product.is_deleted:
-            raise ValidationError("Deleted products cannot be updated")
+        product, _ = ProductService.get_vendor_product_for_update(product_id=product_id, user=user)
 
         ProductService._validate_create_payload(data=data)
 
@@ -92,9 +114,3 @@ class ProductService:
     def get_vendor_products(*, vendor_profile: Vendor):
         """Return non-deleted products owned by a vendor profile."""
         return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by("-created_at")
-
-    @staticmethod
-    def validate_product_ownership(*, product: Product, vendor_profile: Vendor) -> None:
-        """Ensure the product belongs to the acting vendor."""
-        if product.vendor_id != vendor_profile.id:
-            raise PermissionDenied("You do not own this product")

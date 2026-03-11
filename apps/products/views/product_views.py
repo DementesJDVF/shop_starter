@@ -1,11 +1,9 @@
 """API views for products CRUD."""
 
-from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.products.models import Product
 from apps.products.serializers.product_serializer import ProductCreateSerializer, ProductSerializer
 from apps.products.services.product_service import ProductService
 
@@ -45,10 +43,23 @@ class ProductDetailView(APIView):
         serializer = ProductCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        product = get_object_or_404(Product, id=product_id)
-        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
-        updated_product = ProductService.update_product(product=product, data=serializer.validated_data)
+        updated_product = ProductService.update_product(
+            product_id=product_id,
+            user=request.user,
+            data=serializer.validated_data,
+        )
+
+        return Response(ProductSerializer(updated_product).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, product_id: int):
+        serializer = ProductCreateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        updated_product = ProductService.update_product(
+            product_id=product_id,
+            user=request.user,
+            data=serializer.validated_data,
+        )
 
         return Response(ProductSerializer(updated_product).data, status=status.HTTP_200_OK)
 
