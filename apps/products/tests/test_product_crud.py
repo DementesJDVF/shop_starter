@@ -43,7 +43,7 @@ class ProductCrudTests(APITestCase):
 
         product = Product.objects.get()
         self.assertEqual(product.vendor, self.active_vendor)
-        self.assertEqual(product.status, Product.Status.DRAFT)
+        self.assertEqual(product.status, Product.Status.ACTIVE)
 
     def test_create_product_error_when_price_is_not_positive(self):
         self.client.force_authenticate(self.vendor_user)
@@ -180,6 +180,7 @@ class ProductCrudTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         product.refresh_from_db()
         self.assertTrue(product.is_deleted)
+        self.assertEqual(product.status, Product.ProductStatus.INACTIVE)
         self.assertTrue(Product.all_objects.filter(id=product.id).exists())
 
     def test_deleted_product_not_returned_in_list(self):
@@ -254,6 +255,7 @@ class ProductCrudTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         product.refresh_from_db()
         self.assertEqual(str(product.price), "6.25")
+        self.assertEqual(product.status, Product.ProductStatus.ACTIVE)
 
     def test_deleted_product_cannot_be_updated(self):
         product = Product.objects.create(

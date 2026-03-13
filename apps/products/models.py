@@ -8,9 +8,10 @@ from apps.core.models import BaseModel
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
 
-    class ProductStatus(models.TextChoices):        
+    class ProductStatus(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         ACTIVE = "ACTIVE", "Active"
+        INACTIVE = "INACTIVE", "Inactive"
         PAUSED = "PAUSED", "Paused"
         OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
         REJECTED = "REJECTED", "Rejected"

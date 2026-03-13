@@ -70,14 +70,28 @@ class ProductService:
         """Create a product owned by the given vendor profile."""
         ProductService._validate_create_payload(data=data)
 
-        return Product.objects.create(
+        product = Product(
             vendor=vendor_profile,
             name=data["name"],
             description=data["description"],
             price=data["price"],
             stock=data.get("stock", 0),
-            status=Product.ProductStatus.DRAFT,
         )
+        product.status = ProductService.evaluate_product_status(product=product)
+        product.save()
+        return product
+
+    @staticmethod
+    def evaluate_product_status(*, product: Product) -> str:
+        """Evaluate the product status based on business rules."""
+        if product.is_deleted:
+            return Product.ProductStatus.INACTIVE
+
+        is_complete = bool(product.name and product.description and product.price)
+        if is_complete:
+            return Product.ProductStatus.ACTIVE
+
+        return Product.ProductStatus.DRAFT
 
     @staticmethod
     @transaction.atomic
@@ -87,10 +101,11 @@ class ProductService:
 
         ProductService._validate_create_payload(data=data)
 
-        for field in ("name", "description", "price", "stock", "status"):
+        for field in ("name", "description", "price", "stock"):
             if field in data:
                 setattr(product, field, data[field])
 
+        product.status = ProductService.evaluate_product_status(product=product)
         product.save()
         return product
 
@@ -108,9 +123,24 @@ class ProductService:
         ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
 
         product.is_deleted = True
-        product.save(update_fields=["is_deleted", "updated_at"])
+        product.status = Product.ProductStatus.INACTIVE
+        product.save(update_fields=["is_deleted", "status", "updated_at"])
 
     @staticmethod
     def get_vendor_products(*, vendor_profile: Vendor):
         """Return non-deleted products owned by a vendor profile."""
         return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by("-created_at")
+
+    @staticmethod
+    def get_public_catalog():
+        """Return publicly visible catalog products with optimized query."""
+        return (
+            Product.objects.select_related("vendor")
+            .filter(
+                status=Product.ProductStatus.ACTIVE,
+                is_deleted=False,
+                vendor__status=Vendor.Status.ACTIVE,
+                vendor__user__is_active=True,
+            )
+            .order_by("-created_at")
+        )
