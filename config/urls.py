@@ -8,6 +8,7 @@ TokenRefreshView,
 )
 
 urlpatterns = [
+<<<<<<< HEAD
 
     path("admin/", admin.site.urls),
 
@@ -20,3 +21,10 @@ urlpatterns = [
     path("api/products/", include("apps.products.urls")),
     path("api/audit/", include("apps.audit.urls")),
 ]
+=======
+    path('admin/', admin.site.urls),
+    path('api/', include('apps.users.urls')),
+    path('api/audit/', include('apps.audit.urls')),
+    path('api/products/', include('apps.products.urls')),
+]
+>>>>>>> origin/develop

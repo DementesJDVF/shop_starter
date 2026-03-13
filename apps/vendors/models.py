@@ -1,8 +1,15 @@
 from django.conf import settings
+<<<<<<< HEAD
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import BaseModel
+=======
+from apps.core.models import BaseModel
+
+
+class Vendor(BaseModel):
+>>>>>>> origin/develop
 
 
 class Vendor(BaseModel):
@@ -46,4 +53,8 @@ class Vendor(BaseModel):
         ]
 
     def __str__(self):
+<<<<<<< HEAD
         return f"Vendor({self.user.email})"
+=======
+        return self.user.email
+>>>>>>> origin/develop
