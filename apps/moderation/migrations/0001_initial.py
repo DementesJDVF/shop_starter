@@ -13,15 +13,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Review',
+            name='ModerationFlag',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('rating', models.PositiveSmallIntegerField()),
-                ('comment', models.TextField(blank=True)),
+                ('reason', models.TextField()),
+                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('REVIEWED', 'Reviewed'), ('DISMISSED', 'Dismissed')], default='PENDING', max_length=20)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'reviews_review',
+                'db_table': 'moderation_flag',
             },
         ),
     ]

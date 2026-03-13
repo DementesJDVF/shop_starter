@@ -13,15 +13,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Review',
+            name='Location',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('rating', models.PositiveSmallIntegerField()),
-                ('comment', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('latitude', models.FloatField()),
+                ('longitude', models.FloatField()),
+                ('timestamp', models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'reviews_review',
+                'db_table': 'geo_location',
             },
         ),
     ]
