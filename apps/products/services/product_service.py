@@ -70,14 +70,16 @@ class ProductService:
         """Create a product owned by the given vendor profile."""
         ProductService._validate_create_payload(data=data)
 
-        return Product.objects.create(
+        product = Product(
             vendor=vendor_profile,
             name=data["name"],
             description=data["description"],
             price=data["price"],
             stock=data.get("stock", 0),
-            status=Product.ProductStatus.DRAFT,
         )
+        product.status = ProductService.evaluate_product_status(product=product)
+        product.save()
+        return product
 
     @staticmethod
     def evaluate_product_status(*, product: Product) -> str:
