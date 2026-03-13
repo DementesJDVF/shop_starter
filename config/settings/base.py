@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.audit",
 
     # Third Party
+    "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
 ]
@@ -137,6 +138,7 @@ REST_FRAMEWORK = {
         "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
         "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT
@@ -154,4 +156,10 @@ SIMPLE_JWT = {
 
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'SHOPSTARTER API',
+    'DESCRIPTION': 'Documentación de la API del proyecto SHOPSTARTER',
+    'VERSION': '1.0.0',
 }

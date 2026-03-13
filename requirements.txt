@@ -4,6 +4,7 @@ Django==6.0
 django-cors-headers==4.7.0
 django-environ==0.13.0
 djangorestframework==3.16.1
+drf-spectacular==0.28.0
 djangorestframework_simplejwt==5.5.1
 filelock==3.20.0
 platformdirs==4.5.0
