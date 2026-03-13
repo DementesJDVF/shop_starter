@@ -1,6 +1,7 @@
 asgiref==3.11.0
 distlib==0.4.0
 Django==6.0
+django-cors-headers==4.7.0
 django-environ==0.13.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
