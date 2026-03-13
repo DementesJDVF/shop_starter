@@ -1,13 +1,14 @@
 import uuid
-from django.db import models
+
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.conf import settings
+from django.db import models
+
 from apps.core.models import BaseModel
 
 
 class AuditLog(BaseModel):
-
     class ActionType(models.TextChoices):
         CREATE = "CREATE"
         UPDATE = "UPDATE"
@@ -33,8 +34,13 @@ class AuditLog(BaseModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="audit_logs"
+        related_name="audit_logs",
     )
+
+    action = models.CharField(max_length=255, blank=True)
+    entity = models.CharField(max_length=255, blank=True)
+    entity_id = models.CharField(max_length=255, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     action_type = models.CharField(
         max_length=50,
@@ -45,20 +51,20 @@ class AuditLog(BaseModel):
     source = models.CharField(
         max_length=30,
         choices=SourceType.choices,
-        default=SourceType.API
+        default=SourceType.API,
     )
 
     content_type = models.ForeignKey(
         ContentType,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
     )
 
     object_id = models.CharField(max_length=255, null=True, blank=True)
     content_object = GenericForeignKey("content_type", "object_id")
 
-    object_repr = models.CharField(max_length=255)
+    object_repr = models.CharField(max_length=255, blank=True)
 
     previous_data = models.JSONField(null=True, blank=True)
     new_data = models.JSONField(null=True, blank=True)
@@ -66,6 +72,7 @@ class AuditLog(BaseModel):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
+        db_table = "audit_log"
         indexes = [
             models.Index(fields=["action_type"]),
             models.Index(fields=["content_type", "object_id"]),
@@ -74,4 +81,4 @@ class AuditLog(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.action_type} - {self.object_repr}"
+        return f"{self.action_type or self.action} - {self.entity or self.object_repr}"

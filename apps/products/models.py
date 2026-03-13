@@ -1,12 +1,28 @@
 """Models for product catalog."""
 
+import uuid
+
 from django.db import models
 
 from apps.core.models import BaseModel
 
 
+class Category(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "products_category"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class ProductStatus(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
@@ -16,14 +32,18 @@ class Product(BaseModel):
         OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
         REJECTED = "REJECTED", "Rejected"
 
-    # Backward compatible alias used in existing code/tests.
     Status = ProductStatus
 
     vendor = models.ForeignKey(
-        "vendors.Vendor",
+        "vendors.VendorProfile",
         on_delete=models.CASCADE,
         related_name="products",
         db_index=True,
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        related_name="products",
     )
     name = models.CharField(max_length=255)
     description = models.TextField()
@@ -35,8 +55,10 @@ class Product(BaseModel):
         default=ProductStatus.DRAFT,
         db_index=True,
     )
+    is_featured = models.BooleanField(default=False, db_index=True)
 
     class Meta:
+        db_table = "products_product"
         indexes = [
             models.Index(fields=["vendor"], name="products_vendor_idx"),
             models.Index(fields=["status"], name="products_status_idx"),
