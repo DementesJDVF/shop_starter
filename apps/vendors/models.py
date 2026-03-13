@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.db import models
-from apps.core.models import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
+
+from apps.core.models import BaseModel
 
 
 class Vendor(BaseModel):
@@ -18,20 +19,25 @@ class Vendor(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="vendor"  # ✅ Cambiar a minúscula
+        related_name="vendor"
     )
 
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.PENDING
+        default=Status.PENDING,
+        db_index=True
     )
 
-    verified = models.BooleanField(default=False)
+    verified = models.BooleanField(
+        default=False,
+        db_index=True
+    )
 
     location_type = models.CharField(
         max_length=10,
-        choices=LocationType.choices
+        choices=LocationType.choices,
+        default=LocationType.FIXED
     )
 
     reputation = models.DecimalField(
