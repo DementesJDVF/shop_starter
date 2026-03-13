@@ -43,7 +43,7 @@ class ProductCrudTests(APITestCase):
 
         product = Product.objects.get()
         self.assertEqual(product.vendor, self.active_vendor)
-        self.assertEqual(product.status, Product.Status.DRAFT)
+        self.assertEqual(product.status, Product.Status.ACTIVE)
 
     def test_create_product_error_when_price_is_not_positive(self):
         self.client.force_authenticate(self.vendor_user)
