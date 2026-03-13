@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -5,7 +7,9 @@ from django.db import models
 from apps.core.models import BaseModel
 
 
-class Vendor(BaseModel):
+class VendorProfile(BaseModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pendiente"
         ACTIVE = "ACTIVE", "Activo"
@@ -18,7 +22,7 @@ class Vendor(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="vendor",
+        related_name="vendor_profile",
     )
     status = models.CharField(
         max_length=20,
@@ -40,10 +44,20 @@ class Vendor(BaseModel):
     )
 
     class Meta:
+        db_table = "vendors_vendorprofile"
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["verified"]),
         ]
 
     def __str__(self):
-        return f"Vendor({self.user.email})"
+        return f"VendorProfile({self.user.email})"
+
+
+class Vendor(VendorProfile):
+    """Backward-compatible proxy for code that still references vendors.Vendor."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Vendor"
+        verbose_name_plural = "Vendors"
