@@ -1,14 +1,11 @@
 """Models for product catalog."""
 
 import uuid
-
 from django.db import models
-
 from apps.core.models import BaseModel
 
 
-class Category(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+class Category(BaseModel):
     name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True)
 
@@ -22,8 +19,6 @@ class Category(models.Model):
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
     class ProductStatus(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         ACTIVE = "ACTIVE", "Active"
@@ -32,29 +27,31 @@ class Product(BaseModel):
         OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
         REJECTED = "REJECTED", "Rejected"
 
-    Status = ProductStatus
-
     vendor = models.ForeignKey(
         "vendors.VendorProfile",
         on_delete=models.CASCADE,
         related_name="products",
         db_index=True,
     )
+
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
         related_name="products",
     )
+
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
+
     status = models.CharField(
         max_length=20,
         choices=ProductStatus.choices,
         default=ProductStatus.DRAFT,
         db_index=True,
     )
+
     is_featured = models.BooleanField(default=False, db_index=True)
 
     class Meta:
