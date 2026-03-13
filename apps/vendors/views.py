@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.exceptions import NotFound
 
 from .permissions import IsVendor
 from .serializers import VendorSerializer
@@ -35,6 +36,9 @@ class VendorProfileDetailView(APIView):
     def patch(self, request):
         profile = VendorSelectors.get_vendor_profile_by_user(request.user)
 
+        if not profile:
+            raise NotFound("Vendor profile not found")
+
         serializer = VendorSerializer(
             profile,
             data=request.data,
@@ -49,3 +53,14 @@ class VendorProfileDetailView(APIView):
         )
 
         return Response(VendorSerializer(updated).data)
+
+
+class VendorPublicDetailView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, vendor_id):
+        vendor = VendorSelectors.get_public_vendor_profile(vendor_id)
+
+        serializer = VendorSerializer(vendor)
+        return Response(serializer.data)
