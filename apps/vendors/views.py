@@ -1,12 +1,13 @@
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .models import VendorProfile
 from .permissions import IsVendor
 from .selectors import VendorSelectors
-from .serializers import VendorSerializer
+from .serializers import VendorPublicSerializer, VendorSerializer
 from .services import VendorService
 
 
@@ -53,10 +54,20 @@ class VendorProfileDetailView(APIView):
         return Response(VendorSerializer(updated).data)
 
 
-class VendorPublicDetailView(APIView):
-    permission_classes = [AllowAny]
+class VendorPublicView(generics.RetrieveAPIView):
+    """Public vendor profile with dynamic rating metrics."""
 
-    def get(self, request, vendor_id):
-        vendor = VendorSelectors.get_public_vendor_profile(vendor_id)
-        serializer = VendorSerializer(vendor)
-        return Response(serializer.data)
+    permission_classes = [AllowAny]
+    serializer_class = VendorPublicSerializer
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return (
+            VendorProfile.objects.with_rating()
+            .select_related("user")
+            .filter(status=VendorProfile.Status.ACTIVE)
+        )
+
+
+class VendorPublicDetailView(VendorPublicView):
+    """Backward-compatible alias for existing imports."""
