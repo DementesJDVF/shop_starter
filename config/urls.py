@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/', include('apps.users.urls')),
     path('api/audit/', include('apps.audit.urls')),
     path('api/products/', include('apps.products.urls')),
+    path('api/vendors/', include('apps.vendors.urls')),
     path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
 
     # OpenAPI Schema
