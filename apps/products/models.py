@@ -14,7 +14,28 @@ class Category(BaseModel):
 
     def __str__(self) -> str:
         return self.name
-
+class PImages(BaseModel):
+    # Django crea el 'id' SERIAL/BIGSERIAL automáticamente, no hace falta declararlo.
+    # products_product_id integer NOT NULL + FK
+    # 'Product' es el nombre del modelo al que hace referencia.
+    # db_column es vital para que coincida con el nombre exacto en tu SQL.
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        db_column='products_product_id',
+        related_name='images'
+    )
+    # url_image TEXT NOT NULL
+    url_image = models.TextField()
+    # is_main boolean DEFAULT false
+    is_main = models.BooleanField(default=False)
+    # date_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    date_created = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        # Esto le dice a Django que use exactamente el nombre de tu script
+        db_table = 'products_images'
+    def __str__(self):
+        return f"Imagen de {self.product} - Principal: {self.is_main}"
 
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
