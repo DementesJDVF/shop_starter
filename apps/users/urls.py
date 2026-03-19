@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .api.auth_views import LoginView
+from .api.auth_views import LoginView, UserView
 from .views import (
     AdminOnlyView,
     ChangeUserRoleView,
@@ -20,4 +20,5 @@ urlpatterns = [
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
     path("users/<int:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
+    path("read/", UserView.as_view(), name="read"),
 ]
