@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.moderation",
     "apps.analytics",
     "apps.audit",
+    "apps.ai",
 
     # Third Party
     "drf_spectacular",

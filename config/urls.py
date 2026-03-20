@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/audit/', include('apps.audit.urls')),
     path('api/products/', include('apps.products.urls')),
     path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
+    path('api/ai/', include('apps.ai.urls')),
 
     # OpenAPI Schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
