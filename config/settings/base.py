@@ -2,6 +2,12 @@ import environ
 from pathlib import Path
 from datetime import timedelta
 
+import environ
+import os
+
+env = environ.Env()
+environ.Env.read_env()
+
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -97,12 +103,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env("DB_PORT"),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
