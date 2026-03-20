@@ -25,8 +25,10 @@ class ProductViewGet(viewsets.ModelViewSet):
     Esta vista solo permite listar (GET /products/) 
     y ver detalle (GET /products/{id}/).
     """
-    queryset = Product.objects.filter(status='ACTIVE') # O .all() si quieres ver todo
+    queryset = Product.objects.filter(status='ACTIVE') # O .all()
     serializer_class = ReadProSerializer
+    # Especificamos que busque por el campo 'id'
+    lookup_field = 'id'
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -39,7 +41,7 @@ class CategoryViewGet(viewsets.ReadOnlyModelViewSet):
     """
     Vista simple para ver la lista de categorías y el detalle de cada una.
     """
-    queryset = Category.objects.filter(is_active=True) # Solo mostramos las activas
+    queryset = Category.objects.all() # Solo mostramos las activas
     serializer_class = CategorySerializer
 class ProductCreateView(APIView):
     """Create products for active vendors."""

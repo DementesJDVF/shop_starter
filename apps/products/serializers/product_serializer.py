@@ -63,6 +63,7 @@ class ReadProSerializer(serializers.ModelSerializer):
             'images', # 2. Lo incluimos en la lista de campos
             'created_at'
         ]
+        read_only_fields = fields
 class ProductCreateSerializer(serializers.Serializer):
     """Serializer for product create/update payloads."""
 
