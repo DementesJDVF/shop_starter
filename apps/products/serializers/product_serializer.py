@@ -13,7 +13,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = PImages
         fields = ['id', 'url_image', 'is_main'] # Lo que querés recibir/mandar
 class CreProSerializer(serializers.ModelSerializer):
-    # Aquí está la magia: filtramos el queryset para que la API 
+    # Aquí está la magia: filtramos el queryset para que la API
     # rechace cualquier ID que no pertenezca a un vendedor.
     vendor = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(role=UserRoles.VENDOR))
@@ -29,6 +29,7 @@ class CreProSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
         """
+        #No se usa.
         fields = [
             'id', 'vendor', 'category', 'category_detail', 'name', 
             'description', 'price', 'stock', 'status', 'is_featured', 'images']
@@ -41,6 +42,27 @@ class CreProSerializer(serializers.ModelSerializer):
         for image_data in images_data:
             PImages.objects.create(product=product, **image_data)
         return product
+class ReadProSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.username', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    # 1. Agregamos el campo de imágenes. 
+    # El nombre 'images' debe coincidir con el related_name que pusiste en el modelo ProductImage.
+    images = ProductImageSerializer(many=True, read_only=True)
+    class Meta:
+        model = Product
+        fields = [
+            'id', 
+            'name', 
+            'description', 
+            'price', 
+            'stock', 
+            'status', 
+            'vendor_name', 
+            'category_name', 
+            'is_featured',
+            'images', # 2. Lo incluimos en la lista de campos
+            'created_at'
+        ]
 class ProductCreateSerializer(serializers.Serializer):
     """Serializer for product create/update payloads."""
 

@@ -8,6 +8,7 @@ from apps.products.models import Product, Category
 from apps.products.serializers.product_serializer import (ProductCreateSerializer,
                                                           ProductSerializer,
                                                           CreProSerializer,
+                                                          ReadProSerializer,
                                                           CategorySerializer)
 from apps.products.services.product_service import ProductService
 
@@ -19,6 +20,13 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Aquí podrías, por ejemplo, validar algo antes de guardar
         serializer.save()
+class ProductViewGet(viewsets.ModelViewSet):
+    """
+    Esta vista solo permite listar (GET /products/) 
+    y ver detalle (GET /products/{id}/).
+    """
+    queryset = Product.objects.filter(status='ACTIVE') # O .all() si quieres ver todo
+    serializer_class = ReadProSerializer
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer

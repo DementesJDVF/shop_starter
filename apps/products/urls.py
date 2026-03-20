@@ -5,11 +5,14 @@ from apps.products.views.product_views import (ProductCreateView,
                                                ProductDetailView,
                                                VendorProductListView,
                                                ProductViewSet,
+                                               ProductViewGet,
                                                CategoryViewSet,
                                                CategoryViewGet)
 
 Create = DefaultRouter()
 Create.register(r'', ProductViewSet)
+Read = DefaultRouter()
+Read.register(r'', ProductViewGet)
 CatCreate = DefaultRouter()
 CatCreate.register(r'create', CategoryViewSet)
 
@@ -18,6 +21,7 @@ urlpatterns = [
     path('my-products/', VendorProductListView.as_view(), name='vendor-products'),
     path('<int:product_id>/', ProductDetailView.as_view(), name='product-detail'),
     path('create/', include(Create.urls)),
+    path('read/', include(Read.urls)),
     path('categories/', include(CatCreate.urls)),
     path('categories/read/', CategoryViewGet.as_view({'get': 'list'}), name='categorie-read'),
 ]
