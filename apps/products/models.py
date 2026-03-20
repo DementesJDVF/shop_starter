@@ -3,6 +3,7 @@
 import uuid
 from django.db import models
 from apps.core.models import BaseModel
+from django.conf import settings
 
 
 class Category(BaseModel):
@@ -49,11 +50,19 @@ class Product(BaseModel):
         REJECTED = "REJECTED", "Rejected"
 
     vendor = models.ForeignKey(
-        "vendors.VendorProfile",
+        settings.AUTH_USER_MODEL, # Apunta dinámicamente a tu clase User personalizada
         on_delete=models.CASCADE,
         related_name="products",
         db_index=True,
     )
+    """
+    #No se usa.
+    vendor = models.ForeignKey(
+        "vendors.VendorProfile",
+        on_delete=models.CASCADE,
+        related_name="products",
+        db_index=True,)
+    """
 
     category = models.ForeignKey(
         Category,
