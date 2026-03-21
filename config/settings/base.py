@@ -102,13 +102,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
-DATABASES = {
-    "default": dj_database_url.config(
-        default=env("DATABASE_URL"),
-        conn_max_age=env.int("CONN_MAX_AGE", default=600),
-        ssl_require=env.bool("DB_SSL_REQUIRE", default=not DEBUG),
-    )
-}
+DATABASES = {}
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
