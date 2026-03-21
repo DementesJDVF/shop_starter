@@ -78,17 +78,13 @@ Ejemplo de configuración (`.env.example`):
 ``` env
 DEBUG=True
 
-DB_NAME=shopstarter_db
-DB_USER=postgres
-DB_PASSWORD=root
-DB_HOST=localhost
-DB_PORT=5432
+DATABASE_URL=postgres://postgres:root@localhost:5432/shopstarter_db
 
 SECRET_KEY=your-secret-key
 ```
 
-⚠️ Asegúrate de que la base de datos **shopstarter_db** exista en
-PostgreSQL antes de ejecutar las migraciones.
+⚠️ Asegúrate de que la base de datos en `DATABASE_URL` exista antes de
+ejecutar las migraciones.
 
 ------------------------------------------------------------------------
 
@@ -118,3 +114,35 @@ El servidor estará disponible en:
 -   El entorno virtual debe estar **activado** antes de ejecutar
     comandos de Django.
 -   Si cambias variables del archivo `.env`, reinicia el servidor.
+
+------------------------------------------------------------------------
+
+## Despliegue en Render (Blueprint)
+
+El repositorio ya incluye un archivo `render.yaml` para vincular la app
+correctamente a Render.
+
+### Pasos
+
+1. Sube este proyecto a GitHub/GitLab.
+2. En Render, crea un **New + > Blueprint**.
+3. Conecta tu repositorio y selecciona la rama a desplegar.
+4. Render detectará `render.yaml` y creará automáticamente:
+   -   Un servicio web Django.
+   -   Una base de datos PostgreSQL administrada.
+5. Ejecuta el despliegue.
+
+### Configuración aplicada en `render.yaml`
+
+-   `buildCommand` instala dependencias, ejecuta `collectstatic` y
+    migraciones.
+-   `startCommand` usa `gunicorn config.wsgi:application`.
+-   `DJANGO_SETTINGS_MODULE=config.settings.prod`.
+-   `DATABASE_URL` conectado automáticamente a la base de datos de
+    Render.
+-   `ALLOWED_HOSTS=.onrender.com`.
+-   Configuración de frontend para Vercel con:
+    `CORS_ALLOWED_ORIGINS` y `CSRF_TRUSTED_ORIGINS`.
+
+> Si usas dominio personalizado, agrega ese dominio en `ALLOWED_HOSTS`
+> (separado por comas).
