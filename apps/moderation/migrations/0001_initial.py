@@ -13,15 +13,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Location',
+            name='ModerationFlag',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('latitude', models.FloatField()),
-                ('longitude', models.FloatField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
+                ('reason', models.TextField()),
+                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('REVIEWED', 'Reviewed'), ('DISMISSED', 'Dismissed')], default='PENDING', max_length=20)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'geo_location',
+                'db_table': 'moderation_flag',
             },
         ),
     ]
