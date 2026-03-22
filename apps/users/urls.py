@@ -20,5 +20,5 @@ urlpatterns = [
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
     path("users/<int:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
-    path("read/", UserView.as_view(), name="read"),
+    path("users/list/", UserView.as_view(), name="read"),
 ]
