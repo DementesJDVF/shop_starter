@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include
-from apps.products.views.catalog_views import CatalogView
 
 # Swagger
 from drf_spectacular.views import (
@@ -22,7 +21,6 @@ urlpatterns = [
     path('api/', include('apps.users.urls')),
     path('api/audit/', include('apps.audit.urls')),
     path('api/products/', include('apps.products.urls')),
-    path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
 
     # OpenAPI Schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

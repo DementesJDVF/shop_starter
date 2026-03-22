@@ -1,9 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps.products.views.product_views import (ProductViewSet,
-                                               ProductViewGet,
-                                               CategoryViewSet,
-                                               CategoryViewGet)
+from apps.products.views import (ProductViewSet,
+                                 ProductViewGet,
+                                 CategoryViewSet,
+                                 CategoryViewGet)
 Create = DefaultRouter()
 Create.register(r'', ProductViewSet)
 Read = DefaultRouter()
