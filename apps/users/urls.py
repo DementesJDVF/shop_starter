@@ -9,11 +9,15 @@ from .views import (
     CustomerOnlyView,
     MeView,
     RegisterView,
+    CustomerRegisterView,
+    VendorRegisterView,
     VendorOnlyView,
 )
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
+    path("auth/register/customer/", CustomerRegisterView.as_view(), name="register_customer"),
+    path("auth/register/vendor/", VendorRegisterView.as_view(), name="register_vendor"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/me/", MeView.as_view(), name="me"),

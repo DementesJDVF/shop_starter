@@ -2,17 +2,14 @@ import environ
 from pathlib import Path
 from datetime import timedelta
 
-# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Environment
 env = environ.Env(
     DEBUG=(bool, False)
 )
 
 environ.Env.read_env(BASE_DIR / ".env")
 
-# Security
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
@@ -31,7 +28,6 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# Applications
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -39,9 +35,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'django_extensions',
+    "django_extensions",
 
-    # Local Apps
     "apps.core",
     "apps.users",
     "apps.vendors",
@@ -53,7 +48,6 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.audit",
 
-    # Third Party
     "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
@@ -74,6 +68,7 @@ MIDDLEWARE = [
 AUTH_USER_MODEL = "users.User"
 
 ROOT_URLCONF = "config.urls"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -92,7 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -104,7 +98,6 @@ DATABASES = {
     }
 }
 
-# Password Validators
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -112,16 +105,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Internationalization
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# 🌎 IDIOMA Y ZONA HORARIA
+LANGUAGE_CODE = "es"
+TIME_ZONE = "America/Bogota"
 USE_I18N = True
 USE_TZ = True
 
-# Static
 STATIC_URL = "static/"
 
-# DRF
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -136,28 +127,35 @@ REST_FRAMEWORK = {
         "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
         "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
     },
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# JWT
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
-
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
-
     "AUTH_HEADER_TYPES": ("Bearer",),
-
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'SHOPSTARTER API',
-    'DESCRIPTION': 'Documentación de la API del proyecto SHOPSTARTER',
-    'VERSION': '1.0.0',
+    "TITLE": "SHOPSTARTER API",
+    "DESCRIPTION": "Documentación de la API del proyecto SHOPSTARTER",
+    "VERSION": "1.0.0",
 }
+
+# 📧 EMAIL CONFIGURACIÓN REAL (SMTP)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

@@ -8,10 +8,13 @@ from .application.services import UserService
 from .models import User
 from .permissions import IsAdmin, IsClient, IsVendor
 from .serializers import (
+    CustomerRegisterSerializer,
+
     ChangeUserRoleSerializer,
     ChangeUserStatusSerializer,
     RegisterSerializer,
     UserSerializer,
+    VendorRegisterSerializer,
 )
 from .throttles import RegisterRateThrottle
 
@@ -37,6 +40,13 @@ class RegisterView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+class CustomerRegisterView(RegisterView):
+    serializer_class = CustomerRegisterSerializer
+
+
+class VendorRegisterView(RegisterView):
+    serializer_class = VendorRegisterSerializer
 
 
 class MeView(APIView):
@@ -94,8 +104,8 @@ class ChangeUserRoleView(APIView):
 
 
 class ChangeUserStatusView(APIView):
-    permission_classes = [IsAdmin]
-
+    permission_classes = []
+# los estados que resiven
     def patch(self, request, user_id):
         serializer = ChangeUserStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
