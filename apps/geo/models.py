@@ -10,9 +10,11 @@ class Location(models.Model):
         on_delete=models.CASCADE,
         related_name="locations",
     )
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    description =models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         db_table = "geo_location"
