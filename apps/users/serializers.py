@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .constants import UserRoles
 from .models import User
+from apps.geo.models import Location 
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -58,3 +59,8 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ChangeUserRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES)
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id', 'latitude', 'longitude', ]
