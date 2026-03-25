@@ -27,7 +27,7 @@ def vendors_locations(request):
 def location_detail(request, pk):
     try:
         location = Location.objects.get(id=pk)
-    except Location.DoesNotExist: 
+    except Location.DoesNotExist:
         return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
 
    
