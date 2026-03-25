@@ -4,9 +4,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.users.permissions import IsAdmin
 from .permissions import IsVendor
 from .selectors import VendorSelectors
-from .serializers import VendorSerializer
+
+from .serializers import VendorModerationSerializer, VendorSerializer
+
 from .services import VendorService
 
 
@@ -52,6 +55,22 @@ class VendorProfileDetailView(APIView):
 
         return Response(VendorSerializer(updated).data)
 
+class VendorModerationView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def patch(self, request, vendor_id):
+        profile = VendorSelectors.get_vendor_profile_by_id(vendor_id)
+        serializer = VendorModerationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        updated = VendorService.update_vendor_moderation(
+            admin_user=request.user,
+            profile=profile,
+            status=serializer.validated_data["status"],
+            verified=serializer.validated_data["verified"],
+        )
+
+        return Response(VendorSerializer(updated).data)
 
 class VendorPublicDetailView(APIView):
     permission_classes = [AllowAny]

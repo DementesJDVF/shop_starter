@@ -5,34 +5,87 @@ from .models import User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
-    role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
+    correo_electronico = serializers.EmailField(source="email")
+    nombre_completo = serializers.CharField(source="full_name", required=False, allow_blank=True)
+    tipo_documento = serializers.ChoiceField(source="document_type", choices=User.DocumentType.choices, required=False)
+    numero_documento = serializers.CharField(source="document_number", required=False, allow_blank=True)
+    fecha_nacimiento = serializers.DateField(source="birth_date", required=False)
+    fecha_expedicion = serializers.DateField(source="document_issue_date", required=False)
+    telefono = serializers.CharField(source="phone", required=False, allow_blank=True)
+    direccion = serializers.CharField(source="address", required=False, allow_blank=True)
+    nombre_negocio = serializers.CharField(source="business_name", required=False, allow_blank=True)
+    tipos_producto = serializers.CharField(source="product_types", required=False, allow_blank=True)
+    contrasena = serializers.CharField(source="password", write_only=True, min_length=8)
+    confirmar_contrasena = serializers.CharField(write_only=True, min_length=8)
+    rol = serializers.ChoiceField(source="role", choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "role")
+        fields = (
+            "correo_electronico",
+            "nombre_completo",
+            "tipo_documento",
+            "numero_documento",
+            "fecha_nacimiento",
+            "fecha_expedicion",
+            "telefono",
+            "direccion",
+            "nombre_negocio",
+            "tipos_producto",
+            "contrasena",
+            "confirmar_contrasena",
+            "rol",
+        )
 
     def validate(self, attrs):
-        if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})
+        if attrs["password"] != attrs["confirmar_contrasena"]:
+            raise serializers.ValidationError({"contrasena": "Las contraseñas no coinciden"})
 
-        attrs.pop("password_confirm")
+        attrs.pop("confirmar_contrasena")
 
         role = attrs.get("role", UserRoles.CUSTOMER)
         if role not in UserRoles.SELF_ASSIGNABLE:
-            raise serializers.ValidationError({"role": "No es posible autoprovisionar este rol"})
+            raise serializers.ValidationError({"rol": "No es posible autoprovisionar este rol"})
+
+        vendor_required_fields = [
+            "full_name",
+            "document_type",
+            "document_number",
+            "birth_date",
+            "document_issue_date",
+            "phone",
+            "address",
+            "business_name",
+            "product_types",
+        ]
+
+        if role == UserRoles.VENDOR:
+            missing = [field for field in vendor_required_fields if not attrs.get(field)]
+            if missing:
+                raise serializers.ValidationError(
+                    {field: "Este campo es obligatorio para registro de vendedor" for field in missing}
+                )
+
+        if attrs.get("document_issue_date") and attrs.get("birth_date") and attrs["document_issue_date"] < attrs["birth_date"]:
+            raise serializers.ValidationError(
+                {"document_issue_date": "La fecha de expedición no puede ser anterior a la fecha de nacimiento"}
+            )
 
         return attrs
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    correo_electronico = serializers.EmailField(required=False)
+    contrasena = serializers.CharField(write_only=True, required=False)
+    email = serializers.EmailField(required=False, write_only=True)
+    password = serializers.CharField(write_only=True, required=False)
 
     def validate(self, data):
-        email = data.get("email")
-        password = data.get("password")
+        email = data.get("correo_electronico") or data.get("email")
+        password = data.get("contrasena") or data.get("password")
+
+        if not email or not password:
+            raise serializers.ValidationError("Debes enviar correo y contraseña")
 
         try:
             user = User.objects.get(email=email)
@@ -45,16 +98,87 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
+        if user.status == User.Status.PENDING:
+            raise serializers.ValidationError("Tu solicitud está pendiente de aprobación del administrador")
+
+        if user.status == User.Status.REJECTED:
+            raise serializers.ValidationError(
+                "Tu solicitud fue negada. Debes volver a registrarte con un nuevo formulario"
+            )
+
+        if user.status != User.Status.ACTIVE:
+            raise serializers.ValidationError("Usuario inactivo o bloqueado")
+
         data["user"] = user
         return data
 
 
 class UserSerializer(serializers.ModelSerializer):
+    correo_electronico = serializers.EmailField(source="email", read_only=True)
+    nombre_completo = serializers.CharField(source="full_name", read_only=True)
+    tipo_documento = serializers.CharField(source="document_type", read_only=True)
+    numero_documento = serializers.CharField(source="document_number", read_only=True)
+    fecha_nacimiento = serializers.DateField(source="birth_date", read_only=True)
+    fecha_expedicion = serializers.DateField(source="document_issue_date", read_only=True)
+    telefono = serializers.CharField(source="phone", read_only=True)
+    direccion = serializers.CharField(source="address", read_only=True)
+    nombre_negocio = serializers.CharField(source="business_name", read_only=True)
+    tipos_producto = serializers.CharField(source="product_types", read_only=True)
+    rol = serializers.CharField(source="role", read_only=True)
+    estado = serializers.CharField(source="status", read_only=True)
+
     class Meta:
         model = User
-        fields = ["id", "email", "username", "role", "is_active"]
+        fields = [
+            "id",
+            "username",
+            "correo_electronico",
+            "nombre_completo",
+            "tipo_documento",
+            "numero_documento",
+            "fecha_nacimiento",
+            "fecha_expedicion",
+            "telefono",
+            "direccion",
+            "nombre_negocio",
+            "tipos_producto",
+            "rol",
+            "estado",
+            "is_active",
+        ]
         read_only_fields = fields
 
 
 class ChangeUserRoleSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(choices=UserRoles.CHOICES)
+    rol = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False)
+    role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False)
+
+    def validate(self, attrs):
+        role = attrs.get("rol") or attrs.get("role")
+        if not role:
+            raise serializers.ValidationError({"rol": "Este campo es obligatorio"})
+        return {"role": role}
+
+
+class ChangeUserStatusSerializer(serializers.Serializer):
+    estado = serializers.ChoiceField(
+        choices=[
+            (User.Status.ACTIVE, "Activo"),
+            (User.Status.REJECTED, "Negado"),
+        ],
+        required=False,
+    )
+    status = serializers.ChoiceField(
+        choices=[
+            (User.Status.ACTIVE, "Activo"),
+            (User.Status.REJECTED, "Negado"),
+        ],
+        required=False,
+        write_only=True,
+    )
+
+    def validate(self, attrs):
+        status = attrs.get("estado") or attrs.get("status")
+        if not status:
+            raise serializers.ValidationError({"estado": "Este campo es obligatorio"})
+        return {"status": status}

@@ -31,3 +31,13 @@ class VendorService:
 
         profile.save(update_fields=[*data.keys(), "updated_at"])
         return profile
+    
+    @staticmethod
+    def update_vendor_moderation(*, admin_user, profile, status, verified):
+        if admin_user.role != User.Role.ADMIN:
+            raise PermissionDenied("Solo administradores pueden moderar vendedores.")
+
+        profile.status = status
+        profile.verified = verified
+        profile.save(update_fields=["status", "verified", "updated_at"])
+        return profile

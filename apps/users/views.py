@@ -7,7 +7,12 @@ from apps.core.middleware import get_client_ip_from_request
 from .application.services import UserService
 from .models import User
 from .permissions import IsAdmin, IsClient, IsVendor
-from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    ChangeUserRoleSerializer,
+    ChangeUserStatusSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 from .throttles import RegisterRateThrottle
 
 
@@ -27,7 +32,7 @@ class RegisterView(generics.CreateAPIView):
 
         return Response(
             {
-                "message": "Usuario registrado exitosamente",
+                "message": "Solicitud enviada. Debes esperar aprobación del administrador.",
                 "user": UserSerializer(user).data,
             },
             status=status.HTTP_201_CREATED,
@@ -82,6 +87,31 @@ class ChangeUserRoleView(APIView):
         return Response(
             {
                 "message": "Rol actualizado",
+                "user": UserSerializer(updated_user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChangeUserStatusView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, user_id):
+        serializer = ChangeUserStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target_user = get_object_or_404(User, id=user_id)
+
+        updated_user = UserService.change_status(
+            admin_user=request.user,
+            target_user=target_user,
+            new_status=serializer.validated_data["status"],
+            ip_address=get_client_ip_from_request(request),
+        )
+
+        return Response(
+            {
+                "message": "Estado actualizado",
                 "user": UserSerializer(updated_user).data,
             },
             status=status.HTTP_200_OK,

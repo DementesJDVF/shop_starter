@@ -38,10 +38,19 @@ class AuditHU04Tests(TestCase):
 
     def test_register_creates_audit_log(self):
         payload = {
-            "username": "newuser",
-            "email": "newuser@test.com",
-            "password": self.password,
-            "password_confirm": self.password,
+            "nombre_completo": "Nuevo Usuario",
+            "correo_electronico": "newuser@test.com",
+            "tipo_documento": "CC",
+            "numero_documento": "4455667788",
+            "fecha_nacimiento": "1992-04-05",
+            "fecha_expedicion": "2010-04-05",
+            "telefono": "+573155551212",
+            "direccion": "Calle 50 #40-30",
+            "nombre_negocio": "Negocio Nuevo",
+            "tipos_producto": "Abarrotes",
+            "contrasena": self.password,
+            "confirmar_contrasena": self.password,
+            "rol": "VENDEDOR",
         }
 
         response = self.client.post("/api/auth/register/", payload, format="json")

@@ -1,5 +1,11 @@
 from django.contrib import admin
+
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from apps.products.views.catalog_views import CatalogView
 from django.urls import path, include
+
 from apps.products.views.catalog_views import CatalogView
 
 # Swagger
@@ -10,13 +16,13 @@ from drf_spectacular.views import (
 )
 
 
+
 from rest_framework_simplejwt.views import (
 TokenObtainPairView,
 TokenRefreshView,
 )
 
 urlpatterns = [
-<<<<<<< HEAD
 
     path("admin/", admin.site.urls),
 
@@ -28,31 +34,9 @@ urlpatterns = [
     path("api/vendors/", include("apps.vendors.urls")),
     path("api/products/", include("apps.products.urls")),
     path("api/audit/", include("apps.audit.urls")),
+    path("api/", include("apps.users.urls")),
+    path("api/catalog/", CatalogView.as_view(), name="catalog-list"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
-=======
-    path('admin/', admin.site.urls),
-
-    # API del proyecto
-    path('api/', include('apps.users.urls')),
-    path('api/audit/', include('apps.audit.urls')),
-    path('api/products/', include('apps.products.urls')),
-    path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
-
-    # OpenAPI Schema
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-
-    # Swagger UI
-    path(
-        'api/docs/',
-        SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui'
-    ),
-
-    # Redoc (documentación alternativa)
-    path(
-        'api/redoc/',
-        SpectacularRedocView.as_view(url_name='schema'),
-        name='redoc'
-    ),
-]
->>>>>>> origin/develop
