@@ -3,5 +3,5 @@ from .views import vendors_locations, location_detail
 
 urlpatterns = [
     path('vendors-locations/', vendors_locations),
-    path('vendors-locations/<uuid:id>', location_detail),
+    path('vendors-locations/<uuid:pk>/', location_detail),
 ]
