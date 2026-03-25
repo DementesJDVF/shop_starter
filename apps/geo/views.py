@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from apps.geo.models import Location
-from apps.users.serializers import LocationSerializer
+from apps.geo.serializers import LocationSerializer
 from decimal import Decimal, InvalidOperation
 
 @api_view(['GET', 'POST'])
