@@ -171,24 +171,25 @@ class ChangeUserRoleSerializer(serializers.Serializer):
 
 
 class ChangeUserStatusSerializer(serializers.Serializer):
-    estado = serializers.ChoiceField(
-        choices=[
-            (User.Status.ACTIVE, "Activo"),
-            (User.Status.REJECTED, "Negado"),
-        ],
-        required=False,
-    )
-    status = serializers.ChoiceField(
-        choices=[
-            (User.Status.ACTIVE, "Activo"),
-            (User.Status.REJECTED, "Negado"),
-        ],
-        required=False,
-        write_only=True,
-    )
+    STATUS_ALIASES = {
+        "ACTIVO": User.Status.ACTIVE,
+        "ACTIVE": User.Status.ACTIVE,
+        "NEGADO": User.Status.REJECTED,
+        "DENEGADO": User.Status.REJECTED,
+        "RECHAZADO": User.Status.REJECTED,
+        "REJECTED": User.Status.REJECTED,
+    }
+
+    estado = serializers.CharField(required=False)
+    status = serializers.CharField(required=False, write_only=True)
 
     def validate(self, attrs):
         status = attrs.get("estado") or attrs.get("status")
         if not status:
             raise serializers.ValidationError({"estado": "Este campo es obligatorio"})
-        return {"status": status}
+
+        normalized_status = self.STATUS_ALIASES.get(str(status).strip().upper())
+        if not normalized_status:
+            raise serializers.ValidationError({"estado": "Estado inválido"})
+
+        return {"status": normalized_status}

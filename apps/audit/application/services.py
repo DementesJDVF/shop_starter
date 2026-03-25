@@ -1,4 +1,5 @@
 import json
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.models import model_to_dict
@@ -8,6 +9,21 @@ from apps.core.middleware import get_current_ip, get_current_user
 
 
 class AuditService:
+    @staticmethod
+    def _normalize_user(user):
+        if not user:
+            return None, None
+
+        if not getattr(user, "is_authenticated", False):
+            return None, None
+
+        user_model = get_user_model()
+        if isinstance(user, user_model):
+            return user, None
+
+        user_id = getattr(user, "id", None) or getattr(user, "pk", None)
+        return None, user_id
+
 
     @staticmethod
     def _log(
@@ -24,10 +40,11 @@ class AuditService:
         if not ip_address:
             ip_address = get_current_ip()
 
+        normalized_user, normalized_user_id = AuditService._normalize_user(user)
         content_type = ContentType.objects.get_for_model(instance.__class__)
 
-        AuditLog.objects.create(
-            user=user,
+        create_kwargs = dict(
+            user=normalized_user,
             action_type=action_type,
             content_type=content_type,
             object_id=str(instance.pk),
@@ -36,6 +53,10 @@ class AuditService:
             new_data=new_data,
             ip_address=ip_address,
         )
+        if normalized_user is None and normalized_user_id is not None:
+            create_kwargs["user_id"] = normalized_user_id
+
+        AuditLog.objects.create(**create_kwargs)
 
     @classmethod
     def log_create(cls, user, instance, ip_address=None):
