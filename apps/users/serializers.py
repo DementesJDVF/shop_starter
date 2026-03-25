@@ -17,7 +17,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     tipos_producto = serializers.CharField(source="product_types", required=False, allow_blank=True)
     contrasena = serializers.CharField(source="password", write_only=True, min_length=8)
     confirmar_contrasena = serializers.CharField(write_only=True, min_length=8)
-    rol = serializers.ChoiceField(source="role", choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
+    rol = serializers.ChoiceField(
+        source="role",
+        choices=[(role, label) for role, label in UserRoles.CHOICES if role in UserRoles.SELF_ASSIGNABLE],
+        required=False,
+        default=UserRoles.CUSTOMER,
+    )
+
 
     class Meta:
         model = User
@@ -73,6 +79,34 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return attrs
 
+class CustomerRegisterSerializer(RegisterSerializer):
+    rol = serializers.ChoiceField(
+        source="role",
+        choices=[(UserRoles.CUSTOMER, "Cliente")],
+        required=False,
+        default=UserRoles.CUSTOMER,
+    )
+
+    class Meta(RegisterSerializer.Meta):
+        fields = (
+            "correo_electronico",
+            "contrasena",
+            "confirmar_contrasena",
+            "rol",
+        )
+
+
+class VendorRegisterSerializer(RegisterSerializer):
+    rol = serializers.ChoiceField(
+        source="role",
+        choices=[(UserRoles.VENDOR, "Vendedor")],
+        required=False,
+        default=UserRoles.VENDOR,
+    )
+
+    class Meta(RegisterSerializer.Meta):
+        fields = RegisterSerializer.Meta.fields
+
 
 class LoginSerializer(serializers.Serializer):
     correo_electronico = serializers.EmailField(required=False)
@@ -108,13 +142,14 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
-        if user.status == User.Status.PENDING:
-            raise serializers.ValidationError("Tu solicitud está pendiente de aprobación del administrador")
+        if not (user.is_staff or user.is_superuser):
+            if user.status == User.Status.PENDING:
+                raise serializers.ValidationError("Tu solicitud está pendiente de aprobación del administrador")
+
 
         if user.status == User.Status.REJECTED:
             raise serializers.ValidationError(
-                "Tu solicitud fue negada. Debes volver a registrarte con un nuevo formulario"
-            )
+                    "Tu solicitud fue negada. Debes volver a registrarte con un nuevo formulario")
 
         if user.status != User.Status.ACTIVE:
             raise serializers.ValidationError("Usuario inactivo o bloqueado")
@@ -171,24 +206,26 @@ class ChangeUserRoleSerializer(serializers.Serializer):
 
 
 class ChangeUserStatusSerializer(serializers.Serializer):
-    estado = serializers.ChoiceField(
-        choices=[
-            (User.Status.ACTIVE, "Activo"),
-            (User.Status.REJECTED, "Negado"),
-        ],
-        required=False,
-    )
-    status = serializers.ChoiceField(
-        choices=[
-            (User.Status.ACTIVE, "Activo"),
-            (User.Status.REJECTED, "Negado"),
-        ],
-        required=False,
-        write_only=True,
-    )
+
+    STATUS_ALIASES = {
+        "ACTIVO": User.Status.ACTIVE,
+        "ACTIVE": User.Status.ACTIVE,
+        "NEGADO": User.Status.REJECTED,
+        "DENEGADO": User.Status.REJECTED,
+        "RECHAZADO": User.Status.REJECTED,
+        "REJECTED": User.Status.REJECTED,
+    }
+
+    estado = serializers.CharField(required=False)
+    status = serializers.CharField(required=False, write_only=True)
 
     def validate(self, attrs):
         status = attrs.get("estado") or attrs.get("status")
         if not status:
             raise serializers.ValidationError({"estado": "Este campo es obligatorio"})
-        return {"status": status}
+
+        normalized_status = self.STATUS_ALIASES.get(str(status).strip().upper())
+        if not normalized_status:
+            raise serializers.ValidationError({"estado": "Estado inválido"})
+
+        return {"status": normalized_status}

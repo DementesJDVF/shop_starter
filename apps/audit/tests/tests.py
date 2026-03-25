@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from apps.audit.application.services import AuditService
 from apps.audit.infrastructure.models import AuditLog
 from apps.core.application.services import SoftDeleteService
 from apps.products.models import Product
@@ -129,6 +131,19 @@ class AuditHU04Tests(TestCase):
             ).exists()
         )
 
+    def test_status_change_with_anonymous_actor_does_not_crash(self):
+        AuditService.log_status_change(
+            user=AnonymousUser(),
+            instance=self.client_user,
+            previous_status=self.client_user.status,
+            ip_address="127.0.0.1",
+        )
+
+        log = AuditLog.objects.filter(
+            action_type=AuditLog.ActionType.STATUS_CHANGE,
+            object_id=str(self.client_user.id),
+        ).latest("created_at")
+        self.assertIsNone(log.user)
 
     def test_base_model_create_is_audited_automatically(self):
         product = Product.objects.create(

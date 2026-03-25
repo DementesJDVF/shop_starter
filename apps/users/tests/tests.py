@@ -1,6 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from apps.users.models import User
+from apps.users.serializers import ChangeUserStatusSerializer
 from django.urls import reverse
 
 
@@ -74,3 +75,14 @@ class AuthTests(APITestCase):
         url = reverse("login")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_change_user_status_serializer_accepts_spanish_estado(self):
+        serializer = ChangeUserStatusSerializer(data={"estado": "ACTIVO"})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["status"], User.Status.ACTIVE)
+
+    def test_change_user_status_serializer_accepts_denegado_alias(self):
+        serializer = ChangeUserStatusSerializer(data={"estado": "DENEGADO"})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["status"], User.Status.REJECTED)

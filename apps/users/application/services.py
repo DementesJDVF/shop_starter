@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import transaction
 from django.utils.text import slugify
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -28,7 +30,7 @@ class UserService:
             username=UserService._build_username(validated_data["email"]),
             email=validated_data["email"],
             password=validated_data["password"],
-            role=validated_data.get("role", UserRoles.CUSTOMER),
+            role=validated_data.get("role", UserRoles.CLIENTE),
             full_name=validated_data.get("full_name", ""),
             document_type=validated_data.get("document_type", ""),
             document_number=validated_data.get("document_number"),
@@ -40,6 +42,7 @@ class UserService:
             product_types=validated_data.get("product_types", ""),
             status=User.Status.PENDING,
         )
+
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user
 
@@ -87,4 +90,33 @@ class UserService:
             ip_address=ip_address,
         )
 
+        UserService._send_status_update_email(user=target_user)
+
         return target_user
+
+    @staticmethod
+    def _send_status_update_email(*, user: User):
+        if user.status == User.Status.ACTIVE:
+            subject = "Cuenta aprobada"
+            message = (
+                f"Hola {user.full_name or ''},\n\n"
+                "Tu cuenta ha sido aprobada. Ya puedes iniciar sesión.\n\n"
+                "ShopStarter"
+            )
+        elif user.status == User.Status.REJECTED:
+            subject = "Cuenta rechazada"
+            message = (
+                f"Hola {user.full_name or ''},\n\n"
+                "Tu solicitud fue rechazada. Debes registrarte nuevamente.\n\n"
+                "ShopStarter"
+            )
+        else:
+            return
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
