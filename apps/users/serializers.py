@@ -76,13 +76,23 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class LoginSerializer(serializers.Serializer):
     correo_electronico = serializers.EmailField(required=False)
-    contrasena = serializers.CharField(write_only=True, required=False)
-    email = serializers.EmailField(required=False, write_only=True)
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, style={"input_type": "password"})
+
+    def to_internal_value(self, data):
+        mutable_data = data.copy()
+
+        if "correo_electronico" not in mutable_data and "email" in mutable_data:
+            mutable_data["correo_electronico"] = mutable_data.get("email")
+
+        if "password" not in mutable_data and "contrasena" in mutable_data:
+            mutable_data["password"] = mutable_data.get("contrasena")
+
+        return super().to_internal_value(mutable_data)
+
 
     def validate(self, data):
-        email = data.get("correo_electronico") or data.get("email")
-        password = data.get("contrasena") or data.get("password")
+        email = data.get("correo_electronico")
+        password = data.get("password")
 
         if not email or not password:
             raise serializers.ValidationError("Debes enviar correo y contraseña")
