@@ -1,11 +1,11 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import BaseModel
 
-
-class Vendor(BaseModel):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pendiente"
         ACTIVE = "ACTIVE", "Activo"
@@ -18,7 +18,7 @@ class Vendor(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="vendor",
+        related_name="vendor_profile",
     )
     status = models.CharField(
         max_length=20,
@@ -40,6 +40,7 @@ class Vendor(BaseModel):
     )
 
     class Meta:
+        db_table = "vendors_vendorprofile"
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["verified"]),

@@ -10,14 +10,26 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('orders', '0002_initial'),
         ('reviews', '0001_initial'),
+        ('vendors', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='auditlog',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='review_audit_logs', to=settings.AUTH_USER_MODEL),
+            model_name='review',
+            name='client',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AddField(
+            model_name='review',
+            name='order',
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='review', to='orders.order'),
+        ),
+        migrations.AddField(
+            model_name='review',
+            name='vendor',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='vendors.vendorprofile'),
         ),
     ]
