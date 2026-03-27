@@ -1,16 +1,31 @@
-from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 
 from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
-from decimal import Decimal, InvalidOperation
+from django.shortcuts import get_list_or_404, get_object_or_404
 
+class LocationViewSet(viewsets.ModelViewSet):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+    permission_classes = [AllowAny]
+    # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
+    # puedes sobrescribir esta función:
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        read_serializer = LocationSerializer(serializer.instance, context={'request': request})
+        headers = self.get_success_headers(read_serializer.data)
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 @api_view(['GET', 'POST'])
 def vendors_locations(request):
     
     if request.method == 'GET':
-        locations = Location.objects.all()
+        locations =Location.objects.all()
         serializer = LocationSerializer(locations, many=True)
         return Response(serializer.data)
     
@@ -24,18 +39,7 @@ def vendors_locations(request):
     
 
 @api_view(['GET'])
-def location_detail(request, pk):
-    try:
-        location = Location.objects.get(id=pk)
-    except Location.DoesNotExist:
-        return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
-
-   
+def location_detail(request, id):
+    location = get_object_or_404(Location, id=id)
     serializer = LocationSerializer(location)
-    data = serializer.data
-    for field in ['latitude', 'longitude']:
-        try:
-            data[field] = Decimal(data[field])
-        except (InvalidOperation, TypeError, ValueError):
-            data[field] = None  
-    return Response(data)
+    return Response(serializer.data)
