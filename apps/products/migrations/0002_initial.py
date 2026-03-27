@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='product',
             name='vendor',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='vendors.vendor'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='vendors.vendorprofile'),
         ),
         migrations.AddIndex(
             model_name='product',

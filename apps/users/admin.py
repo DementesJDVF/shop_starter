@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User
 
 
-# 🔥 Acciones personalizadas
+#Acciones personalizadas
 @admin.action(description="Aprobar usuarios seleccionados")
 def aprobar_usuarios(modeladmin, request, queryset):
     queryset.update(status=User.Status.ACTIVE)
@@ -97,5 +97,5 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    # ⚡ Acciones rápidas
+    #Acciones rápidas
     actions = [aprobar_usuarios, rechazar_usuarios]

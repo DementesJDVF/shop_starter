@@ -2,6 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
+import uuid
 from django.conf import settings
 from django.db import migrations, models
 
@@ -16,9 +17,8 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Vendor',
+            name='VendorProfile',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('is_deleted', models.BooleanField(db_index=True, default=False)),
@@ -29,7 +29,28 @@ class Migration(migrations.Migration):
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='vendor', to=settings.AUTH_USER_MODEL)),
             ],
             options={
-                'indexes': [models.Index(fields=['status'], name='vendors_ven_status_2dcb2a_idx'), models.Index(fields=['verified'], name='vendors_ven_verifie_775df7_idx')],
+                'db_table': 'vendors_vendorprofile',
             },
+        ),
+        migrations.CreateModel(
+            name='Vendor',
+            fields=[
+            ],
+            options={
+                'verbose_name': 'Vendor',
+                'verbose_name_plural': 'Vendors',
+                'proxy': True,
+                'indexes': [],
+                'constraints': [],
+            },
+            bases=('vendors.vendorprofile',),
+        ),
+        migrations.AddIndex(
+            model_name='vendorprofile',
+            index=models.Index(fields=['status'], name='vendors_ven_status_e0f104_idx'),
+        ),
+        migrations.AddIndex(
+            model_name='vendorprofile',
+            index=models.Index(fields=['verified'], name='vendors_ven_verifie_f728fc_idx'),
         ),
     ]
