@@ -4,15 +4,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.users.constants import UserRoles
+
 from .models import VendorProfile
-from .permissions import IsVendor
+from .permissions import IsVendorRole
 from .selectors import VendorSelectors
 from .serializers import VendorPublicSerializer, VendorSerializer
 from .services import VendorService
 
 
 class VendorProfileCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsVendor]
+    permission_classes = [IsAuthenticated, IsVendorRole]
 
     def post(self, request):
         serializer = VendorSerializer(data=request.data)
@@ -27,7 +29,7 @@ class VendorProfileCreateView(APIView):
 
 
 class VendorProfileDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsVendor]
+    permission_classes = [IsAuthenticated, IsVendorRole]
 
     def get_profile_or_404(self, user):
         profile = VendorSelectors.get_vendor_profile_by_user(user)
@@ -65,7 +67,7 @@ class VendorPublicView(generics.RetrieveAPIView):
         return (
             VendorProfile.objects.with_rating()
             .select_related("user")
-            .filter(status=VendorProfile.Status.ACTIVE)
+            .filter(status=VendorProfile.Status.ACTIVE, user__role=UserRoles.VENDOR)
         )
 
 
