@@ -6,6 +6,9 @@ from django.db import models
 
 from apps.core.models import BaseModel
 
+
+class VendorProfile(BaseModel):
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pendiente"
         ACTIVE = "ACTIVE", "Activo"
@@ -20,18 +23,22 @@ from apps.core.models import BaseModel
         on_delete=models.CASCADE,
         related_name="vendor_profile",
     )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING,
         db_index=True,
     )
+
     verified = models.BooleanField(default=False, db_index=True)
+
     location_type = models.CharField(
         max_length=10,
         choices=LocationType.choices,
         default=LocationType.FIXED,
     )
+
     reputation = models.DecimalField(
         max_digits=3,
         decimal_places=2,

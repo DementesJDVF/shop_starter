@@ -7,9 +7,10 @@ from rest_framework.views import APIView
 from apps.users.permissions import IsAdmin
 from .permissions import IsVendor
 from .selectors import VendorSelectors
-
-from .serializers import VendorModerationSerializer, VendorSerializer
-
+from .serializers import (
+    VendorSerializer,
+    VendorModerationSerializer,
+)
 from .services import VendorService
 
 
@@ -17,15 +18,16 @@ class VendorProfileCreateView(APIView):
     permission_classes = [IsAuthenticated, IsVendor]
 
     def post(self, request):
-        serializer = VendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
+        # No usamos VendorSerializer para crear
         profile = VendorService.create_vendor_profile(
             user=request.user,
-            data=serializer.validated_data,
+            data=request.data,
         )
 
-        return Response(VendorSerializer(profile).data, status=status.HTTP_201_CREATED)
+        return Response(
+            VendorSerializer(profile).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class VendorProfileDetailView(APIView):
@@ -44,22 +46,21 @@ class VendorProfileDetailView(APIView):
     def patch(self, request):
         profile = self.get_profile_or_404(request.user)
 
-        serializer = VendorSerializer(profile, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-
         updated = VendorService.update_vendor_profile(
             request.user,
             profile,
-            serializer.validated_data,
+            request.data,
         )
 
         return Response(VendorSerializer(updated).data)
+
 
 class VendorModerationView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def patch(self, request, vendor_id):
         profile = VendorSelectors.get_vendor_profile_by_id(vendor_id)
+
         serializer = VendorModerationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -71,6 +72,7 @@ class VendorModerationView(APIView):
         )
 
         return Response(VendorSerializer(updated).data)
+
 
 class VendorPublicDetailView(APIView):
     permission_classes = [AllowAny]

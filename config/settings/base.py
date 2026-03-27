@@ -2,6 +2,16 @@ import environ
 import dj_database_url
 from pathlib import Path
 from datetime import timedelta
+from importlib.util import find_spec
+from django.core.exceptions import ImproperlyConfigured
+
+try:
+   import corsheaders 
+except ModuleNotFoundError as exc:
+    raise ImproperlyConfigured(
+        "Falta la dependencia obligatoria 'django-cors-headers'. "
+        "Instala dependencias con: pip install -r requirements.txt"
+    ) from exc
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -58,12 +68,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
 ]
+if find_spec("corsheaders"):
+    INSTALLED_APPS.append("corsheaders")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -72,6 +83,9 @@ MIDDLEWARE = [
     "apps.core.middleware.BlockInactiveUserMiddleware",
     "apps.core.middleware.CurrentUserMiddleware",
 ]
+if find_spec("corsheaders"):
+    MIDDLEWARE.insert(3, "corsheaders.middleware.CorsMiddleware")
+
 
 AUTH_USER_MODEL = "users.User"
 
