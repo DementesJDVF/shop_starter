@@ -15,6 +15,12 @@ class VendorCreationTests(APITestCase):
             password="123456",
             role=User.Role.VENDEDOR,
         )
+        self.admin = User.objects.create_user(
+            username="admin1",
+            email="admin@test.com",
+            password="123456",
+            role=User.Role.ADMIN,
+        )
 
     def authenticate(self, user):
         response = self.client.post(
@@ -91,11 +97,12 @@ class VendorCreationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["location_type"], "FIXED")
 
-    def test_public_detail_only_returns_active_profiles(self):
+    def test_public_detail_only_returns_active_and_verified_profiles(self):
         active_profile = Vendor.objects.create(
             user=self.user,
             location_type="FIXED",
             status=Vendor.Status.ACTIVE,
+            verified=True,
         )
 
         inactive_user = User.objects.create_user(
@@ -108,6 +115,7 @@ class VendorCreationTests(APITestCase):
             user=inactive_user,
             location_type="FIXED",
             status=Vendor.Status.PENDING,
+            verified=False,
         )
 
         ok_response = self.client.get(
@@ -133,3 +141,38 @@ class VendorCreationTests(APITestCase):
         self.assertEqual(response.data["status"], Vendor.Status.PENDING)
         self.assertEqual(response.data["verified"], False)
         self.assertEqual(response.data["reputation"], "0.00")
+
+    def test_admin_can_moderate_vendor_status_and_verification(self):
+        profile = Vendor.objects.create(user=self.user, location_type="FIXED")
+        self.authenticate(self.admin)
+
+        response = self.client.patch(
+            reverse("vendor-moderation", kwargs={"vendor_id": profile.id}),
+            {"status": Vendor.Status.ACTIVE, "verified": True},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], Vendor.Status.ACTIVE)
+        self.assertEqual(response.data["verified"], True)
+
+    def test_non_admin_cannot_moderate_vendor(self):
+        profile = Vendor.objects.create(user=self.user, location_type="FIXED")
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            reverse("vendor-moderation", kwargs={"vendor_id": profile.id}),
+            {"status": Vendor.Status.ACTIVE, "verified": True},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_verify_vendor_if_not_active(self):
+        profile = Vendor.objects.create(user=self.user, location_type="FIXED")
+        self.authenticate(self.admin)
+
+        response = self.client.patch(
+            reverse("vendor-moderation", kwargs={"vendor_id": profile.id}),
+            {"status": Vendor.Status.PENDING, "verified": True},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
