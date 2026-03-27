@@ -1,12 +1,13 @@
 import uuid
 
 from django.db import models
+from django.conf import settings
 
 
 class Location(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey(
-        "vendors.VendorProfile",
+        settings.AUTH_USER_MODEL,  # Apunta dinámicamente a tu clase User personalizada
         on_delete=models.CASCADE,
         related_name="locations",
     )
