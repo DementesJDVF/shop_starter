@@ -10,32 +10,24 @@ from drf_spectacular.views import (
 
 
 from rest_framework_simplejwt.views import (
-TokenObtainPairView,
-TokenRefreshView,
+    TokenObtainPairView,
+    TokenRefreshView,
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-
+    path("admin/", admin.site.urls),
     # API del proyecto
-    path('api/', include('apps.users.urls')),
-    path('api/audit/', include('apps.audit.urls')),
-    path('api/products/', include('apps.products.urls')),
-
+    path("api/", include("apps.users.urls")),
+    path("api/audit/", include("apps.audit.urls")),
+    path("api/products/", include("apps.products.urls")),
     # OpenAPI Schema
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Swagger UI
     path(
-        'api/docs/',
-        SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui'
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
     ),
-
-    # Redoc (documentación alternativa)
-    path(
-        'api/redoc/',
-        SpectacularRedocView.as_view(url_name='schema'),
-        name='redoc'
-    ),
+    # Redoc
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
