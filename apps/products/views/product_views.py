@@ -14,12 +14,9 @@ class ProductCreateView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
-        serializer = ProductCreateSerializer(data=request.data)
+        serializer = ProductCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-
-        vendor_profile = ProductService.validate_vendor_can_manage_products(user=request.user)
-        product = ProductService.create_product(vendor_profile=vendor_profile, data=serializer.validated_data)
-
+        product = serializer.save()
         return Response(ProductSerializer(product).data, status=status.HTTP_201_CREATED)
 
 
@@ -40,7 +37,7 @@ class ProductDetailView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def put(self, request, product_id: int):
-        serializer = ProductCreateSerializer(data=request.data)
+        serializer = ProductCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         updated_product = ProductService.update_product(
@@ -52,7 +49,7 @@ class ProductDetailView(APIView):
         return Response(ProductSerializer(updated_product).data, status=status.HTTP_200_OK)
 
     def patch(self, request, product_id: int):
-        serializer = ProductCreateSerializer(data=request.data, partial=True)
+        serializer = ProductCreateSerializer(data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         updated_product = ProductService.update_product(
