@@ -9,3 +9,4 @@ class VendorsConfig(AppConfig):
     def ready(self):
         # Register vendor domain signals.
         from . import signals  # noqa: F401
+        import apps.vendors.signals
