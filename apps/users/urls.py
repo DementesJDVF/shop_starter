@@ -1,6 +1,13 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from rest_framework.routers import DefaultRouter
+from apps.users.views import AdminUserViewSet
+
+router = DefaultRouter()
+router.register(r'admin/users', AdminUserViewSet, basename='admin-users')
+
+
 from .api.auth_views import LoginView
 from .views import (
     AdminOnlyView,
