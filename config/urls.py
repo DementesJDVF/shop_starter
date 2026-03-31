@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/categories/', CategoryListCreateView.as_view(), name='categories-list'),
     path('api/categories/<int:category_id>/', CategoryDetailView.as_view(), name='category-detail'),
     path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
+    
+    path('api/orders/', include('apps.orders.urls')),
 
     # OpenAPI Schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
