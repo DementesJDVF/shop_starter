@@ -30,7 +30,9 @@ def vendors_locations(request):
         return Response(serializer.data)
     
     if request.method ==  'POST':
-        serializer = LocationSerializer(data=request.data)
+        data = request.data.copy()
+        data['vendor'] = request.user.id
+        serializer = LocationSerializer(data=data)
         
         if serializer.is_valid():
             serializer.save()
@@ -39,7 +41,7 @@ def vendors_locations(request):
     
 
 @api_view(['GET'])
-def location_detail(request, id):
-    location = get_object_or_404(Location, id=id)
+def location_detail(request, pk):
+    location = get_object_or_404(Location, id=pk)
     serializer = LocationSerializer(location)
     return Response(serializer.data)
