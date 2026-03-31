@@ -8,7 +8,6 @@ from apps.core.models import BaseModel
 
 
 class VendorProfile(BaseModel):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pendiente"
@@ -24,18 +23,22 @@ class VendorProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="vendor_profile",
     )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING,
         db_index=True,
     )
+
     verified = models.BooleanField(default=False, db_index=True)
+
     location_type = models.CharField(
         max_length=10,
         choices=LocationType.choices,
         default=LocationType.FIXED,
     )
+
     reputation = models.DecimalField(
         max_digits=3,
         decimal_places=2,
@@ -51,13 +54,4 @@ class VendorProfile(BaseModel):
         ]
 
     def __str__(self):
-        return f"VendorProfile({self.user.email})"
-
-
-class Vendor(VendorProfile):
-    """Backward-compatible proxy for code that still references vendors.Vendor."""
-
-    class Meta:
-        proxy = True
-        verbose_name = "Vendor"
-        verbose_name_plural = "Vendors"
+        return f"Vendor({self.user.email})"
