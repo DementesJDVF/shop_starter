@@ -44,10 +44,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        if attrs["password"] != attrs["confirmar_contrasena"]:
-            raise serializers.ValidationError({"contrasena": "Las contraseñas no coinciden"})
+        password = attrs.get("password")
+        confirmar = self.initial_data.get("confirmar_contrasena")
 
-        attrs.pop("confirmar_contrasena")
+        if password != confirmar:
+            raise serializers.ValidationError({"contrasena": "Las contraseñas no coinciden"})
 
         role = attrs.get("role", UserRoles.CUSTOMER)
         if role not in UserRoles.SELF_ASSIGNABLE:
@@ -142,17 +143,20 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
+        # Staff y superusers pueden ingresar sin importar el status
         if not (user.is_staff or user.is_superuser):
             if user.status == User.Status.PENDING:
-                raise serializers.ValidationError("Tu solicitud está pendiente de aprobación del administrador")
+                raise serializers.ValidationError(
+                    "Tu solicitud está pendiente de aprobación del administrador"
+                )
 
+            if user.status == User.Status.REJECTED:
+                raise serializers.ValidationError(
+                    "Tu solicitud fue negada. Debes volver a registrarte con un nuevo formulario"
+                )
 
-        if user.status == User.Status.REJECTED:
-            raise serializers.ValidationError(
-                    "Tu solicitud fue negada. Debes volver a registrarte con un nuevo formulario")
-
-        if user.status != User.Status.ACTIVE:
-            raise serializers.ValidationError("Usuario inactivo o bloqueado")
+            if user.status != User.Status.ACTIVE:
+                raise serializers.ValidationError("Usuario inactivo o bloqueado")
 
         data["user"] = user
         return data
@@ -210,10 +214,16 @@ class ChangeUserStatusSerializer(serializers.Serializer):
     STATUS_ALIASES = {
         "ACTIVO": User.Status.ACTIVE,
         "ACTIVE": User.Status.ACTIVE,
+        "PENDIENTE": User.Status.PENDING,
+        "PENDING": User.Status.PENDING,
         "NEGADO": User.Status.REJECTED,
         "DENEGADO": User.Status.REJECTED,
         "RECHAZADO": User.Status.REJECTED,
         "REJECTED": User.Status.REJECTED,
+        "INACTIVO": User.Status.INACTIVE,
+        "INACTIVE": User.Status.INACTIVE,
+        "BLOQUEADO": User.Status.BLOCKED,
+        "BLOCKED": User.Status.BLOCKED,
     }
 
     estado = serializers.CharField(required=False)
@@ -226,6 +236,9 @@ class ChangeUserStatusSerializer(serializers.Serializer):
 
         normalized_status = self.STATUS_ALIASES.get(str(status).strip().upper())
         if not normalized_status:
-            raise serializers.ValidationError({"estado": "Estado inválido"})
+            allowed = ", ".join(sorted(self.STATUS_ALIASES.keys()))
+            raise serializers.ValidationError(
+                {"estado": f"Estado inválido. Valores permitidos: {allowed}"}
+            )
 
         return {"status": normalized_status}

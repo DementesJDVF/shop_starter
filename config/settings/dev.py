@@ -1,8 +1,7 @@
 from .base import *
-import dj_database_url
 
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 # CORS (development only)
 CORS_ALLOW_ALL_ORIGINS = True

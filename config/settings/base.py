@@ -1,17 +1,8 @@
 import environ
-import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 from importlib.util import find_spec
-from django.core.exceptions import ImproperlyConfigured
 
-try:
-   import corsheaders 
-except ModuleNotFoundError as exc:
-    raise ImproperlyConfigured(
-        "Falta la dependencia obligatoria 'django-cors-headers'. "
-        "Instala dependencias con: pip install -r requirements.txt"
-    ) from exc
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -44,6 +35,8 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -67,6 +60,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
 ]
 if find_spec("corsheaders"):
     INSTALLED_APPS.append("corsheaders")
@@ -135,7 +129,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # CORS / CSRF
 CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
