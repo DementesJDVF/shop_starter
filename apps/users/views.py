@@ -104,8 +104,8 @@ class ChangeUserRoleView(APIView):
 
 
 class ChangeUserStatusView(APIView):
-    permission_classes = []
-# los estados que resiven
+    permission_classes = [IsAdmin]
+
     def patch(self, request, user_id):
         serializer = ChangeUserStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -78,6 +78,7 @@ class ProductService:
 
         product = Product(
             vendor=vendor_profile,
+            category=data["category"],
             name=data["name"],
             description=data["description"],
             price=data["price"],
@@ -111,7 +112,7 @@ class ProductService:
 
         ProductService._validate_create_payload(data=data)
 
-        for field in ("name", "description", "price", "stock"):
+        for field in ("name", "description", "price", "stock", "category"):
             if field in data:
                 setattr(product, field, data[field])
 
@@ -149,7 +150,7 @@ class ProductService:
     def get_public_catalog():
         """Return publicly visible catalog products with optimized query."""
         return (
-            Product.objects.select_related("vendor")
+            Product.objects.select_related("vendor", "category")
             .filter(
                 status=Product.ProductStatus.ACTIVE,
                 is_deleted=False,

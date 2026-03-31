@@ -3,6 +3,15 @@ from rest_framework import serializers
 from .models import VendorProfile
 
 
+class VendorCreateSerializer(serializers.Serializer):
+    """Serializer for vendor profile creation/update."""
+    location_type = serializers.ChoiceField(
+        choices=VendorProfile.LocationType.choices,
+        required=False,
+        default=VendorProfile.LocationType.FIXED,
+    )
+
+
 class VendorSerializer(serializers.ModelSerializer):
 
     class Meta:
