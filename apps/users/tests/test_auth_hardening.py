@@ -1,5 +1,5 @@
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -24,43 +24,15 @@ from apps.users.models import User
     }
 )
 class AuthHardeningTests(APITestCase):
-    def _simple_register_payload(self, **overrides):
-        payload = {
-            "correo_electronico": "cliente@example.com",
-            "contrasena": "password123",
-            "confirmar_contrasena": "password123",
-            "rol": "CLIENTE",
-        }
-        payload.update(overrides)
-        return payload
-
-    def _register_payload(self, **overrides):
-        payload = self._simple_register_payload(
-            nombre_completo="Vendedor Prueba",
-            correo_electronico="vendedor@example.com",
-            tipo_documento="CC",
-            numero_documento="999888777",
-            fecha_nacimiento="1991-02-03",
-            fecha_expedicion="2009-02-03",
-            telefono="+573102223344",
-            direccion="Cra 10 #20-30",
-            nombre_negocio="Tienda Demo",
-            tipos_producto="Tecnología",
-        )
-        payload.update(overrides)
-        return payload
-    def test_register_allows_simple_customer_role(self):
-        url = reverse("register")
-        payload = self._simple_register_payload()
-
-        response = self.client.post(url, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.get(email="cliente@example.com").role, "CLIENTE")
-
     def test_register_allows_customer_or_vendor_role(self):
         url = reverse("register")
-        payload = self._register_payload(rol="VENDEDOR")
+        payload = {
+            "username": "vendedor",
+            "email": "vendedor@example.com",
+            "password": "password123",
+            "password_confirm": "password123",
+            "role": "VENDEDOR",
+        }
 
         response = self.client.post(url, payload, format="json")
 
@@ -76,11 +48,6 @@ class AuthHardeningTests(APITestCase):
             "password_confirm": "password123",
             "role": "ADMIN",
         }
-        payload = self._register_payload(
-            correo_electronico="adminwannabe@example.com",
-            numero_documento="111222333",
-            rol="ADMIN",
-        )
 
         response = self.client.post(url, payload, format="json")
 
@@ -105,4 +72,7 @@ class AuthHardeningTests(APITestCase):
 
         throttled = self.client.post(
             url,
-            {"email": "normal@example.com", "password": "wrongpass"},)
+            {"email": "normal@example.com", "password": "wrongpass"},
+            format="json",
+        )
+        self.assertEqual(throttled.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
