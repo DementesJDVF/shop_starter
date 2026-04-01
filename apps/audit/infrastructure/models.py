@@ -37,10 +37,7 @@ class AuditLog(BaseModel):
         related_name="audit_logs",
     )
 
-    action = models.CharField(max_length=255, blank=True)
-    entity = models.CharField(max_length=255, blank=True)
-    entity_id = models.CharField(max_length=255, blank=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
+
 
     action_type = models.CharField(
         max_length=50,
@@ -81,4 +78,4 @@ class AuditLog(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.action_type or self.action} - {self.entity or self.object_repr}"
+        return f"{self.action_type} - {self.object_repr}"

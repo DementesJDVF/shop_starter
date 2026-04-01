@@ -1,6 +1,6 @@
 from rest_framework import permissions, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
 
 from apps.core.middleware import get_client_ip_from_request
 from apps.users.application.services import UserService
@@ -8,12 +8,13 @@ from apps.users.serializers import LoginSerializer, UserSerializer
 from apps.users.throttles import LoginRateThrottle
 
 
-class LoginView(APIView):
+class LoginView(GenericAPIView):
+    serializer_class = LoginSerializer
     permission_classes = (permissions.AllowAny,)
     throttle_classes = (LoginRateThrottle,)
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
 
