@@ -3,14 +3,17 @@ from django.urls import path, include
 from apps.products.views.catalog_views import CatalogView
 from apps.products.views.category_views import CategoryListCreateView, CategoryDetailView
 
+# Swagger
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+
+
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
+TokenObtainPairView,
+TokenRefreshView,
 )
 from apps.products.views.catalog_views import CatalogView
 

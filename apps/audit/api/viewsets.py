@@ -1,4 +1,3 @@
-from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
@@ -17,6 +16,4 @@ class AuditLogViewSet(ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
     permission_classes = [IsAdminUserRole]
     pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ["created_at", "action_type"]
     ordering = ["-created_at"]

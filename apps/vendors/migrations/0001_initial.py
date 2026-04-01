@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('is_deleted', models.BooleanField(db_index=True, default=False)),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('status', models.CharField(choices=[('PENDING', 'Pendiente'), ('ACTIVE', 'Activo'), ('BLOCKED', 'Bloqueado')], db_index=True, default='PENDING', max_length=20)),
                 ('verified', models.BooleanField(db_index=True, default=False)),
                 ('location_type', models.CharField(choices=[('FIXED', 'Fijo'), ('MOBILE', 'Móvil')], default='FIXED', max_length=10)),

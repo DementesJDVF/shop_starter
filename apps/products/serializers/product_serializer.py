@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from apps.products.models import Category, Product
+from apps.products.models import Product
 
 
 class ProductCreateSerializer(serializers.Serializer):
@@ -12,10 +12,6 @@ class ProductCreateSerializer(serializers.Serializer):
     description = serializers.CharField()
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     stock = serializers.IntegerField(required=False, min_value=0)
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.filter(is_active=True),
-        source="category",
-    )
 
     def validate_price(self, value):
         """Ensure product price is greater than zero."""
@@ -32,7 +28,6 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "vendor",
-            "category",
             "name",
             "description",
             "price",
