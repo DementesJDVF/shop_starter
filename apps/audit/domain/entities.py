@@ -1,10 +1,11 @@
+import uuid
 from dataclasses import dataclass
 from typing import Optional, Dict
 
 
 @dataclass
 class AuditEntry:
-    user_id: Optional[int]
+    user_id: Optional[uuid.UUID]
     action_type: str
     object_type: str
     object_id: str
