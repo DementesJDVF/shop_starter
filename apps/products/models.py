@@ -38,6 +38,7 @@ class Product(BaseModel):
         Category,
         on_delete=models.PROTECT,
         related_name="products",
+        null=True,
     )
 
     name = models.CharField(max_length=255)
