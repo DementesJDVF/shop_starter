@@ -11,7 +11,7 @@ class SoftDeleteManager(models.Manager):
         return SoftDeleteQuerySet(self.model, using=self._db)
 
     def deleted_only(self):
-        return self.all_with_deleted().deleted()
+        return self.get_queryset().deleted()
 
 
 class AllObjectsManager(models.Manager):
