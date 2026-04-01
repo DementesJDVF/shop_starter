@@ -7,15 +7,7 @@ from apps.core.middleware import get_client_ip_from_request
 from .application.services import UserService
 from .models import User
 from .permissions import IsAdmin, IsClient, IsVendor
-from .serializers import (
-    CustomerRegisterSerializer,
-
-    ChangeUserRoleSerializer,
-    ChangeUserStatusSerializer,
-    RegisterSerializer,
-    UserSerializer,
-    VendorRegisterSerializer,
-)
+from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
 from .throttles import RegisterRateThrottle
 
 
@@ -35,18 +27,11 @@ class RegisterView(generics.CreateAPIView):
 
         return Response(
             {
-                "message": "Solicitud enviada. Debes esperar aprobación del administrador.",
+                "message": "Usuario registrado exitosamente",
                 "user": UserSerializer(user).data,
             },
             status=status.HTTP_201_CREATED,
         )
-
-class CustomerRegisterView(RegisterView):
-    serializer_class = CustomerRegisterSerializer
-
-
-class VendorRegisterView(RegisterView):
-    serializer_class = VendorRegisterSerializer
 
 
 class MeView(APIView):
@@ -97,31 +82,6 @@ class ChangeUserRoleView(APIView):
         return Response(
             {
                 "message": "Rol actualizado",
-                "user": UserSerializer(updated_user).data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class ChangeUserStatusView(APIView):
-    permission_classes = [IsAdmin]
-
-    def patch(self, request, user_id):
-        serializer = ChangeUserStatusSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        target_user = get_object_or_404(User, id=user_id)
-
-        updated_user = UserService.change_status(
-            admin_user=request.user,
-            target_user=target_user,
-            new_status=serializer.validated_data["status"],
-            ip_address=get_client_ip_from_request(request),
-        )
-
-        return Response(
-            {
-                "message": "Estado actualizado",
                 "user": UserSerializer(updated_user).data,
             },
             status=status.HTTP_200_OK,

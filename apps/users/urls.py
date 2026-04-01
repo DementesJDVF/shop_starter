@@ -5,25 +5,19 @@ from .api.auth_views import LoginView
 from .views import (
     AdminOnlyView,
     ChangeUserRoleView,
-    ChangeUserStatusView,
     CustomerOnlyView,
     MeView,
     RegisterView,
-    CustomerRegisterView,
-    VendorRegisterView,
     VendorOnlyView,
 )
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
-    path("auth/register/customer/", CustomerRegisterView.as_view(), name="register_customer"),
-    path("auth/register/vendor/", VendorRegisterView.as_view(), name="register_vendor"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("admin/test/", AdminOnlyView.as_view(), name="admin_test"),
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
-    path("users/<uuid:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
-    path("users/<uuid:user_id>/status/", ChangeUserStatusView.as_view(), name="change_user_status"),
+    path("users/<int:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
 ]
