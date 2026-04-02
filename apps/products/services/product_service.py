@@ -8,7 +8,7 @@ from typing import Any
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
-from apps.products.models import Category, Product
+from apps.products.models import Product, PImages, Category
 from apps.users.constants import UserRoles
 from apps.vendors.models import Vendor
 
@@ -49,7 +49,7 @@ class ProductService:
     @staticmethod
     def _validate_create_payload(*, data: dict[str, Any]) -> None:
         """Run domain-level validations for product creation/update."""
-        if "price" in data and Decimal(str(data["price"])) <= 0:
+        if "price" in data and Decimal(str(data["price"])) <= 0:|
             raise ValidationError("Product price must be greater than zero")
 
     @staticmethod
@@ -59,7 +59,9 @@ class ProductService:
             raise PermissionDenied("You do not own this product")
 
     @staticmethod
-    def get_vendor_product_for_update(*, product_id: int, user: Any) -> tuple[Product, Vendor]:
+    def get_vendor_product_for_update(
+        *, product_id: int, user: Any
+    ) -> tuple[Product, Vendor]:
         """Resolve and validate a vendor-owned product for update workflows."""
         vendor_profile = ProductService.validate_vendor_can_manage_products(user=user)
 
@@ -68,7 +70,9 @@ class ProductService:
         except Product.DoesNotExist as exc:
             raise NotFound("Product not found") from exc
 
-        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+        ProductService.validate_product_ownership(
+            product=product, vendor_profile=vendor_profile
+        )
 
         if product.is_deleted:
             raise ValidationError("Deleted products cannot be updated")
@@ -90,6 +94,14 @@ class ProductService:
         )
         product.status = ProductService.evaluate_product_status(product=product)
         product.save()
+
+        for img_data in data.get("images", []):
+            PImages.objects.create(
+                product=product,
+                url_image=img_data["url_image"],
+                is_main=img_data.get("is_main", False),
+            )
+
         return product
 
     @staticmethod
@@ -108,7 +120,9 @@ class ProductService:
     @transaction.atomic
     def update_product(*, product_id: int, user: Any, data: dict[str, Any]) -> Product:
         """Update mutable product fields for the owner vendor."""
-        product, _ = ProductService.get_vendor_product_for_update(product_id=product_id, user=user)
+        product, _ = ProductService.get_vendor_product_for_update(
+            product_id=product_id, user=user
+        )
 
         ProductService._validate_create_payload(data=data)
 
@@ -131,7 +145,9 @@ class ProductService:
         except Product.DoesNotExist as exc:
             raise NotFound("Product not found") from exc
 
-        ProductService.validate_product_ownership(product=product, vendor_profile=vendor_profile)
+        ProductService.validate_product_ownership(
+            product=product, vendor_profile=vendor_profile
+        )
 
         product.is_deleted = True
         product.status = Product.ProductStatus.INACTIVE
@@ -140,7 +156,9 @@ class ProductService:
     @staticmethod
     def get_vendor_products(*, vendor_profile: Vendor):
         """Return non-deleted products owned by a vendor profile."""
-        return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by("-created_at")
+        return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by(
+            "-created_at"
+        )
 
     @staticmethod
     def get_public_catalog():
