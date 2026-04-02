@@ -8,13 +8,24 @@ from typing import Any
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
-from apps.products.models import Product, PImages
+from apps.products.models import Product, PImages, Category
 from apps.users.constants import UserRoles
 from apps.vendors.models import Vendor
 
 
 class ProductService:
     """Encapsulates product-related business rules."""
+    
+    @staticmethod
+    def list_active_categories():
+        """Return active categories for catalog assignment."""
+        return Category.objects.filter(is_active=True, is_deleted=False).order_by("name")
+
+    @staticmethod
+    @transaction.atomic
+    def create_category(*, data: dict[str, Any]) -> Category:
+        """Create a product category."""
+        return Category.objects.create(**data)
 
     @staticmethod
     def validate_vendor_can_manage_products(*, user: Any) -> Vendor:
