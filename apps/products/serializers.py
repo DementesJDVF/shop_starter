@@ -26,9 +26,7 @@ class ProductImageInputSerializer(serializers.Serializer):
 class CreProSerializer(serializers.ModelSerializer):
     # Aquí está la magia: filtramos el queryset para que la API
     # rechace cualquier ID que no pertenezca a un vendedor.
-    vendor = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(role=UserRoles.VENDOR)
-    )
+    vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     # vendor = serializers.PrimaryKeyRelatedField(queryset=VendorProfile.objects.all())
     # Para LEER: Muestra el objeto completo de la categoría
     category_detail = CategorySerializer(source="category", read_only=True)
