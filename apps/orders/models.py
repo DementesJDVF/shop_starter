@@ -27,12 +27,14 @@ class Order(BaseModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="client_orders",
+        null=True,
     )
 
     vendor = models.ForeignKey(
         "vendors.VendorProfile",
         on_delete=models.CASCADE,
         related_name="vendor_orders",
+        null=True,
     )
 
     status = models.CharField(
@@ -80,15 +82,16 @@ class OrderItem(BaseModel):
 
     product = models.ForeignKey(
         "products.Product",
-        on_delete=models.PROTECT,  # evita perder historial
+        on_delete=models.PROTECT,
         related_name="order_items"
     )
 
-    quantity = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(default=1)
 
     price_at_purchase = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        default=0
     )
 
     class Meta:

@@ -14,14 +14,22 @@ class OrderService:
         if not items_data:
             raise ValueError("El pedido debe tener al menos un producto")
 
-        product_ids = [item["product_id"] for item in items_data]
-
-        products = Product.objects.select_related("vendor").filter(
+        quantities_by_product = {}
+        for item in items_data:
+            quantity = item["quantity"]
+            if quantity <= 0:
+                raise ValueError("La cantidad debe ser mayor que cero")
+            product_id = str(item["product_id"])
+            quantities_by_product[product_id] = quantities_by_product.get(product_id, 0) + quantity
+            
+        product_ids = list(quantities_by_product.keys())
+        
+        products = Product.objects.select_for_update().select_related("vendor").filter(
             id__in=product_ids,
             status="ACTIVE"
         )
 
-        if len(products) != len(items_data):
+        if products.count() != len(product_ids):
             raise ValueError("Uno o más productos no están disponibles")
 
         vendor = products.first().vendor
@@ -37,27 +45,28 @@ class OrderService:
 
         total = Decimal("0.00")
         order_items = []
+        products_by_id = {str(product.id): product for product in products}
 
-        for item in items_data:
-            product = next(p for p in products if str(p.id) == str(item["product_id"]))
+        for product_id, quantity in quantities_by_product.items():
+            product = products_by_id[product_id]
 
-            if product.stock < item["quantity"]:
+            if product.stock < quantity:
                 raise ValueError(f"Stock insuficiente para {product.name}")
 
-            subtotal = product.price * item["quantity"]
+            subtotal = product.price * quantity
             total += subtotal
 
             order_items.append(
                 OrderItem(
                     order=order,
                     product=product,
-                    quantity=item["quantity"],
+                    quantity=quantity,
                     price_at_purchase=product.price
                 )
             )
 
-            product.stock -= item["quantity"]
-            product.save()
+            product.stock -= quantity
+            product.save(update_fields=["stock", "updated_at"])
 
         OrderItem.objects.bulk_create(order_items)
 
