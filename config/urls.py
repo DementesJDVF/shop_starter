@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from apps.products.views import CategoryListCreateView, CategoryDetailView
+from apps.products.views.category_views import CategoryListCreateView, CategoryDetailView
 
 # Swagger
 from drf_spectacular.views import (
