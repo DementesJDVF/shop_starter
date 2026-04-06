@@ -1,4 +1,5 @@
 from rest_framework import permissions, status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,13 +10,31 @@ from apps.users.throttles import LoginRateThrottle
 
 
 class LoginView(APIView):
+    serializer_class = LoginSerializer
+    parser_classes = (JSONParser, FormParser, MultiPartParser)
     permission_classes = (permissions.AllowAny,)
     throttle_classes = (LoginRateThrottle,)
 
+    def get_serializer(self, *args, **kwargs):
+        return self.serializer_class(*args, **kwargs)
+
+    def get(self, request):
+        saved_logins = request.session.get("saved_logins", [])
+        return Response(
+            saved_logins,
+            status=status.HTTP_200_OK,
+        )
+
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
+        saved_logins = request.session.get("saved_logins", [])
+        login_entry = {"email": user.email}
+
+        if login_entry not in saved_logins:
+            saved_logins.insert(0, login_entry)
+            request.session["saved_logins"] = saved_logins[:10]
 
         refresh = UserService.login_user(
             user=user,

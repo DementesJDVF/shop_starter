@@ -2,13 +2,14 @@
 
 from rest_framework import serializers
 
-from apps.products.models import Product
+from apps.products.models import Category, Product
 
 
 class ProductCreateSerializer(serializers.Serializer):
     """Serializer for product create/update payloads."""
 
     name = serializers.CharField(max_length=255)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.filter(is_deleted=False, is_active=True))
     description = serializers.CharField()
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     stock = serializers.IntegerField(required=False, min_value=0)
@@ -29,6 +30,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "vendor",
             "name",
+            "category",
             "description",
             "price",
             "stock",
