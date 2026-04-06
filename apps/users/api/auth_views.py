@@ -12,33 +12,34 @@ from apps.users.throttles import LoginRateThrottle
 
 
 class LoginView(APIView):
-    permission_classes = (permissions.AllowAny,)
-    throttle_classes = (LoginRateThrottle,)
+    pass
+    # permission_classes = (permissions.AllowAny,)
+    # throttle_classes = (LoginRateThrottle,)
 
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
+    # def post(self, request):
+    #     serializer = LoginSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     user = serializer.validated_data["user"]
 
-        refresh = UserService.login_user(
-            user=user,
-            ip_address=get_client_ip_from_request(request),
-        )
+    #     refresh = UserService.login_user(
+    #         user=user,
+    #         ip_address=get_client_ip_from_request(request),
+    #     )
 
-        return Response(
-            {
-                "message": "Login exitoso",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
-                "user": UserSerializer(user).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+    #     return Response(
+    #         {
+    #             "message": "Login exitoso",
+    #             "access_token": str(refresh.access_token),
+    #             "refresh_token": str(refresh),
+    #             "user": UserSerializer(user).data,
+    #         },
+    #         status=status.HTTP_200_OK,
+    #     )
 
 
 class UserViewSet(ModelViewSet):
     permission_classes = []
     serializer_class = UserSerializer
-    queryset = User.objects.all ()
+    queryset = User.objects.all()
     
     
