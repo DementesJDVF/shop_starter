@@ -1,12 +1,9 @@
-"""Serializers for product endpoints."""
-
 from rest_framework import serializers
 
 from apps.products.models import Category, Product
 
 
 class ProductCreateSerializer(serializers.Serializer):
-    """Serializer for product create/update payloads."""
 
     name = serializers.CharField(max_length=255)
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.filter(is_deleted=False, is_active=True))
@@ -15,14 +12,12 @@ class ProductCreateSerializer(serializers.Serializer):
     stock = serializers.IntegerField(required=False, min_value=0)
 
     def validate_price(self, value):
-        """Ensure product price is greater than zero."""
         if value <= 0:
             raise serializers.ValidationError("El precio debe ser mayor a 0")
         return value
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    """Read serializer for products."""
 
     class Meta:
         model = Product
