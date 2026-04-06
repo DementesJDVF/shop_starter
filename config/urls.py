@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from apps.products.views import CatalogView, CategoryListCreateView, CategoryDetailView
+from apps.products.views import CategoryListCreateView, CategoryDetailView
+
 # Swagger
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -29,8 +30,7 @@ urlpatterns = [
     path("api/orders/", include("apps.orders.urls")),
     path("api/audit/", include("apps.audit.urls")),
 
-    # 📚 Catalogo y categorías
-    path("api/catalog/", CatalogView.as_view(), name="catalog-list"),
+    # 📚 Categorías
     path("api/categories/", CategoryListCreateView.as_view(), name="categories-list"),
     path("api/categories/<int:category_id>/", CategoryDetailView.as_view(), name="category-detail"),
 
