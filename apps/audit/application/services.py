@@ -69,7 +69,9 @@ class AuditService:
         )
 
     @classmethod
-    def log_soft_delete(cls, user, instance, previous_data=None, new_data=None, ip_address=None):
+    def log_soft_delete(
+        cls, user, instance, previous_data=None, new_data=None, ip_address=None
+    ):
         cls._log(
             user=user,
             action_type=AuditLog.ActionType.SOFT_DELETE,
@@ -80,7 +82,9 @@ class AuditService:
         )
 
     @classmethod
-    def log_restore(cls, user, instance, previous_data=None, new_data=None, ip_address=None):
+    def log_restore(
+        cls, user, instance, previous_data=None, new_data=None, ip_address=None
+    ):
         cls._log(
             user=user,
             action_type=AuditLog.ActionType.RESTORE,
