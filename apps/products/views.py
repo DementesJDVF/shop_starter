@@ -1,22 +1,32 @@
-"""API views for products CRUD."""
-from rest_framework.response import Response
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.users.permissions import IsVendor
 from apps.products.models import Product, Category
 from apps.products.serializers import (CreProSerializer,
                                        ReadProSerializer,
                                        CategorySerializer)
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = CreProSerializer
-    permission_classes = [AllowAny]
-    # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
-    # puedes sobrescribir esta función:
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
+    def perform_create(self, serializer):
+        # Si el usuario es un vendedor, lo asignamos automáticamente
+        if self.request.user.role == 'VENDEDOR':
+            serializer.save(vendor=self.request.user)
+        else:
+            serializer.save()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        # ¡Parche aquí!
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         headers = self.get_success_headers(read_serializer.data)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
