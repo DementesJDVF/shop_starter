@@ -60,7 +60,14 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "username", "role", "is_active"]
         read_only_fields = fields
-
-
+class UserSerializerAll(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = '__all__'
+    # Sobrescribimos el constructor para marcar todo como read_only dinámicamente
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].read_only = True
 class ChangeUserRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES)

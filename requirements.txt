@@ -2,7 +2,8 @@ asgiref==3.11.0
 attrs==25.4.0
 coverage==7.13.4
 distlib==0.4.0
-Django==6.0
+dj-database-url==2.3.0
+Django==5.2.7
 django-cors-headers==4.7.0
 django-environ==0.13.0
 django-extensions==4.1
@@ -11,9 +12,11 @@ djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.28.0
 drf-spectacular-sidecar==2026.3.1
 filelock==3.20.0
+gunicorn==23.0.0
 inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+packaging==26.0
 platformdirs==4.5.0
 psycopg2-binary==2.9.11
 PyJWT==2.11.0
@@ -22,6 +25,8 @@ PyYAML==6.0.3
 referencing==0.37.0
 rpds-py==0.30.0
 sqlparse==0.5.4
+typing_extensions==4.15.0
 tzdata==2025.2
 uritemplate==4.2.0
 virtualenv==20.35.4
+whitenoise==6.11.0
