@@ -17,9 +17,9 @@ class Review(models.Model):
         related_name="reviews",
     )
     vendor = models.ForeignKey(
-        "vendors.VendorProfile",
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="reviews",
+        related_name="received_reviews",
     )
     rating = models.PositiveSmallIntegerField()
     comment = models.TextField(blank=True)
