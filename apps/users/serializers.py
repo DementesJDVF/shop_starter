@@ -66,3 +66,4 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ChangeUserRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES)
+    
