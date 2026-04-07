@@ -19,7 +19,7 @@ class LoginView(APIView):
         return self.serializer_class(*args, **kwargs)
 
     def get(self, request):
-        saved_logins = request.session.get("saved_logins", [])
+        saved_logins = request.session.get("saved_logins", [])[:10]
         return Response(
             saved_logins,
             status=status.HTTP_200_OK,
@@ -32,9 +32,9 @@ class LoginView(APIView):
         saved_logins = request.session.get("saved_logins", [])
         login_entry = {"email": user.email}
 
-        if login_entry not in saved_logins:
-            saved_logins.insert(0, login_entry)
-            request.session["saved_logins"] = saved_logins[:10]
+        saved_logins = [entry for entry in saved_logins if entry != login_entry]
+        saved_logins.insert(0, login_entry)
+        request.session["saved_logins"] = saved_logins[:10]
 
         refresh = UserService.login_user(
             user=user,
