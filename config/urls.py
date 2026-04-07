@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from apps.products.views.catalog_views import CatalogView
-from apps.users.api.router import router_user
 
 # Swagger
 from drf_spectacular.views import (
@@ -12,20 +11,19 @@ from drf_spectacular.views import (
 
 
 from rest_framework_simplejwt.views import (
-TokenObtainPairView,
-TokenRefreshView,
+    TokenObtainPairView,
+    TokenRefreshView,
 )
 
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 
     # API del proyecto
     path('api/', include('apps.users.urls')),
     path('api/audit/', include('apps.audit.urls')),
     path('api/products/', include('apps.products.urls')),
-    path('api/vendors/', include('apps.vendors.urls')),
     path('api/catalog/', CatalogView.as_view(), name='catalog-list'),
-    path('api/', include(router_user.urls)),
 
     # OpenAPI Schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
