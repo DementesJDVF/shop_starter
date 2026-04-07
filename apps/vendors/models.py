@@ -1,13 +1,32 @@
 import uuid
+from typing import TypeVar
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Avg, Count
 
 from apps.core.models import BaseModel
+from apps.core.models.querysets import SoftDeleteQuerySet
+
+
+VendorProfileQuerySetType = TypeVar("VendorProfileQuerySetType", bound="VendorProfileQuerySet")
+
+
+class VendorProfileQuerySet(SoftDeleteQuerySet):
+    """QuerySet utilities for vendor profile read models."""
+
+    def with_rating(self: VendorProfileQuerySetType) -> VendorProfileQuerySetType:
+        """Annotate vendor profiles with rating summary fields."""
+        return self.annotate(
+            average_rating=Avg("reviews__rating"),
+            total_reviews=Count("reviews"),
+        )
 
 
 class VendorProfile(BaseModel):
+    objects = VendorProfileQuerySet.as_manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Status(models.TextChoices):
