@@ -29,7 +29,7 @@ class VendorLocationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = self.context["request"].user
 
-        # 🔐 SOLO vendedor activo
+        
         if not hasattr(user, "vendorprofile"):
             raise serializers.ValidationError("No eres vendedor")
 
@@ -39,7 +39,7 @@ class VendorLocationSerializer(serializers.ModelSerializer):
         lat = data.get("latitude")
         lng = data.get("longitude")
 
-        # 🌍 Validación coordenadas
+        
         if not (-90 <= lat <= 90):
             raise serializers.ValidationError("Latitud inválida")
 
