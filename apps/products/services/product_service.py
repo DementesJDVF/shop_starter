@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+
+from apps.products.models import Product
+from apps.vendors.models import VendorProfile
 from apps.products.models import Category, Product, PImages
 from apps.users.constants import UserRoles
-from apps.vendors.models import Vendor
+from apps.vendors.services import VendorService
 
 
 class ProductService:
@@ -27,37 +30,30 @@ class ProductService:
         return Category.objects.create(**data)
 
     @staticmethod
-    def validate_vendor_can_manage_products(*, user: Any) -> Vendor:
+    def validate_vendor_can_manage_products(*, user: Any) -> VendorProfile:
         """Validate that the authenticated user is an active vendor."""
-        if not getattr(user, "is_authenticated", False):
-            raise PermissionDenied("Authentication required")
-
-        if user.role != UserRoles.VENDEDOR:
-            raise PermissionDenied("Only vendor users can manage products")
-
-        try:
-            vendor_profile = user.vendor
-        except Vendor.DoesNotExist as exc:
-            raise ValidationError("Vendor profile not found") from exc
-
-        if vendor_profile.status != Vendor.Status.ACTIVE:
-            raise ValidationError("Vendor profile must be active")
-
-        return vendor_profile
+        return VendorService.ensure_vendor_active(user)
 
     @staticmethod
     def _validate_create_payload(*, data: dict[str, Any]) -> None:
         """Run domain-level validations for product creation/update."""
-        if "price" in data and Decimal(str(data["price"])) <= 0:
-            raise ValidationError("Product price must be greater than zero")
+        if "price" in data:
+            try:
+                price = Decimal(str(data["price"]))
+            except (InvalidOperation, TypeError):
+                raise ValidationError("Invalid price format")
+
+            if price <= 0:
+                raise ValidationError("Product price must be greater than zero")
 
     @staticmethod
-    def validate_product_ownership(*, product: Product, vendor_profile: Vendor) -> None:
+    def validate_product_ownership(*, product: Product, vendor_profile: VendorProfile) -> None:
         """Ensure the product belongs to the acting vendor."""
         if product.vendor_id != vendor_profile.id:
             raise PermissionDenied("You do not own this product")
 
     @staticmethod
+    def get_vendor_product_for_update(*, product_id: int, user: Any) -> tuple[Product, VendorProfile]:
     def get_vendor_product_for_update(
         *, product_id: int, user: Any
     ) -> tuple[Product, Vendor]:
@@ -80,7 +76,7 @@ class ProductService:
 
     @staticmethod
     @transaction.atomic
-    def create_product(*, vendor_profile: Vendor, data: dict[str, Any]) -> Product:
+    def create_product(*, vendor_profile: VendorProfile, data: dict[str, Any]) -> Product:
         """Create a product owned by the given vendor profile."""
         ProductService._validate_create_payload(data=data)
 
@@ -101,6 +97,20 @@ class ProductService:
                 is_main=img_data.get("is_main", False),
             )
 
+        return product
+
+    @staticmethod
+    @transaction.atomic
+    def update_product(*, product: Product, data: dict[str, Any]) -> Product:
+        """Update an existing product."""
+        ProductService._validate_create_payload(data=data)
+
+        for field in ["name", "description", "price", "stock"]:
+            if field in data:
+                setattr(product, field, data[field])
+
+        product.status = ProductService.evaluate_product_status(product=product)
+        product.save()
         return product
 
     @staticmethod
@@ -153,7 +163,7 @@ class ProductService:
         product.save(update_fields=["is_deleted", "status", "updated_at"])
 
     @staticmethod
-    def get_vendor_products(*, vendor_profile: Vendor):
+    def get_vendor_products(*, vendor_profile: VendorProfile):
         """Return non-deleted products owned by a vendor profile."""
         return Product.objects.filter(vendor=vendor_profile, is_deleted=False).order_by(
             "-created_at"
@@ -167,7 +177,8 @@ class ProductService:
             .filter(
                 status=Product.ProductStatus.ACTIVE,
                 is_deleted=False,
-                vendor__status=Vendor.Status.ACTIVE,
+                vendor__status=VendorProfile.Status.ACTIVE,
+                vendor__user__role=UserRoles.VENDOR,
                 vendor__user__is_active=True,
             )
             .order_by("-created_at")
