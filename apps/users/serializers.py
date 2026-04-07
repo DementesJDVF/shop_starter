@@ -35,9 +35,16 @@ class LoginSerializer(serializers.Serializer):
         email = (data.get("email") or "").strip().lower()
         password = data.get("password") or ""
 
-        user = User.objects.filter(email__iexact=email).first()
-        if user is None:
+        users_qs = User.objects.filter(email__iexact=email).order_by("id")
+        user_count = users_qs.count()
+
+        if user_count == 0:
             raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        if user_count > 1:
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        user = users_qs.first()
 
         if not user.check_password(password):
             raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
