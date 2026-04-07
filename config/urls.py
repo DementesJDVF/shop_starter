@@ -22,7 +22,6 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh_global"),
 
     path("api/users/", include("apps.users.urls")),
-    path("api/vendors/", include("apps.vendors.urls")),
     path("api/products/", include("apps.products.urls")),
     path("api/audit/", include("apps.audit.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

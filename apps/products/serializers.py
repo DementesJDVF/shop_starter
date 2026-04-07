@@ -29,7 +29,6 @@ class CreProSerializer(serializers.ModelSerializer):
     vendor = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(role=UserRoles.VENDOR)
     )
-    # vendor = serializers.PrimaryKeyRelatedField(queryset=VendorProfile.objects.all())
     # Para LEER: Muestra el objeto completo de la categoría
     category_detail = CategorySerializer(source="category", read_only=True)
     # Para ESCRIBIR: Permite mandar solo el ID
@@ -41,12 +40,6 @@ class CreProSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = "__all__"
-        """
-        #No se usa.
-        fields = [
-            'id', 'vendor', 'category', 'category_detail', 'name', 
-            'description', 'price', 'stock', 'status', 'is_featured', 'images']
-        """
 
     def validate_images(self, value):
         if len(value) > 2:
