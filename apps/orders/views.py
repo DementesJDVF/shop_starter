@@ -1,9 +1,7 @@
-from rest_framework import generics
+from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
-
 from .serializers import OrderCreateSerializer
 
-
-class CreateOrderView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
+class CreateOrderView(CreateAPIView):
     serializer_class = OrderCreateSerializer
+    permission_classes = [IsAuthenticated]

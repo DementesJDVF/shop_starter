@@ -1,8 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from apps.products.views.category_views import CategoryListCreateView, CategoryDetailView
-
 # Swagger
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -19,6 +17,9 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path("admin/", admin.site.urls),
 
+    # API principal (incluye products, categories, etc.)
+    path("api/", include("apps.products.urls")),
+
     # 🔐 Auth JWT
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
@@ -26,13 +27,8 @@ urlpatterns = [
     # 📦 Apps
     path("api/users/", include("apps.users.urls")),
     path("api/vendors/", include("apps.vendors.urls")),
-    path("api/products/", include("apps.products.urls")),
     path("api/orders/", include("apps.orders.urls")),
     path("api/audit/", include("apps.audit.urls")),
-
-    # 📚 Categorías
-    path("api/categories/", CategoryListCreateView.as_view(), name="categories-list"),
-    path("api/categories/<int:category_id>/", CategoryDetailView.as_view(), name="category-detail"),
 
     # 📄 Documentación
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
