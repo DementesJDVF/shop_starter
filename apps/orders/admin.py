@@ -1,6 +1,30 @@
 from django.contrib import admin
 from .models import Order, OrderItem
 
+# Register your models here.
+from .models
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import Order
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ("id", "client", "vendor", "status")
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
