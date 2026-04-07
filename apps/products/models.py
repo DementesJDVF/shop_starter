@@ -60,14 +60,6 @@ class Product(BaseModel):
         related_name="products",
         db_index=True,
     )
-    """
-    #No se usa.
-    vendor = models.ForeignKey(
-        "vendors.VendorProfile",
-        on_delete=models.CASCADE,
-        related_name="products",
-        db_index=True,)
-    """
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
