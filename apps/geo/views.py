@@ -1,9 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
-
+from rest_framework.permissions import IsAuthenticated
+from apps.geo.serializers import VendorLocationSerializer
 from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
 from django.shortcuts import get_list_or_404, get_object_or_404
@@ -45,3 +46,27 @@ def location_detail(request, pk):
     location = get_object_or_404(Location, id=pk)
     serializer = LocationSerializer(location)
     return Response(serializer.data)
+
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def update_vendor_location(request):
+
+    user = request.user
+
+    if not hasattr(user, "vendorprofile"):
+        return Response({"error": "No eres vendedor"}, status=403)
+
+    vendor = user.vendorprofile
+
+    serializer = VendorLocationSerializer(
+        vendor,
+        data=request.data,
+        partial=True,
+        context={"request": request}
+    )
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+
+    return Response(serializer.errors, status=400)
