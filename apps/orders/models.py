@@ -7,54 +7,39 @@ from apps.core.models import BaseModel
 
 
 class Order(BaseModel):
-    """
-    Representa un pedido realizado por un cliente a un vendedor.
-    """
+    """Representa un pedido realizado por un cliente a un vendedor."""
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Status(models.TextChoices):
-        CREATED = "CREATED", "Created"
-        CONFIRMED = "CONFIRMED", "Confirmed"
-        COMPLETED = "COMPLETED", "Completed"
-        CANCELLED = "CANCELLED", "Cancelled"
+        CREATED = "CREADO", "Creado"
+        CONFIRMED = "CONFIRMADO", "Confirmado"
+        COMPLETED = "COMPLETADO", "Completado"
+        CANCELLED = "CANCELADO", "Cancelado"
 
-    client = models.ForeignKey(
+    customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="client_orders",
-        null=True,
+        related_name="customer_orders",
     )
-
     vendor = models.ForeignKey(
         "vendors.VendorProfile",
         on_delete=models.CASCADE,
         related_name="vendor_orders",
-        null=True,
     )
-
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.CREATED,
-        db_index=True
+        db_index=True,
     )
-
-    total = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0
-    )
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         db_table = "orders_order"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["client"]),
+            models.Index(fields=["customer"]),
             models.Index(fields=["vendor"]),
             models.Index(fields=["status"]),
         ]
@@ -64,35 +49,18 @@ class Order(BaseModel):
 
 
 class OrderItem(BaseModel):
-    """
-    Representa un producto dentro de un pedido.
-    """
+    """Representa un producto dentro de un pedido."""
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
-
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name="items"
-    )
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(
         "products.Product",
         on_delete=models.PROTECT,
-        related_name="order_items"
+        related_name="order_items",
     )
-
-    quantity = models.PositiveIntegerField(default=1)
-
-    price_at_purchase = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0
-    )
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
         db_table = "orders_order_item"
