@@ -94,15 +94,24 @@ class ChangeUserRoleView(APIView):
             status=status.HTTP_200_OK,
         )
 
-class AdminUserViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserAdminSerializer
 
-    def get_permissions(self):
-        if not self.request.user.is_authenticated:
-            raise PermissionDenied("No autenticado")
+class ChangeUserStatusView(APIView):
+    permission_classes = [IsAdmin]
 
-        if self.request.user.role != "ADMIN":
-            raise PermissionDenied("No tienes permisos")
+    def patch(self, request, user_id):
+        VALID_STATUSES = [User.Status.ACTIVE, User.Status.INACTIVE, User.Status.PENDING, User.Status.BLOCKED]
+        new_status = request.data.get('status')
+        if new_status not in VALID_STATUSES:
+            return Response({'error': f'Estado inválido. Opciones: {VALID_STATUSES}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return [IsAuthenticated()]
+        target_user = get_object_or_404(User, id=user_id)
+        target_user.status = new_status
+        target_user.save()
+
+        return Response(
+            {
+                "message": "Estado actualizado correctamente",
+                "user": UserSerializer(target_user).data,
+            },
+            status=status.HTTP_200_OK,
+        )

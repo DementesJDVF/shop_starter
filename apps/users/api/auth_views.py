@@ -12,8 +12,7 @@ from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializ
 from apps.users.throttles import LoginRateThrottle
 from apps.users.models import User
 class LoginView(APIView):
-    serializer_class = LoginSerializer
-    parser_classes = (JSONParser, FormParser, MultiPartParser)
+    authentication_classes = []
     permission_classes = (permissions.AllowAny,)
     throttle_classes = (LoginRateThrottle,)
 
