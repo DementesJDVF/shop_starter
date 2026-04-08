@@ -6,21 +6,27 @@ from apps.products.views import (
     CategoryViewSet,
     CategoryViewGet,
 )
-Create = DefaultRouter()
-Create.register(r"", ProductViewSet)
-Read = DefaultRouter()
-# Registramos la ruta base para el listado general: /api/products/
-Read.register(r"", ProductViewGet, basename="product-list")
-CatCreate = DefaultRouter()
-CatCreate.register(r"", CategoryViewSet)
-CatRead = DefaultRouter()
-# Registramos la ruta base para el listado general: /api/products/caregories/
-CatRead.register(r"list", CategoryViewGet, basename="categories-list")
+
+router = DefaultRouter()
+# Para VENDEDORES (Gestionar sus productos)
+router.register(r"create", ProductViewSet, basename="product-admin")
+# Para CLIENTES (Ver catálogo público)
+router.register(r"catalog", ProductViewGet, basename="product-public")
+
 urlpatterns = [
-    path("create/", include(Create.urls)),
-    path("", include(Read.urls)),
+    # Ruta pública de categorías (para vendedores y clientes)
+    path("get-categories/", CategoryViewGet.as_view({'get': 'list'}), name="category-list-public"),
+
+    # Rutas administrativas de categorías (CRUD completo)
+    path("categories/admin/", CategoryViewSet.as_view({'get': 'list', 'post': 'create'}), name="category-admin-list"),
+    path("categories/admin/<int:pk>/", CategoryViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    }), name="category-admin-detail"),
+
+    # Resto de rutas del router
+    path("", include(router.urls)),
     path("<int:id>/", ProductViewGet.as_view({"get": "retrieve"}), name="product-read-id"),
-    path("categories/create/", include(CatCreate.urls)),
-    path("categories/", include(CatRead.urls)),
-    path("categories/<int:id>/",CategoryViewGet.as_view({"get": "retrieve"}),name="product-read-id",),
 ]
