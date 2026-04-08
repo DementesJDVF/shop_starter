@@ -15,6 +15,7 @@ class LoginView(APIView):
     authentication_classes = []
     permission_classes = (permissions.AllowAny,)
     throttle_classes = (LoginRateThrottle,)
+    serializer_class = LoginSerializer
 
     def get_serializer(self, *args, **kwargs):
         return self.serializer_class(*args, **kwargs)
@@ -56,7 +57,7 @@ class LoginView(APIView):
         )
 class UserView(APIView):
     permission_classes = (permissions.AllowAny,)
-    def get(self, recuest):
+    def get(self, request):
         users = User.objects.all()
         return Response(
             UserSerializerAll(users, many=True) .data,
