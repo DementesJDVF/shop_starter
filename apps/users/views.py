@@ -10,6 +10,13 @@ from .permissions import IsAdmin, IsClient, IsVendor
 from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
 from .throttles import RegisterRateThrottle
 
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+
+from apps.users.models import User
+from apps.users.serializers import UserAdminSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -86,3 +93,16 @@ class ChangeUserRoleView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class AdminUserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserAdminSerializer
+
+    def get_permissions(self):
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("No autenticado")
+
+        if self.request.user.role != "ADMIN":
+            raise PermissionDenied("No tienes permisos")
+
+        return [IsAuthenticated()]

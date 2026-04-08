@@ -3,6 +3,12 @@ import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 
+import environ
+import os
+
+env = environ.Env()
+environ.Env.read_env()
+
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -51,7 +57,6 @@ INSTALLED_APPS = [
     # Local Apps
     "apps.core",
     "apps.users",
-    "apps.vendors",
     "apps.products",
     "apps.orders",
     "apps.geo",
@@ -81,6 +86,7 @@ MIDDLEWARE = [
 ]
 
 AUTH_USER_MODEL = "users.User"
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -102,6 +108,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
 DATABASES = {}
 
 # Password Validators

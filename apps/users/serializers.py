@@ -1,7 +1,15 @@
+from django.db.models import Q
 from rest_framework import serializers
 
 from .constants import UserRoles
 from .models import User
+
+from apps.users.models import User
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "email", "role", "is_active"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -11,7 +19,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "role")
+        fields = (
+            "username", "email", "password", "password_confirm", "role",
+            "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+        )
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -23,6 +34,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         if role not in UserRoles.SELF_ASSIGNABLE:
             raise serializers.ValidationError({"role": "No es posible autoprovisionar este rol"})
 
+        # Validación condicional para Vendedores
+        if role == UserRoles.VENDOR:
+            required_vendor_fields = [
+                "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+            ]
+            for field in required_vendor_fields:
+                if not attrs.get(field):
+                    raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
+
         return attrs
 
 
@@ -31,20 +51,33 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email = data.get("email")
-        password = data.get("password")
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password") or ""
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("Credenciales inválidas")
+        users_qs = User.objects.filter(email__iexact=email).order_by("id")
+        user_count = users_qs.count()
+
+        if user_count == 0:
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        if user_count > 1:
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        user = users_qs.first()
 
         if not user.check_password(password):
-            raise serializers.ValidationError("Credenciales inválidas")
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        if user.status == User.Status.PENDING:
+            raise serializers.ValidationError("SU INFORMACIÓN ESTÁ SIENDO REVISADA, EN UN MOMENTO PODRÁ INICIAR SESIÓN")
+
+        if user.status == User.Status.BLOCKED:
+            raise serializers.ValidationError("Su cuenta ha sido bloqueada por un administrador.")
 
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
+        data["email"] = email
         data["user"] = user
         return data
 
@@ -52,7 +85,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "username", "role", "is_active"]
+        fields = ["id", "email", "username", "role", "status", "is_active"]
         read_only_fields = fields
 class UserSerializerAll(serializers.ModelSerializer):
     class Meta:
