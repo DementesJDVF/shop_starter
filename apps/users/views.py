@@ -10,6 +10,13 @@ from .permissions import IsAdmin, IsClient, IsVendor
 from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
 from .throttles import RegisterRateThrottle
 
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+
+from apps.users.models import User
+from apps.users.serializers import UserAdminSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
