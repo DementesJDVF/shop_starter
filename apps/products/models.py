@@ -27,6 +27,7 @@ class Product(BaseModel):
         PAUSED = "PAUSED", "Paused"
         OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
         REJECTED = "REJECTED", "Rejected"
+        RESERVED = "RESERVED", "Reserved"
 
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,  # Apunta dinámicamente a tu clase User personalizada

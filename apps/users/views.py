@@ -86,3 +86,25 @@ class ChangeUserRoleView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class ChangeUserStatusView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, user_id):
+        VALID_STATUSES = [User.Status.ACTIVE, User.Status.INACTIVE, User.Status.PENDING, User.Status.BLOCKED]
+        new_status = request.data.get('status')
+        if new_status not in VALID_STATUSES:
+            return Response({'error': f'Estado inválido. Opciones: {VALID_STATUSES}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_user = get_object_or_404(User, id=user_id)
+        target_user.status = new_status
+        target_user.save()
+
+        return Response(
+            {
+                "message": "Estado actualizado correctamente",
+                "user": UserSerializer(target_user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
