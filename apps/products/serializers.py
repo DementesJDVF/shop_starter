@@ -1,7 +1,7 @@
 """Serializers for product endpoints."""
 
 from rest_framework import serializers
-from apps.products.models import Category, Product, PImages, PComments
+from apps.products.models import Category, Product, PImages
 from apps.users.models import User
 from apps.users.constants import UserRoles
 class CategorySerializer(serializers.ModelSerializer):
@@ -44,9 +44,3 @@ class ProductSerializer(serializers.ModelSerializer):
         for image_data in images_data:
             PImages.objects.create(product=product, **image_data)
         return product
-class PCommentSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    class Meta:
-        model = PComments
-        fields = "__all__"
