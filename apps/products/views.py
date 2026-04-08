@@ -14,11 +14,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         return CreProSerializer
     
     def get_queryset(self):
-        """Filtra los productos para devolver solo los del vendedor autenticado."""
+        """Filtra los productos para devolver solo los del vendedor autenticado, a menos que sea ADMIN."""
         user = self.request.user
-        if user.is_authenticated:
-            return Product.objects.filter(vendor=user)
-        return Product.objects.none()
+        if not user.is_authenticated:
+            return Product.objects.none()
+            
+        if user.role == 'ADMIN':
+            return Product.objects.all()
+            
+        return Product.objects.filter(vendor=user)
     
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
