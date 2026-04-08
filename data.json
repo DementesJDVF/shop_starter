@@ -1,0 +1,505 @@
+[
+{
+  "model": "sessions.session",
+  "pk": "ce65ycsvzuk7tlrim74xq5u2djm3fxgl",
+  "fields": {
+    "session_data": ".eJxVjTkOgzAUBe_iOrb8jRdImT5nQH8jZBFILFWUuwckiqSemffepsV16dt11qm9izmbBhviHMBWsUQbRcESJrREhTvxMfsA5vSbEfJTh72VBw630fE4LNOd3K64g87uOoq-Lof7N9Dj3G81KZTtXYG5JvQAWquAL6kSqFmjJAi4kaZkCRBLTlXoUu5iKhKysPl8ARRFQTM:1w1B8p:mxGfbOs0PS9RQtvbY5kIgxts9R5lRbpYkWu9GL1Xa_c",
+    "expire_date": "2026-03-27T22:37:59.504Z"
+  }
+},
+{
+  "model": "users.user",
+  "pk": "336d3e34-f5fe-4b48-9c96-6a684b417320",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$2mdVp5Avl6KcPeD5gXD4RD$3lp4LHYbdORhtS8t341Qz0u2+25OWYDhTbh46gclbHs=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "u2",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-25T20:36:21.040Z",
+    "email": "use2r@example.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-25T20:36:22.269Z",
+    "updated_at": "2026-03-25T20:36:22.269Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "5af16b43-869f-43c6-95c6-08988fb3d2bd",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$GFDq9P6laQZ9uQSHVxWEjK$4gDDB1xqqgTdDLJ/76uMgFgZ8fA4JHOs5jmBCJmPvcA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "vendor0",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:34:19.990Z",
+    "email": "vendor0@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:34:20.900Z",
+    "updated_at": "2026-03-24T17:34:20.900Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "641b8e67-c50c-42aa-b0eb-966b64a353f2",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$ThFfi1Dricnv1XP3WoidJR$6TO8Hb8hHuEF0yl0rO1VFXj7L/bc7AMiWwkU/UmOtt0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "v1",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:37:07.463Z",
+    "email": "v1@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:37:08.386Z",
+    "updated_at": "2026-03-24T17:37:08.386Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "70e0021c-18ff-4786-b399-d96628d22b2e",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$bdxfTliWW97ufrtm4hPpvn$QDtaZP8+I5y31XV7YEEQ9U5RSlt8Yjbv8EqNiAcmFCc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "vendor1",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:34:20.904Z",
+    "email": "vendor1@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:34:21.822Z",
+    "updated_at": "2026-03-24T17:34:21.822Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "819cb739-09d9-47b2-855d-e5311641f6d5",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$LHECSz1cAC5NALPg5LwHi2$3+USBfcIiAtojHHWWlFNdMZupO1N55kae5iNA91DCOU=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "v4",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:38:26.372Z",
+    "email": "v4@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:38:27.293Z",
+    "updated_at": "2026-03-24T17:38:27.293Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "9a9bc621-3474-4de1-ba5a-bb7cfd046021",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$miyKoia3x6e70JZg1IHjoi$cCFfgFlvtHNwzqN5sCAd6J+GJ/rP2RnV2jH5xVgRDhY=",
+    "last_login": "2026-03-13T22:37:59.499Z",
+    "is_superuser": true,
+    "username": "jhonatan",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-03-13T22:36:10.180Z",
+    "email": "zemanatejhonatan857@gmail.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-13T22:36:11.124Z",
+    "updated_at": "2026-03-13T22:36:11.124Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "9b05d462-9fb4-4e49-bd78-e2a03e885a68",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$1vWOLiGWebauJpbfnj3sz6$bMGbLUJlEeOMIUvSnWWZbO792rLhchmXzXBPTBscA90=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "vendor3",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:34:22.754Z",
+    "email": "vendor3@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:34:23.677Z",
+    "updated_at": "2026-03-24T17:34:23.677Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "aee606ae-ca4b-4ab7-bbf7-29b634d58003",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$W3LYMqDi8DpVT7DG4CQVbY$UWi9ZF5vMWbJom7HttLzAiU/rjPbxKUHIAXE0QNBz3k=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "vendor4",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:34:23.678Z",
+    "email": "vendor4@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:34:24.593Z",
+    "updated_at": "2026-03-24T17:34:24.593Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "c05e2bfa-ea83-42b8-9ab3-33c0ac242f43",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$0TELQWTK2p4ic85Du50Dgl$Zr1tlSzvsprkwI8KQtGpXrXh1By6Z+pS57Q6RkaZ6gk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "v2",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:37:50.301Z",
+    "email": "v2@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:37:51.247Z",
+    "updated_at": "2026-03-24T17:37:51.247Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "e5d4a38f-f63b-45e8-8e6d-532224a81da1",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$UiDojc8haixOGA1t1ik3vA$mOhthtyW/BAeNu/S9kcHjqCcr68hQhxFEJD8l7FFbzU=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "Jhonatan",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-03-13T22:33:22.957Z",
+    "email": "zemanatejhonatan@gmail.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-13T22:33:23.893Z",
+    "updated_at": "2026-03-13T22:33:23.893Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": "f0ed96ef-654a-4cae-9f70-44cb9564842b",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$A9XqM3tmYyfmOcodudh28u$FnHPP8/pOzWH+bxXO4JiibAEZrNo4j/uZOmuatHS9iQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "vendor2",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T17:34:21.822Z",
+    "email": "vendor2@test.com",
+    "role": "CLIENTE",
+    "status": "ACTIVE",
+    "created_at": "2026-03-24T17:34:22.752Z",
+    "updated_at": "2026-03-24T17:34:22.752Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "vendors.vendorprofile",
+  "pk": "17a6f4e2-6061-4ad9-92da-a440e96e45eb",
+  "fields": {
+    "created_at": "2026-03-24T17:38:27.295Z",
+    "updated_at": "2026-03-24T17:38:27.295Z",
+    "is_deleted": false,
+    "user": "819cb739-09d9-47b2-855d-e5311641f6d5",
+    "status": "active",
+    "verified": true,
+    "location_type": "FIXED",
+    "reputation": "0.00"
+  }
+},
+{
+  "model": "vendors.vendorprofile",
+  "pk": "2657ee80-5e55-470e-87fd-e8424426cb2c",
+  "fields": {
+    "created_at": "2026-03-24T17:37:08.390Z",
+    "updated_at": "2026-03-24T17:37:08.390Z",
+    "is_deleted": false,
+    "user": "641b8e67-c50c-42aa-b0eb-966b64a353f2",
+    "status": "active",
+    "verified": true,
+    "location_type": "FIXED",
+    "reputation": "0.00"
+  }
+},
+{
+  "model": "vendors.vendorprofile",
+  "pk": "30442c91-47bf-4b15-ac58-3199404e9b7e",
+  "fields": {
+    "created_at": "2026-03-24T17:17:30.374Z",
+    "updated_at": "2026-03-24T17:17:30.374Z",
+    "is_deleted": false,
+    "user": "9a9bc621-3474-4de1-ba5a-bb7cfd046021",
+    "status": "active",
+    "verified": true,
+    "location_type": "FIXED",
+    "reputation": "0.00"
+  }
+},
+{
+  "model": "vendors.vendorprofile",
+  "pk": "46360239-b680-4aba-a057-dfea40045ad9",
+  "fields": {
+    "created_at": "2026-03-24T17:37:51.250Z",
+    "updated_at": "2026-03-24T17:37:51.250Z",
+    "is_deleted": false,
+    "user": "c05e2bfa-ea83-42b8-9ab3-33c0ac242f43",
+    "status": "active",
+    "verified": true,
+    "location_type": "FIXED",
+    "reputation": "0.00"
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "43086b51-a669-4c19-be99-e7c2869dd404",
+  "fields": {
+    "vendor": "2657ee80-5e55-470e-87fd-e8424426cb2c",
+    "latitude": "2.460000",
+    "longitude": "-76.630000",
+    "timestamp": "2026-03-24T17:37:49.367Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "bba3daf7-a17b-4dd8-8c0d-4aada9ec050b",
+  "fields": {
+    "vendor": "46360239-b680-4aba-a057-dfea40045ad9",
+    "latitude": "2.480000",
+    "longitude": "-76.650000",
+    "timestamp": "2026-03-24T17:38:25.294Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "c9ba47bc-a786-46d2-857d-3fccc7e5dc91",
+  "fields": {
+    "vendor": "17a6f4e2-6061-4ad9-92da-a440e96e45eb",
+    "latitude": "2.480000",
+    "longitude": "-76.650000",
+    "timestamp": "2026-03-24T17:38:28.423Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "daf872c3-1813-478b-8ccb-f7370b64eae0",
+  "fields": {
+    "vendor": "30442c91-47bf-4b15-ac58-3199404e9b7e",
+    "latitude": "2.444814",
+    "longitude": "-76.614739",
+    "timestamp": "2026-03-24T17:17:41.453Z",
+    "description": null
+  }
+},
+{
+  "model": "audit.auditlog",
+  "pk": "265f76dc-337e-4be3-8d2d-92e96ddfe8bd",
+  "fields": {
+    "created_at": "2026-03-25T20:36:22.294Z",
+    "updated_at": "2026-03-25T20:36:22.294Z",
+    "is_deleted": false,
+    "user": "336d3e34-f5fe-4b48-9c96-6a684b417320",
+    "action": "",
+    "entity": "",
+    "entity_id": "",
+    "timestamp": "2026-03-25T20:36:22.294Z",
+    "action_type": "CREATE",
+    "source": "API",
+    "content_type": 6,
+    "object_id": "336d3e34-f5fe-4b48-9c96-6a684b417320",
+    "object_repr": "u2 - CLIENTE",
+    "previous_data": null,
+    "new_data": {
+      "role": "CLIENTE",
+      "email": "use2r@example.com",
+      "groups": [],
+      "status": "ACTIVE",
+      "is_staff": false,
+      "password": "pbkdf2_sha256$1200000$2mdVp5Avl6KcPeD5gXD4RD$3lp4LHYbdORhtS8t341Qz0u2+25OWYDhTbh46gclbHs=",
+      "username": "u2",
+      "is_active": true,
+      "last_name": "",
+      "first_name": "",
+      "last_login": null,
+      "date_joined": "2026-03-25T20:36:21.040Z",
+      "is_superuser": false,
+      "user_permissions": []
+    },
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "audit.auditlog",
+  "pk": "4304fe09-201e-4b00-b093-a25ecb5b4e1d",
+  "fields": {
+    "created_at": "2026-03-24T17:17:30.398Z",
+    "updated_at": "2026-03-24T17:17:30.398Z",
+    "is_deleted": false,
+    "user": null,
+    "action": "",
+    "entity": "",
+    "entity_id": "",
+    "timestamp": "2026-03-24T17:17:30.398Z",
+    "action_type": "CREATE",
+    "source": "API",
+    "content_type": 8,
+    "object_id": "30442c91-47bf-4b15-ac58-3199404e9b7e",
+    "object_repr": "VendorProfile(zemanatejhonatan857@gmail.com)",
+    "previous_data": null,
+    "new_data": {
+      "user": "9a9bc621-3474-4de1-ba5a-bb7cfd046021",
+      "status": "active",
+      "verified": true,
+      "is_deleted": false,
+      "reputation": 0.0,
+      "location_type": "FIXED"
+    },
+    "ip_address": null
+  }
+},
+{
+  "model": "audit.auditlog",
+  "pk": "4529ec8d-8efb-4ee8-a329-18e82a6ab371",
+  "fields": {
+    "created_at": "2026-03-24T17:37:51.251Z",
+    "updated_at": "2026-03-24T17:37:51.251Z",
+    "is_deleted": false,
+    "user": null,
+    "action": "",
+    "entity": "",
+    "entity_id": "",
+    "timestamp": "2026-03-24T17:37:51.251Z",
+    "action_type": "CREATE",
+    "source": "API",
+    "content_type": 8,
+    "object_id": "46360239-b680-4aba-a057-dfea40045ad9",
+    "object_repr": "VendorProfile(v2@test.com)",
+    "previous_data": null,
+    "new_data": {
+      "user": "c05e2bfa-ea83-42b8-9ab3-33c0ac242f43",
+      "status": "active",
+      "verified": true,
+      "is_deleted": false,
+      "reputation": 0.0,
+      "location_type": "FIXED"
+    },
+    "ip_address": null
+  }
+},
+{
+  "model": "audit.auditlog",
+  "pk": "c1893ad2-cd59-419f-9327-d526b36c02ec",
+  "fields": {
+    "created_at": "2026-03-24T17:37:08.394Z",
+    "updated_at": "2026-03-24T17:37:08.394Z",
+    "is_deleted": false,
+    "user": null,
+    "action": "",
+    "entity": "",
+    "entity_id": "",
+    "timestamp": "2026-03-24T17:37:08.394Z",
+    "action_type": "CREATE",
+    "source": "API",
+    "content_type": 8,
+    "object_id": "2657ee80-5e55-470e-87fd-e8424426cb2c",
+    "object_repr": "VendorProfile(v1@test.com)",
+    "previous_data": null,
+    "new_data": {
+      "user": "641b8e67-c50c-42aa-b0eb-966b64a353f2",
+      "status": "active",
+      "verified": true,
+      "is_deleted": false,
+      "reputation": 0.0,
+      "location_type": "FIXED"
+    },
+    "ip_address": null
+  }
+},
+{
+  "model": "audit.auditlog",
+  "pk": "d25190f1-0222-43d5-a6f4-88bb966684fb",
+  "fields": {
+    "created_at": "2026-03-24T17:38:27.296Z",
+    "updated_at": "2026-03-24T17:38:27.296Z",
+    "is_deleted": false,
+    "user": null,
+    "action": "",
+    "entity": "",
+    "entity_id": "",
+    "timestamp": "2026-03-24T17:38:27.296Z",
+    "action_type": "CREATE",
+    "source": "API",
+    "content_type": 8,
+    "object_id": "17a6f4e2-6061-4ad9-92da-a440e96e45eb",
+    "object_repr": "VendorProfile(v4@test.com)",
+    "previous_data": null,
+    "new_data": {
+      "user": "819cb739-09d9-47b2-855d-e5311641f6d5",
+      "status": "active",
+      "verified": true,
+      "is_deleted": false,
+      "reputation": 0.0,
+      "location_type": "FIXED"
+    },
+    "ip_address": null
+  }
+}
+]

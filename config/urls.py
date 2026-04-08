@@ -17,16 +17,16 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh_global"),
-
-    path("api/users/", include("apps.users.urls")),
-    path("api/products/", include("apps.products.urls")),
-    path("api/audit/", include("apps.audit.urls")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # API del proyecto
+    path('api/', include('apps.users.urls')),
+    path('api/audit/', include('apps.audit.urls')),
+    path('api/products/', include('apps.products.urls')),
+    path('api/geo/', include('apps.geo.urls')),
+    # OpenAPI Schema
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Swagger UI
     path('api/docs/',SpectacularSwaggerView.as_view(url_name='schema'),name='swagger-ui'),
-    path("api/", include("apps.users.urls")),
+    # Redoc (documentación alternativa)
+    path('api/redoc/',SpectacularRedocView.as_view(url_name='schema'),name='redoc'),
+    path("api/users/", include("apps.users.urls")),
 ]
