@@ -50,3 +50,7 @@ class PCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = PComments
         fields = "__all__"
+
+# Aliases for views compatibility
+CreProSerializer = ProductSerializer
+ReadProSerializer = ProductSerializer
