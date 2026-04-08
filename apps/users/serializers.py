@@ -1,7 +1,15 @@
+from django.db.models import Q
 from rest_framework import serializers
 
 from .constants import UserRoles
 from .models import User
+
+from apps.users.models import User
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "email", "role", "is_active"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -43,16 +51,22 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email = data.get("email")
-        password = data.get("password")
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password") or ""
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("Credenciales inválidas")
+        users_qs = User.objects.filter(email__iexact=email).order_by("id")
+        user_count = users_qs.count()
+
+        if user_count == 0:
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        if user_count > 1:
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+
+        user = users_qs.first()
 
         if not user.check_password(password):
-            raise serializers.ValidationError("Credenciales inválidas")
+            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
 
         if user.status == User.Status.PENDING:
             raise serializers.ValidationError("SU INFORMACIÓN ESTÁ SIENDO REVISADA, EN UN MOMENTO PODRÁ INICIAR SESIÓN")
@@ -63,6 +77,7 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
+        data["email"] = email
         data["user"] = user
         return data
 
