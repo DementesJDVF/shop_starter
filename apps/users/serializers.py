@@ -19,7 +19,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "role")
+        fields = (
+            "username", "email", "password", "password_confirm", "role",
+            "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+        )
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -30,6 +33,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         role = attrs.get("role", UserRoles.CUSTOMER)
         if role not in UserRoles.SELF_ASSIGNABLE:
             raise serializers.ValidationError({"role": "No es posible autoprovisionar este rol"})
+
+        # Validación condicional para Vendedores
+        if role == UserRoles.VENDOR:
+            required_vendor_fields = [
+                "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+            ]
+            for field in required_vendor_fields:
+                if not attrs.get(field):
+                    raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
 
         return attrs
 
@@ -56,6 +68,12 @@ class LoginSerializer(serializers.Serializer):
         if not user.check_password(password):
             raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
 
+        if user.status == User.Status.PENDING:
+            raise serializers.ValidationError("SU INFORMACIÓN ESTÁ SIENDO REVISADA, EN UN MOMENTO PODRÁ INICIAR SESIÓN")
+
+        if user.status == User.Status.BLOCKED:
+            raise serializers.ValidationError("Su cuenta ha sido bloqueada por un administrador.")
+
         if not user.is_active:
             raise serializers.ValidationError("Usuario inactivo")
 
@@ -67,7 +85,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "username", "role", "is_active"]
+        fields = ["id", "email", "username", "role", "status", "is_active"]
         read_only_fields = fields
 class UserSerializerAll(serializers.ModelSerializer):
     class Meta:
