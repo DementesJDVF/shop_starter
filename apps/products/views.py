@@ -1,9 +1,8 @@
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
-from apps.products.models import Category, Product, PComments
+from apps.products.models import Category, Product
 from apps.products.serializers import (CategorySerializer,
-                                       ProductSerializer,
-                                       PCommentSerializer)
+                                       ProductSerializer)
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -20,10 +19,4 @@ class CategoryViewSet(viewsets.ModelViewSet):
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):
         # Aquí podrías, por ejemplo, validar algo antes de guardar
-        serializer.save()
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = PComments.objects.all()
-    serializer_class = PCommentSerializer
-    permission_classes = [AllowAny]
-    def perform_create(self, serializer):
         serializer.save()
