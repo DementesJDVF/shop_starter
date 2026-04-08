@@ -7,15 +7,17 @@ from apps.core.middleware import get_client_ip_from_request
 from .application.services import UserService
 from .models import User
 from .permissions import IsAdmin, IsClient, IsVendor
-from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    ChangeUserRoleSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    UserAdminSerializer,
+)
 from .throttles import RegisterRateThrottle
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
-from apps.users.models import User
-from apps.users.serializers import UserAdminSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -115,3 +117,9 @@ class ChangeUserStatusView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class AdminUserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserAdminSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
