@@ -1,0 +1,46 @@
+[
+{
+  "model": "geo.location",
+  "pk": "43086b51-a669-4c19-be99-e7c2869dd404",
+  "fields": {
+    "vendor": "2657ee80-5e55-470e-87fd-e8424426cb2c",
+    "latitude": "2.460000",
+    "longitude": "-76.630000",
+    "timestamp": "2026-03-24T17:37:49.367Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "bba3daf7-a17b-4dd8-8c0d-4aada9ec050b",
+  "fields": {
+    "vendor": "46360239-b680-4aba-a057-dfea40045ad9",
+    "latitude": "2.480000",
+    "longitude": "-76.650000",
+    "timestamp": "2026-03-24T17:38:25.294Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "c9ba47bc-a786-46d2-857d-3fccc7e5dc91",
+  "fields": {
+    "vendor": "17a6f4e2-6061-4ad9-92da-a440e96e45eb",
+    "latitude": "2.480000",
+    "longitude": "-76.650000",
+    "timestamp": "2026-03-24T17:38:28.423Z",
+    "description": null
+  }
+},
+{
+  "model": "geo.location",
+  "pk": "daf872c3-1813-478b-8ccb-f7370b64eae0",
+  "fields": {
+    "vendor": "30442c91-47bf-4b15-ac58-3199404e9b7e",
+    "latitude": "2.444814",
+    "longitude": "-76.614739",
+    "timestamp": "2026-03-24T17:17:41.453Z",
+    "description": null
+  }
+}
+]

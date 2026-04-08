@@ -51,6 +51,33 @@ class AuthTests(APITestCase):
         url = reverse("login")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_login_trims_and_normalizes_email(self):
+        """Permite login con email en mayúsculas o con espacios."""
+        User.objects.create_user(
+            username='trimuser',
+            email='trim@example.com',
+            password='password123',
+            role='CLIENTE'
+        )
+        data = {'email': '  TRIM@EXAMPLE.COM  ', 'password': 'password123'}
+        url = reverse("login")
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_login_password_keeps_spaces_as_real_chars(self):
+        """No altera password: espacios forman parte de la contraseña."""
+        User.objects.create_user(
+            username='spacepass',
+            email='spacepass@example.com',
+            password='password123',
+            role='CLIENTE'
+        )
+        data = {'email': 'spacepass@example.com', 'password': ' password123 '}
+        url = reverse("login")
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
     def test_register_user(self):
         return self.test_register_success()

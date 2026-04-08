@@ -23,9 +23,9 @@ class Order(BaseModel):
     )
 
     vendor = models.ForeignKey(
-        "vendors.VendorProfile",
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="orders",
+        related_name="sales",
         null=True,
     )
 

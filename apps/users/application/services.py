@@ -11,11 +11,26 @@ class UserService:
     @staticmethod
     @transaction.atomic
     def register_user(*, validated_data, ip_address=None):
+        role = validated_data.get("role", UserRoles.CUSTOMER)
+        
+        # El estado inicial es PENDING para vendedores, ACTIVE para clientes
+        initial_status = User.Status.PENDING if role == UserRoles.VENDOR else User.Status.ACTIVE
+        is_active = False if role == UserRoles.VENDOR else True
+        
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data["email"],
             password=validated_data["password"],
-            role=validated_data.get("role", UserRoles.CUSTOMER),
+            role=role,
+            status=initial_status,
+            is_active=is_active,
+            # Datos de contacto y perfil
+            full_name=validated_data.get("full_name"),
+            phone_number=validated_data.get("phone_number"),
+            document_type=validated_data.get("document_type"),
+            document_number=validated_data.get("document_number"),
+            birth_date=validated_data.get("birth_date"),
+            expedition_date=validated_data.get("expedition_date"),
         )
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user
