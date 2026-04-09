@@ -5,6 +5,9 @@ from apps.core.models import BaseModel
 from django.conf import settings
 class Category(BaseModel):
     name = models.CharField(max_length=120, unique=True)
+    description = models.TextField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    emoji = models.CharField(max_length=20, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     class Meta:
         db_table = "products_category"
@@ -19,6 +22,8 @@ class Product(BaseModel):
         PAUSED = "PAUSED", "Paused"
         OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
         REJECTED = "REJECTED", "Rejected"
+        RESERVED = "RESERVED", "Reserved"
+
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,  # Apunta dinámicamente a tu clase User personalizada
         on_delete=models.CASCADE,
