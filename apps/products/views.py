@@ -31,11 +31,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
         # Asignamos al usuario actual si es vendedor
         if self.request.user.is_authenticated and self.request.user.role == 'VENDEDOR':
             serializer.save(vendor=self.request.user)
         else:
-            serializer.save()
+            raise PermissionDenied("Solo los vendedores pueden crear productos.")
 
     def create(self, request, *args, **kwargs):
         # Usamos el serializador de creación pero respondemos con el de lectura
@@ -46,7 +47,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Respondemos con el objeto completo para que el front se actualice bien
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
-class ProductViewGet(viewsets.ModelViewSet):
+class ProductViewGet(viewsets.ReadOnlyModelViewSet):
     """
     Esta vista solo permite listar (GET /products/) 
     y ver detalle (GET /products/{id}/).
