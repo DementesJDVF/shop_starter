@@ -44,12 +44,6 @@ class ProductSerializer(serializers.ModelSerializer):
         for image_data in images_data:
             PImages.objects.create(product=product, **image_data)
         return product
-class PCommentSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    class Meta:
-        model = PComments
-        fields = "__all__"
 
 # Aliases for views compatibility
 CreProSerializer = ProductSerializer
