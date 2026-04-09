@@ -7,11 +7,12 @@ from apps.products.views import (
     CategoryViewGet,
 )
 
+# Creamos un ÚNICO router para toda la aplicación de productos
 router = DefaultRouter()
-# Para VENDEDORES (Gestionar sus productos)
-router.register(r"create", ProductViewSet, basename="product-admin")
-# Para CLIENTES (Ver catálogo público)
-router.register(r"catalog", ProductViewGet, basename="product-public")
+
+# Registramos cada ViewSet con su propio prefijo
+router.register(r'products', ProductViewSet, basename='product')
+router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
     # Ruta pública de categorías (para vendedores y clientes)
