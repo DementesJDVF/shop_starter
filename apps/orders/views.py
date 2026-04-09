@@ -3,23 +3,18 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from .models import Order, OrderItem
+from decimal import Decimal
+from .models import Order
 from apps.products.models import Product
 
-class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    class Meta:
-        model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'price_at_purchase']
-
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
     client_name = serializers.CharField(source='client.username', read_only=True)
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'client', 'client_name', 'vendor', 'vendor_name', 'status', 'total', 'items', 'created_at']
+        fields = ['id', 'client', 'client_name', 'vendor', 'vendor_name', 'status', 'total', 'created_at', 'product', 'product_name']
         read_only_fields = ['client', 'status', 'total', 'vendor']
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -54,15 +49,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = Order.objects.create(
             client=self.request.user,
             vendor=product.vendor,
-            total=product.price
-        )
-
-        # Crear el item
-        OrderItem.objects.create(
-            order=order,
+            total=product.price,
             product=product,
             quantity=1,
-            price_at_purchase=product.price
+            unit_price=product.price
         )
 
         # Cambiar estado del producto a RESERVADO
@@ -85,12 +75,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Penalización si el vendedor marca que el cliente no vino ('cancel' desde el panel del vendedor)
         if request.user.role == 'VENDEDOR' and order.vendor == request.user:
             client = order.client
-            client.reputation_score = max(0, client.reputation_score - 1.0)
+            client.reputation_score = max(Decimal('0.0'), client.reputation_score - Decimal('1.0'))
             client.save()
 
         # Liberar el producto
-        for item in order.items.all():
-            product = item.product
+        if order.product:
+            product = order.product
             product.status = Product.ProductStatus.ACTIVE
             product.save()
 
@@ -109,8 +99,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Recompensa por completar la transacción exitosamente
         client = order.client
         vendor = order.vendor
-        client.reputation_score = min(5.0, client.reputation_score + 0.1)
-        vendor.reputation_score = min(5.0, vendor.reputation_score + 0.1)
+        client.reputation_score = min(Decimal('5.0'), client.reputation_score + Decimal('0.1'))
+        vendor.reputation_score = min(Decimal('5.0'), vendor.reputation_score + Decimal('0.1'))
         client.save()
         vendor.save()
 
@@ -129,12 +119,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         # Penalización fuerte al vendedor
         vendor = order.vendor
-        vendor.reputation_score = max(0, vendor.reputation_score - 1.5)
+        vendor.reputation_score = max(Decimal('0.0'), vendor.reputation_score - Decimal('1.5'))
         vendor.save()
 
         # Liberar el producto (aunque supuestamente ya lo vendió, lo ponemos en ACTIVE para que el sistema sea consistente o el vendedor lo borre)
-        for item in order.items.all():
-            product = item.product
+        if order.product:
+            product = order.product
             product.status = Product.ProductStatus.ACTIVE
             product.save()
 
