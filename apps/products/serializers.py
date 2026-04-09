@@ -7,7 +7,7 @@ from apps.users.constants import UserRoles
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "name", "description", "price", "emoji", "is_active"]
+        fields = ["id", "name", "description", "emoji", "is_active"]
 class PImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PImages
