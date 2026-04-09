@@ -7,7 +7,7 @@ from apps.users.constants import UserRoles
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "name", "is_active"]
+        fields = ["id", "name", "description", "price", "emoji", "is_active"]
 class PImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PImages
@@ -16,7 +16,7 @@ class ProductSerializer(serializers.ModelSerializer):
     # Aquí está la magia: filtramos el queryset para que la API
     # rechace cualquier ID que no pertenezca a un vendedor.
     # vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=UserRoles.VENDOR))
-    vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    vendor = serializers.PrimaryKeyRelatedField(read_only=True)
     # Para LEER: Muestra el objeto completo de la categoría
     category_detail = CategorySerializer(source="category", read_only=True)
     # Para ESCRIBIR: Permite mandar solo el ID
@@ -44,3 +44,7 @@ class ProductSerializer(serializers.ModelSerializer):
         for image_data in images_data:
             PImages.objects.create(product=product, **image_data)
         return product
+
+# Aliases for views compatibility
+CreProSerializer = ProductSerializer
+ReadProSerializer = ProductSerializer
