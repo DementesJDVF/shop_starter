@@ -5,7 +5,8 @@ from apps.users.permissions import IsVendor
 from apps.products.models import Product, Category
 from apps.products.serializers import (CreProSerializer,
                                        ReadProSerializer,
-                                       CategorySerializer)
+                                       CategorySerializer,
+                                       ProductSerializer)
 
 class ProductViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):

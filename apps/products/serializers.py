@@ -1,7 +1,7 @@
 """Serializers for product endpoints."""
 
 from rest_framework import serializers
-from apps.products.models import Category, Product, PImages, PComments
+from apps.products.models import Category, Product, PImages
 from apps.users.models import User
 from apps.users.constants import UserRoles
 class CategorySerializer(serializers.ModelSerializer):
