@@ -46,3 +46,38 @@ class LocationSerializer(serializers.ModelSerializer):
                 LImages.objects.create(location=instance, **image_data)
                 
         return instance
+    
+class NearbyVendorSerializer(serializers.ModelSerializer):
+    vendor = serializers.SerializerMethodField()
+    distance = serializers.FloatField()
+    image = serializers.SerializerMethodField()  # 🔥 NUEVO
+
+    class Meta:
+        model = Location
+        fields = [
+            "id",
+            "latitude",
+            "longitude",
+            "description",
+            "distance",
+            "vendor",
+            "image",  # 🔥 IMPORTANTE
+        ]
+
+    def get_vendor(self, obj):
+        vp = getattr(obj.vendor, "vendorprofile", None)
+        return {
+            "id": obj.vendor.id,
+            "name": getattr(obj.vendor, "username", None),
+            "is_active": getattr(vp, "is_active", False) if vp else False,
+        }
+
+    # 🔥 ESTA FUNCIÓN ES LA CLAVE
+    def get_image(self, obj):
+        main_image = obj.images.filter(is_main=True).first()
+
+        if main_image:
+            request = self.context.get("request")
+            return request.build_absolute_uri(main_image.url_image.url)
+
+        return None
