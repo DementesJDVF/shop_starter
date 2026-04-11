@@ -7,15 +7,17 @@ from apps.core.middleware import get_client_ip_from_request
 from .application.services import UserService
 from .models import User
 from .permissions import IsAdmin, IsClient, IsVendor
-from .serializers import ChangeUserRoleSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    ChangeUserRoleSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    UserAdminSerializer,
+)
 from .throttles import RegisterRateThrottle
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
-from apps.users.models import User
-from apps.users.serializers import UserAdminSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -94,15 +96,30 @@ class ChangeUserRoleView(APIView):
             status=status.HTTP_200_OK,
         )
 
+
+class ChangeUserStatusView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, user_id):
+        VALID_STATUSES = [User.Status.ACTIVE, User.Status.INACTIVE, User.Status.PENDING, User.Status.BLOCKED]
+        new_status = request.data.get('status')
+        if new_status not in VALID_STATUSES:
+            return Response({'error': f'Estado inválido. Opciones: {VALID_STATUSES}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_user = get_object_or_404(User, id=user_id)
+        target_user.status = new_status
+        target_user.save()
+
+        return Response(
+            {
+                "message": "Estado actualizado correctamente",
+                "user": UserSerializer(target_user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class AdminUserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserAdminSerializer
-
-    def get_permissions(self):
-        if not self.request.user.is_authenticated:
-            raise PermissionDenied("No autenticado")
-
-        if self.request.user.role != "ADMIN":
-            raise PermissionDenied("No tienes permisos")
-
-        return [IsAuthenticated()]
+    permission_classes = [IsAuthenticated, IsAdmin]

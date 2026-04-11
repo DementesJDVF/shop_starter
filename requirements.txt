@@ -30,3 +30,4 @@ tzdata==2025.2
 uritemplate==4.2.0
 virtualenv==20.35.4
 whitenoise==6.11.0
+drf-extra-fields==3.7.0
