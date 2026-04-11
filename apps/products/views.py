@@ -1,17 +1,64 @@
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
-from apps.products.models import Category, Product, PComments
-from apps.products.serializers import (CategorySerializer,
-                                       ProductSerializer,
-                                       PCommentSerializer)
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.users.permissions import IsVendor
+from apps.products.models import Product, Category
+from apps.products.serializers import (CreProSerializer,
+                                       ReadProSerializer,
+                                       CategorySerializer,
+                                       ProductSerializer)
+
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [AllowAny]
-    # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
-    # puedes sobrescribir esta función:
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return ReadProSerializer
+        return CreProSerializer
+    
+    def get_queryset(self):
+        """Filtra los productos para devolver solo los del vendedor autenticado, a menos que sea ADMIN."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return Product.objects.none()
+            
+        if user.role == 'ADMIN':
+            return Product.objects.all()
+            
+        return Product.objects.filter(vendor=user)
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
     def perform_create(self, serializer):
-        serializer.save()
+        from rest_framework.exceptions import PermissionDenied
+        # Asignamos al usuario actual si es vendedor
+        if self.request.user.is_authenticated and self.request.user.role == 'VENDEDOR':
+            serializer.save(vendor=self.request.user)
+        else:
+            raise PermissionDenied("Solo los vendedores pueden crear productos.")
+
+    def create(self, request, *args, **kwargs):
+        # Usamos el serializador de creación pero respondemos con el de lectura
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Respondemos con el objeto completo para que el front se actualice bien
+        read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+class ProductViewGet(viewsets.ReadOnlyModelViewSet):
+    """
+    Esta vista solo permite listar (GET /products/) 
+    y ver detalle (GET /products/{id}/).
+    """
+    queryset = Product.objects.filter(status=Product.ProductStatus.ACTIVE)
+    serializer_class = ReadProSerializer
+    # Especificamos que busque por el campo 'id'
+    lookup_field = 'id'
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -21,9 +68,15 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Aquí podrías, por ejemplo, validar algo antes de guardar
         serializer.save()
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = PComments.objects.all()
-    serializer_class = PCommentSerializer
+
+class CategoryViewGet(viewsets.ReadOnlyModelViewSet):
+    """
+    Vista simple para ver la lista de categorías y el detalle de cada una.
+    """
+    # Usamos all_objects para saltar cualquier filtro de eliminación suave (soft-delete)
+    queryset = Category.all_objects.all()
+    serializer_class = CategorySerializer
+    authentication_classes = []
     permission_classes = [AllowAny]
-    def perform_create(self, serializer):
-        serializer.save()
+    # Especificamos que busque por el campo 'id'
+    lookup_field = 'id'

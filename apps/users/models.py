@@ -18,6 +18,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=UserRoles.CHOICES, default=UserRoles.CLIENTE)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    reputation_score = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
     
     # Datos de contacto y perfil
     full_name = models.CharField(max_length=255, blank=True, null=True)

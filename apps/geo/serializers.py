@@ -1,49 +1,83 @@
 from rest_framework import serializers
-from apps.geo.models import Location
+from apps.geo.models import Location, LImages
 from apps.users.models import User
-from apps.users.constants import UserRoles
-from .models import VendorProfile
+from drf_extra_fields.fields import Base64ImageField
+# from apps.users.constants import UserRoles
+class ImageSerializer(serializers.ModelSerializer):
+    url_image = Base64ImageField () # Allows you to receive a string in base64 and save it as a file
+    class Meta:
+        model = LImages
+        fields = ["id", "url_image", "is_main"]
 class LocationSerializer(serializers.ModelSerializer):
-    vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    #vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=UserRoles.VENDOR))
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    images = ImageSerializer(many=True, required=False)
     class Meta:
         model = Location
         fields = "__all__"
-    def create(self, validated_data):
-        location = Location.objects.create(**validated_data) 
-        return location
-    
-    def valid_latitude(self,value):
-        if value < -90 or value > 90:
-            raise serializers.ValidationError(
-                "la latitude debe estar entre -90 y 90"
-            )
+    def validate_images(self, value):
+        if len(value) > 10:
+            raise serializers.ValidationError("Se permiten máximo 10 imágenes.")
+        mains = [img for img in value if img.get("is_main")]
+        if len(mains) > 1:
+            raise serializers.ValidationError("Solo una imagen puede ser la principal.")
         return value
+
+    def create(self, validated_data):
+        images_data = validated_data.pop("images", [])
+        location = Location.objects.create(**validated_data)
         
-class VendorLocationSerializer(serializers.ModelSerializer):
+        for image_data in images_data:
+            LImages.objects.create(location=location, **image_data)
+            
+        return location
+
+    def update(self, instance, validated_data):
+        images_data = validated_data.pop("images", None)
+        
+        # Actualizamos la location
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Si mandaron imágenes, las reemplazamos
+        if images_data is not None:
+            instance.images.all().delete() 
+            for image_data in images_data:
+                LImages.objects.create(location=instance, **image_data)
+                
+        return instance
+    
+class NearbyVendorSerializer(serializers.ModelSerializer):
+    vendor = serializers.SerializerMethodField()
+    distance = serializers.FloatField()
+    image = serializers.SerializerMethodField()  # 🔥 NUEVO
 
     class Meta:
-        model = VendorProfile
-        fields = ["latitude", "longitude"]
+        model = Location
+        fields = [
+            "id",
+            "latitude",
+            "longitude",
+            "description",
+            "distance",
+            "vendor",
+            "image",  # 🔥 IMPORTANTE
+        ]
 
-    def validate(self, data):
-        user = self.context["request"].user
+    def get_vendor(self, obj):
+        vp = getattr(obj.vendor, "vendorprofile", None)
+        return {
+            "id": obj.vendor.id,
+            "name": getattr(obj.vendor, "username", None),
+            "is_active": getattr(vp, "is_active", False) if vp else False,
+        }
 
-        
-        if not hasattr(user, "vendorprofile"):
-            raise serializers.ValidationError("No eres vendedor")
+    # 🔥 ESTA FUNCIÓN ES LA CLAVE
+    def get_image(self, obj):
+        main_image = obj.images.filter(is_main=True).first()
 
-        if not user.vendorprofile.is_active:
-            raise serializers.ValidationError("Vendedor inactivo")
+        if main_image:
+            request = self.context.get("request")
+            return request.build_absolute_uri(main_image.url_image.url)
 
-        lat = data.get("latitude")
-        lng = data.get("longitude")
-
-        
-        if not (-90 <= lat <= 90):
-            raise serializers.ValidationError("Latitud inválida")
-
-        if not (-180 <= lng <= 180):
-            raise serializers.ValidationError("Longitud inválida")
-
-        return data
+        return None

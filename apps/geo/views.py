@@ -1,13 +1,14 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
-from apps.geo.serializers import VendorLocationSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.shortcuts import get_list_or_404, get_object_or_404
+from django.db.models import Q 
+
 from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
-from django.shortcuts import get_list_or_404, get_object_or_404
+from apps.geo.utils import haversine
+from apps.geo.serializers import NearbyVendorSerializer
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
@@ -15,58 +16,54 @@ class LocationViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        read_serializer = LocationSerializer(serializer.instance, context={'request': request})
-        headers = self.get_success_headers(read_serializer.data)
-        return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-@api_view(['GET', 'POST'])
-def vendors_locations(request):
-    
-    if request.method == 'GET':
-        locations =Location.objects.all()
-        serializer = LocationSerializer(locations, many=True)
-        return Response(serializer.data)
-    
-    if request.method ==  'POST':
-        data = request.data.copy()
-        data['vendor'] = request.user.id
-        serializer = LocationSerializer(data=data)
+    def perform_create(self, serializer):
+        # El método update_or_create es perfecto para relaciones OneToOne
+        user = serializer.validated_data.get('user')
+        Location.objects.update_or_create(
+            user=user,
+            defaults=serializer.validated_data)
         
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def nearby_vendors(request):
+    lat = request.GET.get("lat")
+    lng = request.GET.get("lng")
+    radius = request.GET.get("radius", 5)
 
-@api_view(['GET'])
-def location_detail(request, pk):
-    location = get_object_or_404(Location, id=pk)
-    serializer = LocationSerializer(location)
-    return Response(serializer.data)
+    try:
+        lat = float(lat)
+        lng = float(lng)
+        radius = float(radius)
+    except:
+        return Response([], status=400)
 
-@api_view(["PUT", "PATCH"])
-@permission_classes([IsAuthenticated])
-def update_vendor_location(request):
-
-    user = request.user
-
-    if not hasattr(user, "vendorprofile"):
-        return Response({"error": "No eres vendedor"}, status=403)
-
-    vendor = user.vendorprofile
-
-    serializer = VendorLocationSerializer(
-        vendor,
-        data=request.data,
-        partial=True,
-        context={"request": request}
+    qs = Location.objects.select_related(
+        "vendor", "vendor__vendorprofile"
+    ).filter(
+        latitude__isnull=False,
+        longitude__isnull=False,
+        # activar cuando tengas datos correctos:
+        # vendor__vendorprofile__is_active=True
     )
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
+    results = []
 
-    return Response(serializer.errors, status=400)
+    for loc in qs:
+        dist = haversine(lat, lng, float(loc.latitude), float(loc.longitude))
+        if dist <= radius:
+            results.append({
+                "instance": loc,
+                "distance": round(dist, 2),
+            })
+
+    results.sort(key=lambda x: x["distance"])
+
+    data = [
+        NearbyVendorSerializer(
+            r["instance"],
+            context={"request": request}
+        ).data | {"distance": r["distance"]}
+        for r in results
+    ]
+
+    return Response(data)
