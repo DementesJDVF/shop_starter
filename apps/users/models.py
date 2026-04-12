@@ -26,7 +26,7 @@ class User(AbstractUser):
     document_type = models.CharField(max_length=20, blank=True, null=True)
     document_number = models.CharField(max_length=50, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
-    expedition_date = models.DateField(blank=True, null=True)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

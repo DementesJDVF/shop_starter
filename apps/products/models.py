@@ -15,7 +15,7 @@ class Category(BaseModel):
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
     class ProductStatus(models.TextChoices):
-        DRAFT = "DRAFT", "Draft"
+        PENDING = "PENDING", "Pending Approval"
         ACTIVE = "ACTIVE", "Active"
         INACTIVE = "INACTIVE", "Inactive"
         PAUSED = "PAUSED", "Paused"
@@ -40,8 +40,9 @@ class Product(BaseModel):
     status = models.CharField(
         max_length=20,
         choices=ProductStatus.choices,
-        default=ProductStatus.DRAFT,
+        default=ProductStatus.PENDING,
         db_index=True)
+    rejection_reason = models.TextField(null=True, blank=True)
     is_featured = models.BooleanField(default=False, db_index=True)
     class Meta:
         db_table = "products_product"
@@ -61,7 +62,7 @@ class PImages(BaseModel):
         db_column="products_product_id",
         related_name="images",)
     # url_image TEXT NOT NULL
-    url_image = models.TextField()
+    url_image = models.ImageField(upload_to="products/images/")
     # is_main boolean DEFAULT false
     is_main = models.BooleanField(default=False)
     # date_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

@@ -38,12 +38,12 @@ def nearby_vendors(request):
         return Response([], status=400)
 
     qs = Location.objects.select_related(
-        "vendor", "vendor__vendorprofile"
+        "user"
     ).filter(
         latitude__isnull=False,
         longitude__isnull=False,
-        # activar cuando tengas datos correctos:
-        # vendor__vendorprofile__is_active=True
+        # Filtramos para que traiga solo locaciones de cuentas "Activas"
+        user__is_active=True
     )
 
     results = []

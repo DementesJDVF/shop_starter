@@ -34,4 +34,5 @@ class Review(models.Model):
         unique_together = ['order', 'user']
     # Esto es lo que "regresa" el modelo cuando lo ves en el Admin o consola
     def __str__(self):
-        return f"{self.user.username} - {self.product.name} ({self.rate}★)"
+        product_name = self.order.product.name if self.order and self.order.product else "N/A"
+        return f"{self.user.username if self.user else 'Anon'} - {product_name} ({self.rate}★)"

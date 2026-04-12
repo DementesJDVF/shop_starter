@@ -12,6 +12,7 @@ router = DefaultRouter()
 
 # Registramos cada ViewSet con su propio prefijo
 router.register(r'products', ProductViewSet, basename='product')
+router.register(r'create', ProductViewSet, basename='product-create')  # Alias usado por el frontend
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
@@ -30,4 +31,7 @@ urlpatterns = [
     # Resto de rutas del router
     path("", include(router.urls)),
     path("<int:id>/", ProductViewGet.as_view({"get": "retrieve"}), name="product-read-id"),
+
+    # Ruta pública para el catálogo de clientes (solo productos ACTIVE)
+    path("catalog/", ProductViewGet.as_view({"get": "list"}), name="product-catalog-public"),
 ]

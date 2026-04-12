@@ -14,6 +14,7 @@ from .serializers import (
     UserAdminSerializer,
 )
 from .throttles import RegisterRateThrottle
+from apps.core.services.email_service import send_user_status_notification
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
@@ -107,8 +108,13 @@ class ChangeUserStatusView(APIView):
             return Response({'error': f'Estado inválido. Opciones: {VALID_STATUSES}'}, status=status.HTTP_400_BAD_REQUEST)
 
         target_user = get_object_or_404(User, id=user_id)
+        old_status = target_user.status
         target_user.status = new_status
         target_user.save()
+
+        # Notificar si el estado cambió a ACTIVE o BLOCKED
+        if old_status != new_status and new_status in [User.Status.ACTIVE, User.Status.BLOCKED]:
+            send_user_status_notification(target_user)
 
         return Response(
             {

@@ -4,7 +4,6 @@ from rest_framework import serializers
 from .constants import UserRoles
 from .models import User
 
-from apps.users.models import User
 
 class UserAdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,16 +15,35 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
+    is_human = serializers.BooleanField(required=True)
+    honeypot = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = User
         fields = (
             "username", "email", "password", "password_confirm", "role",
-            "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+            "full_name", "phone_number", "document_type", "document_number", "birth_date",
+            "is_human", "honeypot"
         )
 
     def validate(self, attrs):
-        if attrs["password"] != attrs["password_confirm"]:
+        import re
+        password = attrs.get("password", "")
+        if not re.search(r'[A-Z]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos una letra mayúscula."})
+        if not re.search(r'[0-9]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un número."})
+        if not re.search(r'[@#$%^&+=!¡¿?*]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
+            
+        if not attrs.get("is_human"):
+            raise serializers.ValidationError({"is_human": "Debes confirmar que no eres un robot."})
+            
+        if attrs.get("honeypot"):
+            # Si el campo trampa tiene datos, es probablemente un bot.
+            raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Bot detectado)."})
+            
+        if password != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})
 
         attrs.pop("password_confirm")
@@ -37,12 +55,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Validación condicional para Vendedores
         if role == UserRoles.VENDOR:
             required_vendor_fields = [
-                "full_name", "phone_number", "document_type", "document_number", "birth_date", "expedition_date"
+                "full_name", "phone_number", "document_type", "document_number", "birth_date"
             ]
             for field in required_vendor_fields:
                 if not attrs.get(field):
                     raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
 
+        attrs.pop("is_human", None)
+        attrs.pop("honeypot", None)
         return attrs
 
 
