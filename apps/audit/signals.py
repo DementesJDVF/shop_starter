@@ -18,6 +18,11 @@ def audit_create_update(sender, instance, created, **kwargs):
         AuditService.log_create(user=None, instance=instance)
         return
 
+    # Si la instancia tiene is_deleted=True, lo logueamos como eliminación suave
+    if getattr(instance, "is_deleted", False):
+        AuditService.log_soft_delete(user=None, instance=instance)
+        return
+
     AuditService.log_update(
         user=None,
         instance=instance,

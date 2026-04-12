@@ -30,7 +30,6 @@ class UserService:
             document_type=validated_data.get("document_type"),
             document_number=validated_data.get("document_number"),
             birth_date=validated_data.get("birth_date"),
-            expedition_date=validated_data.get("expedition_date"),
         )
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user

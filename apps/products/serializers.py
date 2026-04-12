@@ -2,49 +2,151 @@
 
 from rest_framework import serializers
 from apps.products.models import Category, Product, PImages
-from apps.users.models import User
-from apps.users.constants import UserRoles
+from django.db import transaction
+import base64
+import uuid
+from django.core.files.base import ContentFile
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ["id", "name", "description", "emoji", "is_active"]
-class PImageSerializer(serializers.ModelSerializer):
+
+
+class PImageWriteSerializer(serializers.Serializer):
+    """Acepta una imagen como string Base64 o URL."""
+    url_image = serializers.CharField()  # Base64 string del frontend
+    is_main = serializers.BooleanField(default=False)
+
+    def to_internal_value(self, data):
+        validated = super().to_internal_value(data)
+        raw = validated.get('url_image', '')
+
+        # Si llega como Base64 (data:image/jpeg;base64,...)
+        if raw.startswith('data:'):
+            try:
+                header, encoded = raw.split(';base64,', 1)
+                ext = header.split('/')[-1]
+                file_data = base64.b64decode(encoded)
+                filename = f"{uuid.uuid4()}.{ext}"
+                validated['url_image'] = ContentFile(file_data, name=filename)
+            except Exception:
+                raise serializers.ValidationError({"url_image": "Imagen Base64 inválida."})
+
+        return validated
+
+
+class PImageReadSerializer(serializers.ModelSerializer):
+    """Para leer imágenes — devuelve la URL completa."""
+    url_image = serializers.SerializerMethodField()
+
     class Meta:
         model = PImages
-        fields = ["id", "url_image", "is_main"]  # Lo que querés recibir/mandar
-class ProductSerializer(serializers.ModelSerializer):
-    # Aquí está la magia: filtramos el queryset para que la API
-    # rechace cualquier ID que no pertenezca a un vendedor.
-    # vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=UserRoles.VENDOR))
+        fields = ["id", "url_image", "is_main"]
+
+    def get_url_image(self, obj):
+        request = self.context.get('request')
+        if obj.url_image and request:
+            return request.build_absolute_uri(obj.url_image.url)
+        return obj.url_image.url if obj.url_image else None
+
+
+class CreProSerializer(serializers.ModelSerializer):
+    """Serializer para CREAR/EDITAR productos (el vendedor envía datos)."""
+    images = PImageWriteSerializer(many=True, required=False)
     vendor = serializers.PrimaryKeyRelatedField(read_only=True)
-    # Para LEER: Muestra el objeto completo de la categoría
-    category_detail = CategorySerializer(source="category", read_only=True)
-    # Para ESCRIBIR: Permite mandar solo el ID
-    # 'queryset' es necesario para que DRF valide que la categoría existe
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
-    # 'images' debe coincidir con el related_name del ForeignKey en ProductImage
-    images = PImageSerializer(many=True, required=False)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
     class Meta:
         model = Product
-        fields = "__all__"
-    def validate_images(self, value):
-        if len(value) > 10:
-            raise serializers.ValidationError("Se permiten máximo 10 imágenes.")
-        mains = [img for img in value if img.get("is_main")]
-        if len(mains) > 1:
-            raise serializers.ValidationError("Solo una imagen puede ser la principal.")
-        return value
-    # Para que DRF sepa qué hacer con el array al crear el producto
+        fields = [
+            'id', 'vendor', 'category', 'category_name',
+            'name', 'description', 'price', 'stock',
+            'status', 'rejection_reason', 'is_featured', 'images'
+        ]
+        read_only_fields = ['vendor'] # 'status' is no longer read_only globally; we will handle permissions in the view.
+
+    @transaction.atomic
     def create(self, validated_data):
-        images_data = validated_data.pop(
-            "images", []
-        )  # Sacamos las imágenes del paquete
-        product = Product.objects.create(**validated_data)  # Creamos el producto solo
-        # Ahora creamos cada imagen asociada a ese producto
-        for image_data in images_data:
-            PImages.objects.create(product=product, **image_data)
+        images_data = validated_data.pop('images', [])
+        product = Product.objects.create(**validated_data)
+        for img_data in images_data:
+            PImages.objects.create(product=product, **img_data)
         return product
 
-# Aliases for views compatibility
-CreProSerializer = ProductSerializer
-ReadProSerializer = ProductSerializer
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        images_data = validated_data.pop('images', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if images_data is not None:
+            # Opción: borrar imágenes anteriores o solo añadir
+            # Por ahora solo añadimos las nuevas
+            for img_data in images_data:
+                PImages.objects.create(product=instance, **img_data)
+        return instance
+
+
+class ReadProSerializer(serializers.ModelSerializer):
+    """Serializer para LEER productos (el cliente ve la lista/detalle)."""
+    images = PImageReadSerializer(many=True, read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    vendor_name = serializers.CharField(source='vendor.username', read_only=True)
+    distance = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'vendor', 'vendor_name', 'category', 'category_name',
+            'name', 'description', 'price', 'stock',
+            'status', 'rejection_reason', 'is_featured', 'images', 'created_at',
+            'distance', 'latitude', 'longitude'
+        ]
+
+    def get_distance(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return None
+        
+        user_lat = request.query_params.get('lat')
+        user_lng = request.query_params.get('lng')
+
+        if not (user_lat and user_lng):
+            return None
+
+        try:
+            from apps.geo.models import Location
+            from apps.geo.utils import haversine
+            
+            vendor_loc = Location.objects.filter(user=obj.vendor).first()
+            if not vendor_loc:
+                return None
+                
+            return round(haversine(
+                user_lat, user_lng, 
+                vendor_loc.latitude, vendor_loc.longitude
+            ), 2)
+        except Exception:
+            return None
+
+    def get_latitude(self, obj):
+        try:
+            from apps.geo.models import Location
+            loc = Location.objects.filter(user=obj.vendor).first()
+            return float(loc.latitude) if loc else None
+        except: return None
+
+    def get_longitude(self, obj):
+        try:
+            from apps.geo.models import Location
+            loc = Location.objects.filter(user=obj.vendor).first()
+            return float(loc.longitude) if loc else None
+        except: return None
+
+
+# Alias para compatibilidad con código existente
+ProductSerializer = ReadProSerializer

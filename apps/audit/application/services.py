@@ -7,6 +7,14 @@ from apps.audit.infrastructure.models import AuditLog
 from apps.core.middleware import get_current_ip, get_current_user
 
 
+class AuditJSONEncoder(DjangoJSONEncoder):
+    def default(self, o):
+        from django.db.models.fields.files import FieldFile
+        if isinstance(o, FieldFile):
+            return o.url if o else None
+        return super().default(o)
+
+
 class AuditService:
 
     @staticmethod
@@ -21,6 +29,11 @@ class AuditService:
     ):
         if not user:
             user = get_current_user()
+        
+        # Si el usuario es Anónimo (AnonymousUser), lo tratamos como None para la BD
+        if user and not user.is_authenticated:
+            user = None
+
         if not ip_address:
             ip_address = get_current_ip()
 
@@ -119,7 +132,7 @@ class AuditService:
     @staticmethod
     def _serialize(instance):
         data = model_to_dict(instance)
-        return json.loads(json.dumps(data, cls=DjangoJSONEncoder))
+        return json.loads(json.dumps(data, cls=AuditJSONEncoder))
 
     @classmethod
     def log_login(cls, user, ip_address=None):

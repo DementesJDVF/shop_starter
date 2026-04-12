@@ -14,6 +14,20 @@ class Order(BaseModel):
         CONFIRMED = "CONFIRMED", "Confirmed"
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders_as_client",
+        null=True,
+        blank=True
+    )
+    vendor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders_as_vendor",
+        null=True,
+        blank=True
+    )
     product = models.ForeignKey(
         Product, 
         on_delete=models.CASCADE, 

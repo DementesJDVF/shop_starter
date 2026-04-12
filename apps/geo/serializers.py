@@ -65,11 +65,10 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
         ]
 
     def get_vendor(self, obj):
-        vp = getattr(obj.vendor, "vendorprofile", None)
         return {
-            "id": obj.vendor.id,
-            "name": getattr(obj.vendor, "username", None),
-            "is_active": getattr(vp, "is_active", False) if vp else False,
+            "id": obj.user.id,
+            "name": getattr(obj.user, "username", None),
+            "is_active": obj.user.is_active,
         }
 
     # 🔥 ESTA FUNCIÓN ES LA CLAVE

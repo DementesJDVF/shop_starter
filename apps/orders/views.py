@@ -7,15 +7,7 @@ from decimal import Decimal
 from .models import Order
 from apps.products.models import Product
 
-class OrderSerializer(serializers.ModelSerializer):
-    client_name = serializers.CharField(source='client.username', read_only=True)
-    vendor_name = serializers.CharField(source='vendor.username', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
-
-    class Meta:
-        model = Order
-        fields = ['id', 'client', 'client_name', 'vendor', 'vendor_name', 'status', 'total', 'created_at', 'product', 'product_name']
-        read_only_fields = ['client', 'status', 'total', 'vendor']
+from .serializers import OrderSerializer
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()

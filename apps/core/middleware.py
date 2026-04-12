@@ -7,6 +7,12 @@ class BlockInactiveUserMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Las rutas de API usan autenticación JWT que DRF procesa DESPUÉS del middleware.
+        # Si bloqueamos aquí, el usuario aún no está autenticado y se bloquea incorrectamente.
+        # DRF maneja los permisos por sí mismo en las vistas de API.
+        if request.path.startswith('/api/'):
+            return self.get_response(request)
+
         user = getattr(request, "user", None)
 
         if user and user.is_authenticated:
