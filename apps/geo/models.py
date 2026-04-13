@@ -32,7 +32,7 @@ class LImages(BaseModel):
         db_column="location_id",
         related_name="images",)
     # url_image TEXT NOT NULL
-    url_image = models.TextField()
+    url_image = models.ImageField(upload_to="locations/images/")
     # is_main boolean DEFAULT false
     is_main = models.BooleanField(default=False)
     # date_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

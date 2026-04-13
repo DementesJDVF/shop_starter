@@ -2,6 +2,7 @@ import json
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.models import model_to_dict
+from django.db.models.fields.files import FieldFile
 
 from apps.audit.infrastructure.models import AuditLog
 from apps.core.middleware import get_current_ip, get_current_user
@@ -9,10 +10,15 @@ from apps.core.middleware import get_current_ip, get_current_user
 
 class AuditJSONEncoder(DjangoJSONEncoder):
     def default(self, o):
-        from django.db.models.fields.files import FieldFile
-        if isinstance(o, FieldFile):
-            return o.url if o else None
-        return super().default(o)
+        try:
+            if isinstance(o, FieldFile):
+                return o.url if o else None
+            # Soporte adicional para tipos que model_to_dict podría incluir
+            if hasattr(o, '__str__'):
+                return str(o)
+            return super().default(o)
+        except Exception:
+            return str(o)
 
 
 class AuditService:
@@ -131,8 +137,13 @@ class AuditService:
 
     @staticmethod
     def _serialize(instance):
-        data = model_to_dict(instance)
-        return json.loads(json.dumps(data, cls=AuditJSONEncoder))
+        try:
+            data = model_to_dict(instance)
+            # Dump and Load ensures it's JSON serializable for the JSONField
+            return json.loads(json.dumps(data, cls=AuditJSONEncoder))
+        except Exception as e:
+            # Red de seguridad: si falla, guardamos representación simple para no romper el flujo
+            return {"error": "Serialization failed", "details": str(e), "repr": str(instance)}
 
     @classmethod
     def log_login(cls, user, ip_address=None):

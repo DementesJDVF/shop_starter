@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -18,10 +18,19 @@ class LocationViewSet(viewsets.ModelViewSet):
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):
         # El método update_or_create es perfecto para relaciones OneToOne
-        user = serializer.validated_data.get('user')
-        Location.objects.update_or_create(
+        user = serializer.validated_data.pop('user', None) or self.request.user
+        location, created = Location.objects.update_or_create(
             user=user,
             defaults=serializer.validated_data)
+        # Sincronizamos el objeto con el serializador
+        serializer.instance = location
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_location(self, request):
+        """Devuelve la ubicación del vendedor autenticado."""
+        location = get_object_or_404(Location, user=request.user)
+        serializer = self.get_serializer(location)
+        return Response(serializer.data)
         
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -43,7 +52,7 @@ def nearby_vendors(request):
         latitude__isnull=False,
         longitude__isnull=False,
         # Filtramos para que traiga solo locaciones de cuentas "Activas"
-        user__is_active=True
+        user__status='ACTIVE'
     )
 
     results = []

@@ -9,11 +9,13 @@ class ImageSerializer(serializers.ModelSerializer):
         model = LImages
         fields = ["id", "url_image", "is_main"]
 class LocationSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     images = ImageSerializer(many=True, required=False)
+    user_name = serializers.CharField(source="user.username", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
     class Meta:
         model = Location
-        fields = "__all__"
+        fields = ["id", "user", "user_name", "user_email", "latitude", "longitude", "description", "images"]
     def validate_images(self, value):
         if len(value) > 10:
             raise serializers.ValidationError("Se permiten máximo 10 imágenes.")
