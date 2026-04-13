@@ -5,6 +5,7 @@ from apps.products.views import (
     ProductViewGet,
     CategoryViewSet,
     CategoryViewGet,
+    nearby_products,
 )
 
 # Creamos un ÚNICO router para toda la aplicación de productos
@@ -34,4 +35,5 @@ urlpatterns = [
 
     # Ruta pública para el catálogo de clientes (solo productos ACTIVE)
     path("catalog/", ProductViewGet.as_view({"get": "list"}), name="product-catalog-public"),
+    path("nearby/", nearby_products, name="product-nearby"),
 ]

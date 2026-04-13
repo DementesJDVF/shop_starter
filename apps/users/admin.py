@@ -25,7 +25,7 @@ class UserAdmin(BaseUserAdmin):
     # Organización de los formularios de edición
     fieldsets = BaseUserAdmin.fieldsets + (
         ("Información de Perfil", {"fields": ("role", "status")}),
-        ("Datos de Verificación (Vendedores)", {"fields": ("phone_number", "document_type", "document_number", "birth_date", "expedition_date")}),
+        ("Datos de Verificación (Vendedores)", {"fields": ("phone_number", "document_type", "document_number", "birth_date")}),
     )
     
     # Organización para el formulario de creación de usuario

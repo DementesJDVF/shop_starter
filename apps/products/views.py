@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
@@ -138,3 +139,56 @@ class CategoryViewGet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     # Especificamos que busque por el campo 'id'
     lookup_field = 'id'
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def nearby_products(request):
+    from apps.geo.models import Location
+    from apps.geo.utils import haversine
+    
+    lat = request.GET.get("lat")
+    lng = request.GET.get("lng")
+    radius = request.GET.get("radius", 5)
+
+    try:
+        lat = float(lat)
+        lng = float(lng)
+        radius = float(radius)
+    except:
+        return Response([], status=400)
+
+    # 1. Obtenemos locaciones de vendedores activos
+    locations = Location.objects.select_related("user").filter(
+        latitude__isnull=False,
+        longitude__isnull=False,
+        user__status='ACTIVE',
+        user__role='VENDEDOR'
+    )
+
+    # 2. Filtramos por distancia y recolectamos IDs de usuarios
+    nearby_users = []
+    user_distances = {} # userId -> distance
+
+    for loc in locations:
+        dist = haversine(lat, lng, float(loc.latitude), float(loc.longitude))
+        if dist <= radius:
+            nearby_users.append(loc.user)
+            user_distances[loc.user.id] = round(dist, 2)
+
+    # 3. Obtenemos productos de esos vendedores (solo los activos)
+    products = Product.objects.filter(
+        vendor__in=nearby_users,
+        status='ACTIVE'
+    ).select_related('category', 'vendor').prefetch_related('images')
+
+    # 4. Serializamos y añadimos la distancia
+    data = []
+    for product in products:
+        prod_data = ReadProSerializer(product, context={'request': request}).data
+        prod_data['distance'] = user_distances.get(product.vendor.id)
+        data.append(prod_data)
+
+    # Opcional: ordenar por distancia
+    data.sort(key=lambda x: x['distance'] if x['distance'] is not None else 999)
+
+    return Response(data)
