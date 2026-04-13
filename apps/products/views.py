@@ -115,7 +115,7 @@ class ProductViewGet(viewsets.ReadOnlyModelViewSet):
     authentication_classes = []
     permission_classes = [AllowAny]
     pagination_class = ProductPagination
-    filterset_fields = ['category']
+    filterset_fields = ['category', 'vendor']
     search_fields = ['name', 'description']
 
 class CategoryViewSet(viewsets.ModelViewSet):
