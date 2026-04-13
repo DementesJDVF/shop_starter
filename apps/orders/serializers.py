@@ -1,23 +1,20 @@
 """Serializers for orders endpoints."""
 from rest_framework import serializers
 from apps.products.models import Product
-from apps.geo.models import Location
+from apps.users.models import User
 from apps.orders.models import Order
 class OrderSerializer(serializers.ModelSerializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    product_name = serializers.CharField(source='product.name', read_only=True)
     client_name = serializers.CharField(source='client.username', read_only=True)
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    location = serializers.PrimaryKeyRelatedField(queryset=Location.objects.all(), required=False)
-
     class Meta:
         model = Order
-        fields = [
-            'id', 'client', 'client_name', 'vendor', 'vendor_name', 
-            'status', 'total', 'created_at', 'product', 'product_name', 
-            'location', 'quantity', 'unit_price', 'shipping', 'description'
-        ]
-        read_only_fields = ['client', 'status', 'total', 'vendor', 'unit_price']
+        fields = ['id', 'client', 'client_name', 'vendor', 'vendor_name',
+        'status', 'created_at', 'product', 'product_name', 
+        'quantity', 'description']
+        read_only_fields = ['vendor']
     def validate(self, data):
         product = data.get('product')
         quantity = data.get('quantity')
