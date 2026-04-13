@@ -41,10 +41,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = Order.objects.create(
             client=self.request.user,
             vendor=product.vendor,
-            total=product.price,
             product=product,
             quantity=1,
-            unit_price=product.price
         )
 
         # Cambiar estado del producto a RESERVADO
