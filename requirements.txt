@@ -7,6 +7,7 @@ Django==5.2.7
 django-cors-headers==4.7.0
 django-environ==0.13.0
 django-extensions==4.1
+django-filter==25.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 drf-extra-fields==3.7.0
@@ -19,6 +20,7 @@ inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 packaging==26.0
+pillow==12.2.0
 platformdirs==4.5.0
 psycopg2-binary==2.9.11
 PyJWT==2.11.0
@@ -32,4 +34,3 @@ tzdata==2025.2
 uritemplate==4.2.0
 virtualenv==20.35.4
 whitenoise==6.11.0
-django-filter==25.1
