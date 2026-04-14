@@ -44,6 +44,8 @@ class Order(BaseModel):
         default=Status.PENDING)
     quantity = models.PositiveIntegerField(default=1,validators=[MinValueValidator(1)]) # Antes era 'stock'
     description = models.CharField(max_length=255, blank=True, null=True)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, editable=False)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False) # Editable=False porque es automático
     class Meta:
         db_table = "orders_order"
     def clean(self):
@@ -52,6 +54,12 @@ class Order(BaseModel):
             raise ValidationError(
                 f"No puedes pedir {self.quantity} unidades. Solo quedan {self.product.stock} en stock.")
     def save(self, *args, **kwargs):
+        #  Congelar el precio si es la primera vez que se guarda
+        if self._state.adding:
+        # Aquí 'congelamos' el precio del momento de la compra
+            self.unit_price = self.product.price
+        # 2. Calcular total usando el precio congelado
+        self.total = (self.unit_price * self.quantity)
         # Asignación automática del vendor
         if self.product:
             self.vendor = self.product.vendor
