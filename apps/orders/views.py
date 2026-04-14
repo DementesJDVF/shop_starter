@@ -43,6 +43,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             vendor=product.vendor,
             product=product,
             quantity=1,
+            unit_price=product.price,
+            total=product.price
         )
 
         # Cambiar estado del producto a RESERVADO

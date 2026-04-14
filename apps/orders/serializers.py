@@ -13,8 +13,8 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['id', 'client', 'client_name', 'vendor', 'vendor_name',
         'status', 'created_at', 'product', 'product_name', 
-        'quantity', 'description']
-        read_only_fields = ['vendor']
+        'quantity', 'description', 'unit_price', 'total']
+        read_only_fields = ['vendor', 'unit_price', 'total']
     def validate(self, data):
         product = data.get('product')
         quantity = data.get('quantity')
