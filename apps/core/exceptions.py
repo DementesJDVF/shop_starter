@@ -30,7 +30,7 @@ def custom_exception_handler(exc, context):
 
     # DRF retorna los detalles en response.data, generalmente como diccionarios o listas.
     if isinstance(response.data, dict):
-        # Si DRF trae un "detail" global, lo usamos como mensaje principal
+        # Si DRF trae un "detail" global (ej: 401, 403, 404), lo usamos como mensaje principal
         if "detail" in response.data:
             error_payload["message"] = str(response.data.get("detail"))
             error_payload["code"] = getattr(exc, "default_code", "ERROR")
@@ -39,8 +39,19 @@ def custom_exception_handler(exc, context):
         # El resto de llaves suelen ser errores de validación de serializers (detalles)
         if response.data:
             error_payload["details"] = response.data
-            if error_payload["message"] == "Ocurrió un error en la solicitud.":
-                error_payload["message"] = "Error de validación de datos."
+            
+            # MEJORA: Priorizamos non_field_errors para el mensaje principal
+            if "non_field_errors" in response.data:
+                error_payload["message"] = str(response.data["non_field_errors"][0])
+                error_payload["code"] = "VALIDATION_ERROR"
+            elif error_payload["message"] == "Ocurrió un error en la solicitud.":
+                # Si no hay mensaje global, tomamos el error del primer campo que falló
+                first_field = next(iter(response.data))
+                first_error = response.data[first_field]
+                if isinstance(first_error, list) and len(first_error) > 0:
+                    error_payload["message"] = str(first_error[0])
+                else:
+                    error_payload["message"] = "Error de validación de datos."
                 error_payload["code"] = "VALIDATION_ERROR"
     elif isinstance(response.data, list):
         error_payload["message"] = str(response.data[0])
@@ -50,3 +61,4 @@ def custom_exception_handler(exc, context):
 
     response.data = error_payload
     return response
+

@@ -111,11 +111,19 @@ class ChangeUserStatusView(APIView):
         target_user = get_object_or_404(User, id=user_id)
         old_status = target_user.status
         target_user.status = new_status
+        
+        # Sincronizar is_active con el status para permitir/bloquear el login
+        if new_status == User.Status.ACTIVE:
+            target_user.is_active = True
+        elif new_status in [User.Status.BLOCKED, User.Status.INACTIVE]:
+            target_user.is_active = False
+            
         target_user.save()
 
         # Notificar si el estado cambió a ACTIVE o BLOCKED
         if old_status != new_status and new_status in [User.Status.ACTIVE, User.Status.BLOCKED]:
             send_user_status_notification(target_user)
+
 
         return Response(
             {
