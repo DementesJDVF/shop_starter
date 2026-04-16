@@ -20,14 +20,21 @@ CSRF_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
-    default=["https://*.onrender.com"]
+    default=[
+        "https://*.onrender.com", 
+        "https://shopstarter.online", 
+        "https://*.shopstarter.online"
+    ]
 )
 
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", ".up.railway.app"])
+ALLOWED_HOSTS = env.list(
+    "ALLOWED_HOSTS", 
+    default=["localhost", "127.0.0.1", ".up.railway.app", "shopstarter.online", ".shopstarter.online"]
+)
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
