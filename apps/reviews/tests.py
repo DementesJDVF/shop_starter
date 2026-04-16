@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+from apps.reviews.test.test_vendor_reviews import VendorReviewEndpointTests
