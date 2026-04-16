@@ -127,9 +127,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
-# Internationalization
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
@@ -142,9 +139,9 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", 
-    default=["http://localhost:5173", "http://127.0.0.1:5173", "https://shopstarter.vercel.app"]
+    default=["http://localhost:5173", "http://127.0.0.1:5173", "https://shopstarter.vercel.app", "https://shopstarter.online"]
 )
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["https://shopstarter.vercel.app"])
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["https://shopstarter.vercel.app", "https://shopstarter.online"])
 
 # DRF
 REST_FRAMEWORK = {
@@ -242,4 +239,4 @@ ANYMAIL = {
 }
 
 # Frontend configuration
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+FRONTEND_URL = env("FRONTEND_URL", default="https://shopstarter.online")
