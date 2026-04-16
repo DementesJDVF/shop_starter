@@ -34,3 +34,6 @@ tzdata==2025.2
 uritemplate==4.2.0
 virtualenv==20.35.4
 whitenoise==6.11.0
+cloudinary==1.42.2
+django-cloudinary-storage==0.3.0
+django-anymail[brevo]==12.0

@@ -5,10 +5,12 @@ DEBUG = False
 
 CORS_ALLOW_ALL_ORIGINS = False
 
-DATABASES["default"].update({
-    "CONN_MAX_AGE": 600,
-    "OPTIONS": {"sslmode": "require"},
-})
+# Aplicar opciones de producción solo si el motor es PostgreSQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"].update({
+        "CONN_MAX_AGE": 600,
+        "OPTIONS": {"sslmode": "require"},
+    })
 
 # Seguridad
 SECURE_SSL_REDIRECT = True
