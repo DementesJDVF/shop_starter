@@ -23,7 +23,8 @@ CSRF_TRUSTED_ORIGINS = env.list(
     default=[
         "https://*.onrender.com", 
         "https://shopstarter.online", 
-        "https://*.shopstarter.online"
+        "https://*.shopstarter.online",
+        "https://shopstarter-production.up.railway.app"
     ]
 )
 
