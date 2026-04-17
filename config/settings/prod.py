@@ -18,15 +18,18 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+BASE_LOCAL_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+]
+
 CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
         "https://*.onrender.com", 
         "https://shopstarter.online", 
         "http://shopstarter.online",
@@ -36,17 +39,11 @@ CSRF_TRUSTED_ORIGINS = env.list(
         "https://shop-starter-production.up.railway.app",
         "https://shopstarter-production.up.railway.app"
     ]
-)
+) + BASE_LOCAL_ORIGINS
 
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", 
     default=[
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173", 
-        "http://localhost:5174", 
-        "http://127.0.0.1:5174", 
-        "http://localhost:5175", 
-        "http://127.0.0.1:5175", 
         "https://shopstarter.vercel.app", 
         "https://shopstarter.online",
         "http://shopstarter.online",
@@ -55,7 +52,7 @@ CORS_ALLOWED_ORIGINS = env.list(
         "https://shop-starter-production.up.railway.app",
         "https://shopstarter-production.up.railway.app"
     ]
-)
+) + BASE_LOCAL_ORIGINS
 
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
