@@ -21,12 +21,30 @@ CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "https://*.onrender.com", 
         "https://shopstarter.online", 
         "http://shopstarter.online",
         "https://www.shopstarter.online",
         "http://www.shopstarter.online",
         "https://*.shopstarter.online",
+        "https://shop-starter-production.up.railway.app",
+        "https://shopstarter-production.up.railway.app"
+    ]
+)
+
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS", 
+    default=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173", 
+        "https://shopstarter.vercel.app", 
+        "https://shopstarter.online",
+        "http://shopstarter.online",
+        "https://www.shopstarter.online",
+        "http://www.shopstarter.online",
+        "https://shop-starter-production.up.railway.app",
         "https://shopstarter-production.up.railway.app"
     ]
 )
