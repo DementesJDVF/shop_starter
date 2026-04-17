@@ -23,6 +23,10 @@ CSRF_TRUSTED_ORIGINS = env.list(
     default=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "https://*.onrender.com", 
         "https://shopstarter.online", 
         "http://shopstarter.online",
@@ -39,6 +43,10 @@ CORS_ALLOWED_ORIGINS = env.list(
     default=[
         "http://localhost:5173", 
         "http://127.0.0.1:5173", 
+        "http://localhost:5174", 
+        "http://127.0.0.1:5174", 
+        "http://localhost:5175", 
+        "http://127.0.0.1:5175", 
         "https://shopstarter.vercel.app", 
         "https://shopstarter.online",
         "http://shopstarter.online",
