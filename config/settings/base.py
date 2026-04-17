@@ -70,9 +70,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -135,13 +135,34 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # CORS / CSRF
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://(www\.)?shopstarter\.online$",
+    r"^https?://(www\.)?shopstarter\.vercel\.app$",
+]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", 
-    default=["http://localhost:5173", "http://127.0.0.1:5173", "https://shopstarter.vercel.app", "https://shopstarter.online"]
+    default=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173", 
+        "https://shopstarter.vercel.app", 
+        "https://shopstarter.online",
+        "http://shopstarter.online",
+        "https://www.shopstarter.online",
+        "http://www.shopstarter.online"
+    ]
 )
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["https://shopstarter.vercel.app", "https://shopstarter.online"])
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS", 
+    default=[
+        "https://shopstarter.vercel.app", 
+        "https://shopstarter.online",
+        "http://shopstarter.online",
+        "https://www.shopstarter.online",
+        "http://www.shopstarter.online"
+    ]
+)
 
 # DRF
 REST_FRAMEWORK = {
