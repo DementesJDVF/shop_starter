@@ -63,5 +63,10 @@ ALLOWED_HOSTS = env.list(
     default=["localhost", "127.0.0.1", ".up.railway.app", "shopstarter.online", ".shopstarter.online"]
 )
 
+# Estabilidad de Sesión
+SESSION_COOKIE_AGE = 1209600  # 2 semanas
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
