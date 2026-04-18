@@ -62,7 +62,7 @@ class CreProSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'vendor', 'category', 'category_name',
-            'name', 'description', 'price', 'stock',
+            'name', 'description', 'ai_description', 'price', 'stock',
             'status', 'rejection_reason', 'is_featured', 'images'
         ]
         read_only_fields = ['vendor'] # 'status' is no longer read_only globally; we will handle permissions in the view.
@@ -102,7 +102,7 @@ class ReadProSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'vendor', 'vendor_name', 'category', 'category_name',
-            'name', 'description', 'price', 'stock',
+            'name', 'description', 'ai_description', 'price', 'stock',
             'status', 'rejection_reason', 'is_featured', 'images', 'created_at',
             'distance', 'latitude', 'longitude'
         ]

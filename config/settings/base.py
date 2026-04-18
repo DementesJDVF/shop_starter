@@ -6,7 +6,6 @@ from datetime import timedelta
 import environ
 import os
 
-
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -260,6 +259,9 @@ LOGGING = {
 # Email Configuration (Anymail + Brevo)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="anymail.backends.brevo.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ShopStarter <noreply@shopstarter.com>")
+
+HUGGINGFACE_API_TOKEN = env("HUGGINGFACE_API_TOKEN", default="")
+GROQ_API_KEY = env("GROQ_API_KEY", default="")
 
 ANYMAIL = {
     "BREVO_API_KEY": env("BREVO_API_KEY", default=""),
