@@ -1,5 +1,5 @@
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
@@ -11,6 +11,7 @@ from apps.products.serializers import (CreProSerializer,
                                        ProductSerializer)
 from apps.core.services.email_service import send_product_status_notification
 from apps.core.models import Notification
+from apps.ai.services.ai_service import generate_product_description
 
 class ProductPagination(PageNumberPagination):
     page_size = 10
@@ -101,6 +102,69 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Respondemos con el objeto completo para que el front se actualice bien
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def generate_ai_description(self, request, pk=None):
+        from rest_framework.exceptions import PermissionDenied
+        
+        product = self.get_object()
+        
+        # Seguridad: Solo el dueño vendedor o un ADMIN pueden generarlo
+        if request.user.role not in ['VENDEDOR', 'ADMIN'] or (request.user.role == 'VENDEDOR' and product.vendor != request.user):
+            raise PermissionDenied("No tienes permisos para generar una descripción IA para este producto.")
+            
+        if product.ai_description:
+            return Response({"ai_description": product.ai_description, "cached": True})
+            
+        main_image = product.images.filter(is_main=True).first()
+        if not main_image:
+            main_image = product.images.first()
+            
+        if not main_image or not main_image.url_image:
+            return Response({"error": "No hay imágenes disponibles para analizar."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            ai_text = generate_product_description(main_image.url_image)
+            product.ai_description = ai_text
+            product.save()
+            return Response({"ai_description": product.ai_description, "cached": False})
+        except Exception as e:
+            return Response({"error": f"Error del servicio IA: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def suggest_description(self, request):
+        """
+        Sugiere una descripción basada en una imagen (URL o archivo).
+        Puede recibir 'product_id' para usar/guardar en caché.
+        """
+        image_url = request.data.get('image_url')
+        image_file = request.FILES.get('image_file')
+        product_id = request.data.get('product_id')
+        
+        product = None
+        if product_id:
+            product = Product.objects.filter(id=product_id).first()
+            if product and product.ai_description:
+                return Response({"suggestion": product.ai_description, "cached": True})
+
+        # Determinar qué enviar al servicio
+        source = image_file if image_file else image_url
+        is_url = bool(image_url and not image_file)
+
+        if not source:
+            return Response({"error": "Se requiere una imagen (URL o archivo)."}, status=400)
+
+        try:
+            suggestion = generate_product_description(source, is_url=is_url)
+            
+            # Guardar en caché si hay producto
+            if product:
+                product.ai_description = suggestion
+                product.save()
+                
+            return Response({"suggestion": suggestion, "cached": False})
+        except Exception as e:
+            return Response({"error": f"Error IA: {str(e)}"}, status=500)
 
 
 class ProductViewGet(viewsets.ReadOnlyModelViewSet):

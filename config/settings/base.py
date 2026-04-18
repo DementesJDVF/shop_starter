@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.moderation",
     "apps.analytics",
     "apps.audit",
+    "apps.chat",
 
     # Third Party
     "drf_spectacular",
@@ -223,4 +224,8 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ShopStarter <noreply@shopstarter.com>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ShopStarter <noreply@shopstarter.com>")
+
+# AI Configuration
+HUGGINGFACE_API_TOKEN = env("HUGGINGFACE_API_TOKEN", default="")
+GROQ_API_KEY = env("GROQ_API_KEY", default="")
