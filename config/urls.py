@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/audit/", include("apps.audit.urls")),
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
+    path("api/chat/", include("apps.chat.urls")),
 
     # =========================================================================
     # 📚 PORTAL INTERACTIVO PARA PROGRAMADORES FRONTEND (DX)

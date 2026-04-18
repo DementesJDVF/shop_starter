@@ -17,6 +17,10 @@ router.register(r'create', ProductViewSet, basename='product-create')  # Alias u
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
+    # Ruta para generación de descripción IA (vendedores)
+    path("<int:pk>/generate_ai_description/", ProductViewSet.as_view({"post": "generate_ai_description"}), name="product-ai-gen"),
+    path("suggest_description/", ProductViewSet.as_view({"post": "suggest_description"}), name="product-suggest-desc"),
+
     # Ruta pública de categorías (para vendedores y clientes)
     path("get-categories/", CategoryViewGet.as_view({'get': 'list'}), name="category-list-public"),
 
