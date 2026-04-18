@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.moderation",
     "apps.analytics",
     "apps.audit",
+    "apps.chat",
 
     # Third Party
     "drf_spectacular",
