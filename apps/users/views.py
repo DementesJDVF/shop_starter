@@ -25,7 +25,8 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     authentication_classes = []  # IMPORTANTE: No validar tokens en registro para evitar errores con sesiones expiradas
     permission_classes = (permissions.AllowAny,)
-    throttle_classes = (RegisterRateThrottle,)
+    throttle_classes = () # Desactivado temporalmente para pruebas
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
