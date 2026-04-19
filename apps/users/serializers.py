@@ -17,7 +17,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
     is_human = serializers.BooleanField(required=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
-    birth_date = serializers.DateField(required=False, input_formats=['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'])
+    birth_date = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'])
 
     class Meta:
         model = User
@@ -62,6 +62,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             for field in required_vendor_fields:
                 if not attrs.get(field):
                     raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
+        else:
+            # Para clientes, si birth_date vino como algo inválido (ej: ""), lo limpiamos
+            if "birth_date" in attrs and not attrs["birth_date"]:
+                attrs["birth_date"] = None
 
         attrs.pop("is_human", None)
         attrs.pop("honeypot", None)
