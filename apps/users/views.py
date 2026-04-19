@@ -30,14 +30,7 @@ class RegisterView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        # Validación simplificada temporalmente para diagnóstico
-        password = request.data.get('password', '')
-        if len(password) < 8:
-            raise serializers.ValidationError({"password": "La contraseña debe tener al menos 8 caracteres."})
-
-        if not serializer.is_valid():
-            print(f"❌ ERROR DE REGISTRO: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         user = UserService.register_user(
             validated_data=serializer.validated_data,
