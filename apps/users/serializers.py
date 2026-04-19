@@ -43,9 +43,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         import re
         password = attrs.get("password", "")
-        # Validación simplificada temporalmente para diagnóstico
-        if not password or len(password) < 8:
-            raise serializers.ValidationError({"password": "La contraseña debe tener al menos 8 caracteres."})
+        import re
+        if not re.search(r'[A-Z]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos una letra mayúscula."})
+        if not re.search(r'[0-9]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un número."})
+        if not re.search(r'[@#$%^&+=!¡¿?*]', password):
+            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
 
         if not attrs.get("is_human"):
             raise serializers.ValidationError({"is_human": "Debes marcar la casilla 'No soy un robot' (is_human: true)."})
