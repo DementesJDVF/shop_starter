@@ -268,7 +268,12 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ShopStarter <noreply@sho
 HUGGINGFACE_API_TOKEN = env("HUGGINGFACE_API_TOKEN", default="")
 GROQ_API_KEY = env("GROQ_API_KEY", default="")
 
+# Asegurar que el directorio de estáticos exista al arrancar (silencia el UserWarning)
+if not STATIC_ROOT.exists():
+    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+
 ANYMAIL = {
+
     "BREVO_API_KEY": env("BREVO_API_KEY", default=""),
 }
 
