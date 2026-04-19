@@ -13,9 +13,9 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
+    password_confirm = serializers.CharField(write_only=True, min_length=8, required=False)
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
-    is_human = serializers.BooleanField(required=True)
+    is_human = serializers.BooleanField(required=False, default=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
     birth_date = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'])
 
@@ -28,6 +28,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        # Soporte para alias 'nombre' -> 'full_name'
+        if "nombre" in self.initial_data and not attrs.get("full_name"):
+            attrs["full_name"] = self.initial_data["nombre"]
+
         import re
         password = attrs.get("password", "")
         if not re.search(r'[A-Z]', password):
@@ -45,10 +49,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Honeypot)."})
 
             
-        if password != attrs["password_confirm"]:
+        if attrs.get("password_confirm") and password != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})
 
-        attrs.pop("password_confirm")
+        attrs.pop("password_confirm", None)
 
         role = attrs.get("role", UserRoles.CUSTOMER)
         if role not in UserRoles.SELF_ASSIGNABLE:
