@@ -18,7 +18,7 @@ SECRET_KEY = env("SECRET_KEY", default="django-insecure-fallback-key-for-build-p
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list(
     "ALLOWED_HOSTS",
-    default=["127.0.0.1", "localhost"] if DEBUG else [".onrender.com"],
+    default=["127.0.0.1", "localhost"] if DEBUG else [".railway.app", ".up.railway.app"],
 )
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -131,7 +131,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # CORS / CSRF
