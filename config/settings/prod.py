@@ -30,7 +30,7 @@ BASE_LOCAL_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=[
-        "https://*.onrender.com", 
+        "https://*.up.railway.app",
         "https://shopstarter.online", 
         "http://shopstarter.online",
         "https://www.shopstarter.online",
