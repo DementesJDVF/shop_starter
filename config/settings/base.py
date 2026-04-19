@@ -222,7 +222,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Storage Configuration: STATIC (WhiteNoise) vs MEDIA (Cloudinary)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_MANIFEST_STRICT = False  # Evita errores si falta algún archivo
+WHITENOISE_USE_FINDERS = DEBUG       # En desarrollo busca en carpetas locales, en prod solo en STATIC_ROOT
+
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
 
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME", default=""),
