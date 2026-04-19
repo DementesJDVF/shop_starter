@@ -37,11 +37,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
             
         if not attrs.get("is_human"):
-            raise serializers.ValidationError({"is_human": "Debes confirmar que no eres un robot."})
+            raise serializers.ValidationError({"is_human": "Debes marcar la casilla 'No soy un robot' (is_human: true)."})
             
         if attrs.get("honeypot"):
             # Si el campo trampa tiene datos, es probablemente un bot.
-            raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Bot detectado)."})
+            raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Honeypot)."})
+
             
         if password != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})

@@ -29,6 +29,8 @@ urlpatterns = [
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/chat/", include("apps.chat.urls")),
+    path("api/auth/", include("apps.users.urls")), # Alias para compatibilidad con el frontend
+
 
     # =========================================================================
     # 📚 PORTAL INTERACTIVO PARA PROGRAMADORES FRONTEND (DX)
