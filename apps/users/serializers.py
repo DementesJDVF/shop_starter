@@ -87,20 +87,21 @@ class LoginSerializer(serializers.Serializer):
         user = users_qs.first()
 
         if not user.check_password(password):
-            raise serializers.ValidationError("Credenciales inválidas. Verifica el email y contraseña")
+            raise serializers.ValidationError({"non_field_errors": ["Contraseña incorrecta."]})
 
         if user.status == User.Status.PENDING:
-            raise serializers.ValidationError("SU INFORMACIÓN ESTÁ SIENDO REVISADA, EN UN MOMENTO PODRÁ INICIAR SESIÓN")
+            raise serializers.ValidationError({"detail": "SU INFORMACIÓN ESTÁ SIENDO REVISADA, EN UN MOMENTO PODRÁ INICIAR SESIÓN"})
 
         if user.status == User.Status.BLOCKED:
-            raise serializers.ValidationError("Su cuenta ha sido bloqueada por un administrador.")
+            raise serializers.ValidationError({"detail": "Su cuenta ha sido bloqueada por un administrador."})
 
         if not user.is_active:
-            raise serializers.ValidationError("Usuario inactivo")
+            raise serializers.ValidationError({"detail": "Usuario inactivo"})
 
         data["email"] = email
         data["user"] = user
         return data
+
 
 
 class UserSerializer(serializers.ModelSerializer):
