@@ -18,9 +18,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return Order.objects.none()
+        if user.role == 'ADMIN':
+            return Order.objects.all().order_by('-created_at')
         if user.role == 'VENDEDOR':
-            return Order.objects.filter(vendor=user)
-        return Order.objects.filter(client=user)
+            return Order.objects.filter(vendor=user).order_by('-created_at')
+        return Order.objects.filter(client=user).order_by('-created_at')
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

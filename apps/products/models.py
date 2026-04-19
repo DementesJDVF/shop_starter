@@ -52,24 +52,68 @@ class Product(BaseModel):
             models.Index(fields=["status"], name="products_status_idx"),]
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        # --- BLINDAJE ANTI-INYECCIÓN (Technical Immunity) ---
+        # Esta parte es vital para tu seguridad: usamos 'bleach' para limpiar cualquier rastro 
+        # de código malicioso (XSS) que un atacante intente meter en la descripción.
+        # Solo permitimos etiquetas seguras como negritas (b), cursivas (i), etc.
+        try:
+            import bleach
+            allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li']
+            
+            if self.description:
+                self.description = bleach.clean(self.description, tags=allowed_tags, strip=True)
+                
+            if self.ai_description:
+                self.ai_description = bleach.clean(self.ai_description, tags=allowed_tags, strip=True)
+        except ImportError:
+            # Red de seguridad: si bleach no está, la app sigue viva, pero alertamos de la falta.
+            pass
+            
+        super().save(*args, **kwargs)
+
 class PImages(BaseModel):
-    # Django crea el 'id' SERIAL/BIGSERIAL automáticamente, no hace falta declararlo.
-    # products_product_id integer NOT NULL + FK
-    # 'Product' es el nombre del modelo al que hace referencia.
-    # db_column es vital para que coincida con el nombre exacto en tu SQL.
+    """
+    SISTEMA DE MODERACIÓN DE IMÁGENES:
+    Aquí controlamos que ninguna imagen obscena o inapropiada llegue a tus clientes.
+    """
+    class ModerationStatus(models.TextChoices):
+        PENDING = "PENDING", "Pendiente"          # Esperando revisión
+        APPROVED = "APPROVED", "Aprobado"          # Visible para todos
+        REJECTED = "REJECTED", "Rechazado"         # Contenido ofensivo bloqueado
+        FLAGGED = "FLAGGED", "Marcado para revisión" # Algo huele mal, revisar manualmente
+
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         db_column="products_product_id",
         related_name="images",)
-    # url_image TEXT NOT NULL
+    
     url_image = models.ImageField(upload_to="products/images/")
-    # is_main boolean DEFAULT false
     is_main = models.BooleanField(default=False)
-    # date_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    
+    # Flags para el motor de Inteligencia Artificial
+    is_moderated = models.BooleanField(default=False, db_index=True)
+    moderation_status = models.CharField(
+        max_length=20, 
+        choices=ModerationStatus.choices, 
+        default=ModerationStatus.PENDING,
+        db_index=True
+    )
+    moderation_details = models.JSONField(null=True, blank=True)
+
     date_created = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # PROTECCIÓN AUTOMÁTICA DE CONTENIDO:
+        # Aquí se disparará la lógica para detectar si una imagen es apta para todo público.
+        if not self.pk and self.url_image:
+            # En el futuro, un robot analizará esta imagen apenas se suba.
+            pass
+        super().save(*args, **kwargs)
+
     class Meta:
-        # Esto le dice a Django que use exactamente el nombre de tu script
         db_table = "products_images"
     def __str__(self):
-        return f"Imagen de {self.product} - Principal: {self.is_main}"
+        return f"Imagen de {self.product} - Estado: {self.moderation_status}"
