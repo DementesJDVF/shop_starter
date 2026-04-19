@@ -32,9 +32,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         if "nombre" in self.initial_data and not attrs.get("full_name"):
             attrs["full_name"] = self.initial_data["nombre"]
 
-        # Si no viene username, usar el email (o parte de él)
+        # Si no viene username, usar el email (o parte de él) + random para evitar duplicados
         if not attrs.get("username") and attrs.get("email"):
-            attrs["username"] = attrs["email"].split("@")[0]
+            import random
+            email = attrs["email"].lower().strip()
+            attrs["email"] = email
+            base_user = email.split("@")[0]
+            attrs["username"] = f"{base_user}_{random.randint(100, 999)}"
+
 
         import re
         password = attrs.get("password", "")
