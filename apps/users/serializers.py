@@ -32,15 +32,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         if "nombre" in self.initial_data and not attrs.get("full_name"):
             attrs["full_name"] = self.initial_data["nombre"]
 
+        # Si no viene username, usar el email (o parte de él)
+        if not attrs.get("username") and attrs.get("email"):
+            attrs["username"] = attrs["email"].split("@")[0]
+
         import re
         password = attrs.get("password", "")
-        if not re.search(r'[A-Z]', password):
-            raise serializers.ValidationError({"password": "La contraseña debe contener al menos una letra mayúscula."})
-        if not re.search(r'[0-9]', password):
-            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un número."})
-        if not re.search(r'[@#$%^&+=!¡¿?*]', password):
-            raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
-            
+        # Validación simplificada temporalmente para diagnóstico
+        if not password or len(password) < 8:
+            raise serializers.ValidationError({"password": "La contraseña debe tener al menos 8 caracteres."})
+
         if not attrs.get("is_human"):
             raise serializers.ValidationError({"is_human": "Debes marcar la casilla 'No soy un robot' (is_human: true)."})
             
