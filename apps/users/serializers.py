@@ -17,6 +17,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
     is_human = serializers.BooleanField(required=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
+    birth_date = serializers.DateField(required=False, input_formats=['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'])
 
     class Meta:
         model = User
