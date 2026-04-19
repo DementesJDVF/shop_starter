@@ -17,7 +17,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
     is_human = serializers.BooleanField(required=False, default=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
-    birth_date = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'])
+    birth_date = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
@@ -72,10 +72,26 @@ class RegisterSerializer(serializers.ModelSerializer):
             for field in required_vendor_fields:
                 if not attrs.get(field):
                     raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
+            
+            # Intentar convertir el texto de birth_date a una fecha real para el modelo
+            from django.utils.dateparse import parse_date
+            import datetime
+            date_str = attrs.get("birth_date")
+            if date_str:
+                parsed_date = None
+                # Intentar varios formatos conocidos
+                for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'):
+                    try:
+                        parsed_date = datetime.datetime.strptime(date_str, fmt).date()
+                        break
+                    except (ValueError, TypeError):
+                        continue
+                if not parsed_date:
+                    raise serializers.ValidationError({"birth_date": "Formato de fecha inválido. Usa AAAA-MM-DD o DD/MM/AAAA."})
+                attrs["birth_date"] = parsed_date
         else:
-            # Para clientes, si birth_date vino como algo inválido (ej: ""), lo limpiamos
-            if "birth_date" in attrs and not attrs["birth_date"]:
-                attrs["birth_date"] = None
+            # Para clientes, simplemente ignoramos el birth_date o lo ponemos en None
+            attrs["birth_date"] = None
 
         attrs.pop("is_human", None)
         attrs.pop("honeypot", None)
