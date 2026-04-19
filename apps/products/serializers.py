@@ -43,9 +43,13 @@ class PImageReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PImages
-        fields = ["id", "url_image", "is_main"]
+        fields = ["id", "url_image", "is_main", "moderation_status"]
 
     def get_url_image(self, obj):
+        # Si la imagen está rechazada, no devolvemos la URL por seguridad
+        if obj.moderation_status == PImages.ModerationStatus.REJECTED:
+            return None
+            
         request = self.context.get('request')
         if obj.url_image and request:
             return request.build_absolute_uri(obj.url_image.url)

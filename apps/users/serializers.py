@@ -28,11 +28,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        # Soporte para alias 'nombre' -> 'full_name'
+        # --- MEJORA DE USABILIDAD ---
+        # Si el frontend envía 'nombre', lo guardamos automáticamente en el campo técnico 'full_name'.
         if "nombre" in self.initial_data and not attrs.get("full_name"):
             attrs["full_name"] = self.initial_data["nombre"]
 
-        # Si no viene username, usar el email (o parte de él) + random para evitar duplicados
+        # --- GENERACIÓN DE IDENTIDAD ---
+        # Si no hay un nombre de usuario, creamos uno amigable usando el email y un número aleatorio.
         if not attrs.get("username") and attrs.get("email"):
             import random
             email = attrs["email"].lower().strip()
@@ -40,10 +42,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             base_user = email.split("@")[0]
             attrs["username"] = f"{base_user}_{random.randint(100, 999)}"
 
-
+        # --- BLINDAJE DE CONTRASEÑAS (Fortaleza) ---
+        # No permitimos contraseñas débiles. Obligamos a usar mayúsculas, números y símbolos.
         import re
         password = attrs.get("password", "")
-        import re
         if not re.search(r'[A-Z]', password):
             raise serializers.ValidationError({"password": "La contraseña debe contener al menos una letra mayúscula."})
         if not re.search(r'[0-9]', password):
@@ -51,11 +53,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         if not re.search(r'[@#$%^&+=!¡¿?*]', password):
             raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
 
+        # --- VALIDACIÓN DE HUMANIDAD (Captcha) ---
         if not attrs.get("is_human"):
             raise serializers.ValidationError({"is_human": "Debes marcar la casilla 'No soy un robot' (is_human: true)."})
             
+        # --- LA TRAMPA: HONEYPOT ---
+        # Este campo es invisible para humanos pero los bots lo llenan automáticamente.
+        # Si tiene datos, registramos el ataque sospechoso para el dashboard admin.
         if attrs.get("honeypot"):
-            # Si el campo trampa tiene datos, es probablemente un bot.
+            from apps.audit.application.services import AuditService
+            from apps.users.models import User
+            AuditService._log(
+                user=None,
+                action_type="SUSPICIOUS_REGISTRATION",
+                instance=User(),
+                is_suspicious=True,
+                new_data={"reason": "Bot detectado via Honeypot trampa", "details": attrs.get("honeypot")}
+            )
             raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Honeypot)."})
 
             

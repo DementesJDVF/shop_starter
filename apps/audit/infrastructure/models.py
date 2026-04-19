@@ -66,7 +66,9 @@ class AuditLog(BaseModel):
     previous_data = models.JSONField(null=True, blank=True)
     new_data = models.JSONField(null=True, blank=True)
 
+    is_suspicious = models.BooleanField(default=False, db_index=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "audit_log"

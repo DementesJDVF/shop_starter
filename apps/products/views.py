@@ -45,12 +45,29 @@ class ProductViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def perform_create(self, serializer):
-        from rest_framework.exceptions import PermissionDenied
-        # Asignamos al usuario actual si es vendedor
-        if self.request.user.is_authenticated and self.request.user.role == 'VENDEDOR':
-            serializer.save(vendor=self.request.user)
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        user = self.request.user
+        
+        # Si es ADMIN, puede especificar el vendor o auto-asignarse si el serializer lo trae
+        if user.role == "ADMIN":
+            vendor_id = self.request.data.get('vendor')
+            if vendor_id:
+                from apps.users.models import User
+                try:
+                    vendor = User.objects.get(id=vendor_id, role="VENDEDOR")
+                    serializer.save(vendor=vendor)
+                except User.DoesNotExist:
+                    raise ValidationError({"vendor": "El vendedor especificado no existe o no tiene rol VENDEDOR."})
+            else:
+                # Si no especifica, se le asigna a sí mismo (asumiendo que puede ser admin y tener productos)
+                serializer.save(vendor=user)
+            return
+
+        # Si es VENDEDOR, se auto-asigna
+        if user.role == "VENDEDOR":
+            serializer.save(vendor=user)
         else:
-            raise PermissionDenied("Solo los vendedores pueden crear productos.")
+            raise PermissionDenied("Solo los vendedores o administradores pueden crear productos.")
 
     def perform_update(self, serializer):
         from rest_framework.exceptions import PermissionDenied

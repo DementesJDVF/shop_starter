@@ -53,6 +53,17 @@ class Order(BaseModel):
         if self.quantity > self.product.stock:
             raise ValidationError(
                 f"No puedes pedir {self.quantity} unidades. Solo quedan {self.product.stock} en stock.")
+    def _handle_stock_reduction(self):
+        """Helper to reduce stock atomically."""
+        with transaction.atomic():
+            # Refrescar instancia de producto para evitar datos obsoletos
+            self.product.refresh_from_db()
+            if self.product.stock >= self.quantity:
+                self.product.stock -= self.quantity
+                self.product.save(update_fields=['stock'])
+            else:
+                raise ValidationError(f"No hay stock suficiente para confirmar (Disponible: {self.product.stock})")
+
     def save(self, *args, **kwargs):
         #  Congelar el precio si es la primera vez que se guarda
         if self._state.adding:
@@ -64,28 +75,21 @@ class Order(BaseModel):
         if self.product:
             self.vendor = self.product.vendor
         # Lógica de actualización de stock por estado
-        if self.pk:
+        if not self._state.adding:
             # Obtenemos la orden como está actualmente en la BD antes de guardar
-            old_instance = Order.objects.get(pk=self.pk)
-            # Si cambia a CONFIRMED y antes no lo estaba
-            if self.status == self.Status.CONFIRMED and old_instance.status != self.Status.CONFIRMED:
-                with transaction.atomic():
-                    # Doble validación de seguridad antes de restar
-                    if self.product.stock >= self.quantity:
-                        self.product.stock -= self.quantity
-                        self.product.save(update_fields=['stock'])
-                    else:
-                        raise ValidationError(f"No hay stock suficiente para confirmar (Disponible: {self.product.stock})")
+            try:
+                old_instance = Order.objects.get(pk=self.pk)
+                # Si cambia a CONFIRMED y antes no lo estaba
+                if self.status == self.Status.CONFIRMED and old_instance.status != self.Status.CONFIRMED:
+                    self._handle_stock_reduction()
+            except Order.DoesNotExist:
+                # Caso extremo: pk existe pero no está en DB (uuid prefijado)
+                if self.status == self.Status.CONFIRMED:
+                    self._handle_stock_reduction()
         else:
             # Si la orden se crea directamente como CONFIRMED
             if self.status == self.Status.CONFIRMED:
-                with transaction.atomic():
-                    # Doble validación de seguridad antes de restar
-                    if self.product.stock >= self.quantity:
-                        self.product.stock -= self.quantity
-                        self.product.save(update_fields=['stock'])
-                    else:
-                        raise ValidationError(f"No hay stock suficiente para confirmar (Disponible: {self.product.stock})")
+                self._handle_stock_reduction()
         # Validar todo
         self.full_clean()
         super().save(*args, **kwargs)
