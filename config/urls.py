@@ -29,7 +29,6 @@ urlpatterns = [
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/vendors/<uuid:vendor_id>/reviews/", include("apps.reviews.vendor_urls")),  # ADD THIS
-
     # =========================================================================
     # 📚 PORTAL INTERACTIVO PARA PROGRAMADORES FRONTEND (DX)
     # =========================================================================

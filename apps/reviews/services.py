@@ -5,6 +5,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.reviews.models import VendorReview
 from apps.users.constants import UserRoles
 from apps.users.models import User
+from apps.reviews.utils import contains_profanity
 
 
 def submit_or_update_review(client, vendor_id, rating, review_text=""):
@@ -16,6 +17,10 @@ def submit_or_update_review(client, vendor_id, rating, review_text=""):
     )
 
     # REMOVED: Completed order validation requirement for review submission.
+    if review_text and contains_profanity(review_text):
+        raise ValidationError(
+        "Tu reseña contiene lenguaje inapropiado. Por favor, sé respetuoso."
+    )
 
     review, created = VendorReview.objects.update_or_create(
         vendor=vendor,
@@ -24,8 +29,6 @@ def submit_or_update_review(client, vendor_id, rating, review_text=""):
     )
     review._created = created
     return review
-
-
 def get_vendor_review_summary(vendor_id):
     vendor = get_object_or_404(User, pk=vendor_id, role=UserRoles.VENDEDOR)
     reviews = VendorReview.objects.filter(vendor=vendor).order_by("-created_at")
@@ -38,3 +41,27 @@ def get_vendor_review_summary(vendor_id):
         "total": reviews.count(),
         "reviews": reviews,
     }
+
+def update_review(client, review_id, rating, review_text=""):
+    from apps.reviews.models import VendorReview
+    from apps.reviews.utils import contains_profanity
+    from rest_framework.exceptions import ValidationError, PermissionDenied
+    from django.shortcuts import get_object_or_404
+
+    review = get_object_or_404(VendorReview, id=review_id)
+
+    if review.client != client:
+        raise PermissionDenied("No puedes editar una reseña que no es tuya.")
+
+    if not (1 <= rating <= 5):
+        raise ValidationError("La calificación debe estar entre 1 y 5.")
+
+    if review_text and contains_profanity(review_text):
+        raise ValidationError(
+            "Tu reseña contiene lenguaje inapropiado. Por favor, sé respetuoso."
+        )
+
+    review.rating = rating
+    review.review_text = review_text
+    review.save()
+    return review

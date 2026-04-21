@@ -23,8 +23,8 @@ class ReviewOutputSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorReview
-        fields = ["client", "rating", "review_text", "created_at"]
-
+        fields = [ "id", "client", "rating", "review_text", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 class VendorReviewSummarySerializer(serializers.Serializer):
     average = serializers.FloatField()

@@ -50,3 +50,19 @@ class VendorReviewView(APIView):
     def get(self, request, vendor_id):
         summary = get_vendor_review_summary(vendor_id)
         return Response(VendorReviewSummarySerializer(summary).data)
+
+
+class VendorReviewEditView(APIView):
+    permission_classes = [IsAuthenticated]
+    @extend_schema(request=ReviewInputSerializer, responses={200: ReviewOutputSerializer})
+    def patch(self, request, review_id):
+        from apps.reviews.services import update_review
+        serializer = ReviewInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review = update_review(
+            client=request.user,
+            review_id=review_id,
+            rating=serializer.validated_data["rating"],
+            review_text=serializer.validated_data.get("review_text", ""),
+        )
+        return Response(ReviewOutputSerializer(review).data, status=status.HTTP_200_OK)
