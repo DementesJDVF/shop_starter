@@ -18,11 +18,10 @@ class LocationViewSet(viewsets.ModelViewSet):
         # 'list' (GET /locations/) expone coordenadas de todos: solo para Admins
         # 'my_location' y 'vendors-locations' son acciones especiales con sus propios permisos
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'list', 'retrieve']:
-            from apps.users.permissions import IsAdmin
-            from rest_framework.permissions import IsAuthenticated
             if self.action == 'list':
+                from apps.users.permissions import IsAdmin
                 return [IsAdmin()]  # Solo admins pueden ver TODAS las ubicaciones
-            return [IsAuthenticated()]  # Crear/editar/ver detalle: autenticado
+        
         return [IsAuthenticated()]
 
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
@@ -87,12 +86,11 @@ def nearby_vendors(request):
 
     results.sort(key=lambda x: x["distance"])
 
-    data = [
-        NearbyVendorSerializer(
-            r["instance"],
-            context={"request": request}
-        ).data | {"distance": r["distance"]}
-        for r in results
-    ]
+    data = []
+    for r in results:
+        instance = r["instance"]
+        instance.distance = r["distance"]  # Asignamos el valor dinámico para que el serializador lo lea
+        serializer = NearbyVendorSerializer(instance, context={"request": request})
+        data.append(serializer.data)
 
     return Response(data)
