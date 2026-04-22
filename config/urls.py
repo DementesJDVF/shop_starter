@@ -15,6 +15,8 @@ from rest_framework_simplejwt.views import (
 
 from apps.users.api.auth_views import LoginView
 from apps.users.views import RegisterView, MeView
+from apps.users.api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
+
 urlpatterns = [
     # admin
     path("admin/", admin.site.urls),
@@ -36,6 +38,8 @@ urlpatterns = [
     path("api/auth/register/", RegisterView.as_view(), name="register-alias"),
     path("api/auth/me/", MeView.as_view(), name="me-alias"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh-alias"),
+    path("api/auth/password-reset/", RequestPasswordResetView.as_view(), name="password-reset-alias"),
+    path("api/auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password-reset-confirm-alias"),
     
     # Alias para corregir llamadas antiguas del frontend a /api/vendors/
     path("api/vendors/", include("apps.reviews.urls")),
