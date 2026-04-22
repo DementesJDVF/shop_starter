@@ -3,6 +3,12 @@ import dj_database_url
 
 DEBUG = False
 
+# Deshabilitar el Browsable API de DRF en producción (elimina 404s de /static/rest_framework/)
+# En producción, solo necesitamos respuestas JSON puras
+REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
+    'rest_framework.renderers.JSONRenderer',
+]
+
 CORS_ALLOW_ALL_ORIGINS = False
 
 # Aplicar opciones de producción solo si el motor es PostgreSQL
