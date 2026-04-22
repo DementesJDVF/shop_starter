@@ -12,6 +12,9 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+
+from apps.users.api.auth_views import LoginView
+from apps.users.views import RegisterView, MeView
 urlpatterns = [
     # admin
     path("admin/", admin.site.urls),
@@ -29,7 +32,10 @@ urlpatterns = [
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/chat/", include("apps.chat.urls")),
-    path("api/auth/", include("apps.users.urls")), # Alias para compatibilidad con el frontend
+    path("api/auth/login/", LoginView.as_view(), name="login-alias"),
+    path("api/auth/register/", RegisterView.as_view(), name="register-alias"),
+    path("api/auth/me/", MeView.as_view(), name="me-alias"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh-alias"),
     
     # Alias para corregir llamadas antiguas del frontend a /api/vendors/
     path("api/vendors/", include("apps.reviews.urls")),
