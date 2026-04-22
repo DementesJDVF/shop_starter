@@ -8,8 +8,9 @@ router = DefaultRouter()
 router.register(r'admin/users', AdminUserViewSet, basename='admin-users')
 
 
-from .api.auth_views import LoginView
+
 from .api.auth_views import LoginView, UserView
+from .api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
 from .views import (
     AdminOnlyView,
     ChangeUserRoleView,
@@ -23,6 +24,8 @@ from .views import (
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/password-reset/", RequestPasswordResetView.as_view(), name="password_reset_request"),
+    path("auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password_reset_confirm"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("admin/test/", AdminOnlyView.as_view(), name="admin_test"),

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7fa; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header { background: {{ bg_color }}; padding: 30px; text-align: center; color: white; }
+        .content { padding: 40px; color: #334155; line-height: 1.6; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; background: {{ bg_color }}; color: white; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SHOPSTARTER</h1>
+        </div>
+        <div class="content">
+            <h2>Actualización de Cuenta</h2>
+            <p>Hola <strong>{{ username }}</strong>,</p>
+            <p>Te informamos que el estado de tu cuenta ha sido actualizado:</p>
+            <div class="status-badge">{{ status_label }}</div>
+            <p>{{ custom_message }}</p>
+            <p>¡Gracias por ser parte de nuestra comunidad!</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 ShopStarter Online.
+        </div>
+    </div>
+</body>
+</html>

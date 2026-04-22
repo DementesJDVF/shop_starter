@@ -11,21 +11,23 @@ class AuthTests(APITestCase):
         data = {
             'username': 'testuser',
             'email': 'test@example.com',
-            'password': 'password123',
-            'password_confirm': 'password123',
+            'password': 'Password123!',
+            'password_confirm': 'Password123!',
+            'is_human': True
         }
         url = reverse("register")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 1)
+        self.assertTrue(User.objects.filter(email='test@example.com').exists())
 
     def test_register_password_mismatch(self):
         """Prueba contraseñas que no coinciden"""
         data = {
             'username': 'testuser',
             'email': 'test@example.com',
-            'password': 'password123',
-            'password_confirm': 'password456',
+            'password': 'Password123!',
+            'password_confirm': 'Password456!',
+            'is_human': True
         }
         url = reverse("register")
         response = self.client.post(url, data)
@@ -99,6 +101,7 @@ class AuthTests(APITestCase):
         refresh_url = reverse("token_refresh")
         refresh_response = self.client.post(refresh_url, {'refresh': login_response.data['refresh_token']})
         self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+        # Use 'access' instead of 'access_token' as per SIMPLE_JWT settings / views
         self.assertIn('access', refresh_response.data)
 
     def test_protected_endpoint_requires_auth(self):
