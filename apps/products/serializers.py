@@ -49,11 +49,20 @@ class PImageReadSerializer(serializers.ModelSerializer):
         # Si la imagen está rechazada, no devolvemos la URL por seguridad
         if obj.moderation_status == PImages.ModerationStatus.REJECTED:
             return None
-            
+
+        if not obj.url_image:
+            return None
+
+        url = obj.url_image.url
+        # Cloudinary (y otros storages remotos) ya devuelven URLs absolutas.
+        # Solo usamos build_absolute_uri para archivos locales (rutas relativas).
+        if url.startswith(('http://', 'https://')):
+            return url
+
         request = self.context.get('request')
-        if obj.url_image and request:
-            return request.build_absolute_uri(obj.url_image.url)
-        return obj.url_image.url if obj.url_image else None
+        if request:
+            return request.build_absolute_uri(url)
+        return url
 
 
 class CreProSerializer(serializers.ModelSerializer):
