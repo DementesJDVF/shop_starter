@@ -17,10 +17,9 @@ class LocationViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # 'list' (GET /locations/) expone coordenadas de todos: solo para Admins
         # 'my_location' y 'vendors-locations' son acciones especiales con sus propios permisos
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'list', 'retrieve']:
-            if self.action == 'list':
-                from apps.users.permissions import IsAdmin
-                return [IsAdmin()]  # Solo admins pueden ver TODAS las ubicaciones
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'retrieve', 'list']:
+            from apps.users.permissions import IsAdmin
+            return [IsAdmin()] 
         
         return [IsAuthenticated()]
 
