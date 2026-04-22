@@ -9,6 +9,7 @@ from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
 from apps.geo.utils import haversine
 from apps.geo.serializers import NearbyVendorSerializer
+from rest_framework.permissions import IsAuthenticated
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
@@ -17,13 +18,10 @@ class LocationViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # 'list' (GET /locations/) expone coordenadas de todos: solo para Admins
         # 'my_location' y 'vendors-locations' son acciones especiales con sus propios permisos
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'list', 'retrieve']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'retrieve']:
             from apps.users.permissions import IsAdmin
-            from rest_framework.permissions import IsAuthenticated
-            if self.action == 'list':
-                return [IsAdmin()]  # Solo admins pueden ver TODAS las ubicaciones
-            return [IsAuthenticated()]  # Crear/editar/ver detalle: autenticado
-        return [IsAuthenticated()]
+            return [IsAdmin()] # Solo admin puede hacer lo de arriba, list no va, por obvias razones.
+        return [IsAuthenticated()]  # Crear/editar/ver detalle: autenticado
 
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
