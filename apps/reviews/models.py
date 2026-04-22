@@ -36,3 +36,30 @@ class Review(models.Model):
     def __str__(self):
         product_name = self.order.product.name if self.order and self.order.product else "N/A"
         return f"{self.user.username if self.user else 'Anon'} - {product_name} ({self.rate}★)"
+
+
+class VendorReview(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    vendor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="vendor_reviews",
+    )
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="client_vendor_reviews",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    review_text = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("vendor", "client")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.client.username} → {self.vendor.username}: {self.rating}★"
