@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from .constants import UserRoles
+from apps.core.utils.encryption import EncryptedCharField
 
 class UserManager(BaseUserManager):
     def _create_user(self, email, password, **extra_fields):
@@ -43,12 +44,12 @@ class User(AbstractUser):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     reputation_score = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
     
-    # Datos de contacto y perfil
-    full_name = models.CharField(max_length=255, blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    # Datos de contacto y perfil (Encriptados)
+    full_name = EncryptedCharField(max_length=512, blank=True, null=True)
+    phone_number = EncryptedCharField(max_length=255, blank=True, null=True)
     document_type = models.CharField(max_length=20, blank=True, null=True)
-    document_number = models.CharField(max_length=50, blank=True, null=True)
-    birth_date = models.DateField(blank=True, null=True)
+    document_number = EncryptedCharField(max_length=255, blank=True, null=True)
+    birth_date = EncryptedCharField(max_length=255, blank=True, null=True)
 
 
     created_at = models.DateTimeField(auto_now_add=True)

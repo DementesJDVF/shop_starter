@@ -11,6 +11,8 @@ from apps.users.application.services import UserService
 from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerAll
 from apps.users.throttles import LoginRateThrottle
 from apps.users.models import User
+from apps.users.permissions import IsAdmin
+
 class LoginView(APIView):
     serializer_class = LoginSerializer
     authentication_classes = []
@@ -56,9 +58,21 @@ class LoginView(APIView):
             status=status.HTTP_200_OK,
         )
 class UserView(APIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated, IsAdmin)
     def get(self, request):
+        search_query = request.query_params.get('search', '').lower()
         users = User.objects.all()
-        return Response(
-            UserSerializerAll(users, many=True) .data,
-            status=status.HTTP_200_OK)
+        
+        serializer_data = UserSerializerAll(users, many=True).data
+        
+        if search_query:
+            # Filter in-memory since database searching on encrypted fields is not possible directly
+            filtered_data = []
+            for user_data in serializer_data:
+                # Search in important fields (case-insensitive)
+                searchable_text = f"{user_data.get('email', '')} {user_data.get('full_name', '')} {user_data.get('document_number', '')} {user_data.get('phone_number', '')}".lower()
+                if search_query in searchable_text:
+                    filtered_data.append(user_data)
+            serializer_data = filtered_data
+
+        return Response(serializer_data, status=status.HTTP_200_OK)
