@@ -161,7 +161,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserSerializerAll(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ["username", "role", "status"]
     # Sobrescribimos el constructor para marcar todo como read_only dinámicamente
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
