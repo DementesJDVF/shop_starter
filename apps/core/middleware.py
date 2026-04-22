@@ -77,6 +77,7 @@ class BlockIPMiddleware:
         from apps.core.models.security import BannedIP
         from django.utils import timezone
         from django.http import JsonResponse
+        from django.db import models
 
         is_banned = BannedIP.objects.filter(
             ip_address=ip_address
