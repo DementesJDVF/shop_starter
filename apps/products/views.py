@@ -42,7 +42,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated()]
-        return [AllowAny()]
+        # La lista privada de mis productos requiere estar autenticado
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -202,7 +203,13 @@ class ProductViewGet(viewsets.ReadOnlyModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            from apps.users.permissions import IsAdmin
+            return [IsAdmin()]
+        return [IsAuthenticated()]
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):

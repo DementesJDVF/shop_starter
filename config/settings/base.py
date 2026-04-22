@@ -21,6 +21,9 @@ ALLOWED_HOSTS = env.list(
     default=["127.0.0.1", "localhost"] if DEBUG else [".railway.app", ".up.railway.app"],
 )
 
+# Encryption
+ENCRYPTION_KEY = env("ENCRYPTION_KEY", default=None)
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
@@ -232,6 +235,7 @@ CLOUDINARY_STORAGE = {
     "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME", default=""),
     "API_KEY": env("CLOUDINARY_API_KEY", default=""),
     "API_SECRET": env("CLOUDINARY_API_SECRET", default=""),
+    "SECURE": True, # Forzar HTTPS para todas las imágenes
 }
 
 if DEBUG:
