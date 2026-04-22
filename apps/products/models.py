@@ -106,12 +106,23 @@ class PImages(BaseModel):
     date_created = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # PROTECCIÓN AUTOMÁTICA DE CONTENIDO:
-        # Aquí se disparará la lógica para detectar si una imagen es apta para todo público.
-        if not self.pk and self.url_image:
-            # En el futuro, un robot analizará esta imagen apenas se suba.
-            pass
+        is_new = not self.pk  # True solo cuando es una imagen nueva
         super().save(*args, **kwargs)
+        
+        # MODERACIÓN AUTOMÁTICA CON IA:
+        # Apenas se sube una imagen nueva, el motor de IA la analiza en segundo plano.
+        # Si es obscena o ilegal → se rechaza automáticamente y se notifica al vendedor.
+        # Si es segura → se aprueba y el producto puede publicarse sin intervención humana.
+        if is_new and self.url_image:
+            try:
+                from apps.moderation.services import moderate_image
+                from threading import Thread
+                # Lanzamos en un hilo separado para no bloquear la respuesta al usuario
+                thread = Thread(target=moderate_image, args=(self,), daemon=True)
+                thread.start()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error al iniciar moderación de imagen: {e}")
 
     class Meta:
         db_table = "products_images"
