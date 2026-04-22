@@ -14,12 +14,10 @@ class HasRole(BasePermission):
 
 class IsAdmin(HasRole):
     allowed_roles = [UserRoles.ADMIN]
-
-
 class IsVendor(HasRole):
     allowed_roles = [UserRoles.VENDEDOR]
-
-
+class IsVendorOrAdmin(HasRole):
+    allowed_roles = [UserRoles.VENDEDOR, UserRoles.ADMIN]
 class IsClient(HasRole):
     allowed_roles = [UserRoles.CLIENTE]
 
