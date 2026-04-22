@@ -15,9 +15,15 @@ class LocationViewSet(viewsets.ModelViewSet):
     serializer_class = LocationSerializer
     
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated()]
-        return [AllowAny()]
+        # 'list' (GET /locations/) expone coordenadas de todos: solo para Admins
+        # 'my_location' y 'vendors-locations' son acciones especiales con sus propios permisos
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'list', 'retrieve']:
+            from apps.users.permissions import IsAdmin
+            from rest_framework.permissions import IsAuthenticated
+            if self.action == 'list':
+                return [IsAdmin()]  # Solo admins pueden ver TODAS las ubicaciones
+            return [IsAuthenticated()]  # Crear/editar/ver detalle: autenticado
+        return [IsAuthenticated()]
 
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:

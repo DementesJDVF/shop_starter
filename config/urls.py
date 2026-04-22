@@ -30,6 +30,9 @@ urlpatterns = [
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/chat/", include("apps.chat.urls")),
     path("api/auth/", include("apps.users.urls")), # Alias para compatibilidad con el frontend
+    
+    # Alias para corregir llamadas antiguas del frontend a /api/vendors/
+    path("api/vendors/", include("apps.reviews.urls")),
 
 
     # =========================================================================

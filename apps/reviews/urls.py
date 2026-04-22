@@ -4,6 +4,9 @@ from apps.reviews.views import ReviewViewSet
 
 router = DefaultRouter()
 router.register(r'', ReviewViewSet, basename='comment')
+
 urlpatterns = [
+    # Ruta específica para reviews de un vendedor: GET /api/reviews/vendors/{vendor_id}/reviews/
+    path('vendors/<uuid:vendor_id>/reviews/', ReviewViewSet.as_view({'get': 'list'}), name='vendor-reviews'),
     path('', include(router.urls)),
 ]
