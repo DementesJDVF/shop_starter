@@ -25,6 +25,8 @@ ALLOWED_HOSTS = env.list(
 ENCRYPTION_KEY = env("ENCRYPTION_KEY", default=None)
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_BROWSER_XSS_FILTER = True
@@ -293,3 +295,4 @@ ANYMAIL = {
 
 # Frontend configuration
 FRONTEND_URL = env("FRONTEND_URL", default="https://shopstarter.online")
+BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
