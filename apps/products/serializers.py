@@ -62,6 +62,13 @@ class PImageReadSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             return request.build_absolute_uri(url)
+            
+        # Si no hay request (ej: tareas en segundo plano), intentamos usar el host configurado
+        from django.conf import settings
+        backend_url = getattr(settings, 'BACKEND_URL', None)
+        if backend_url:
+            return f"{backend_url.rstrip('/')}{url}"
+            
         return url
 
 
