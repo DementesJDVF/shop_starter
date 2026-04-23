@@ -12,8 +12,8 @@ class Location(models.Model):
         related_name="location", # Singular, porque ahora solo es UNA
         db_column="user_id"      # O el nombre que prefieras en DB
     )
-    latitude = models.DecimalField(max_digits=18, decimal_places=15)
-    longitude = models.DecimalField(max_digits=18, decimal_places=15)
+    latitude = models.DecimalField(max_digits=21, decimal_places=18)
+    longitude = models.DecimalField(max_digits=21, decimal_places=18)
     timestamp = models.DateTimeField(auto_now_add=True)
     description =models.CharField(max_length=255, blank=True, null=True)
     class Meta:
