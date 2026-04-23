@@ -223,20 +223,30 @@ SPECTACULAR_SETTINGS = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Storage Configuration: STATIC (WhiteNoise) vs MEDIA (Cloudinary)
+# Storage Configuration: STATIC (WhiteNoise) vs MEDIA (Cloudinary in Prod, Local in Dev)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-WHITENOISE_MANIFEST_STRICT = False  # Evita errores si falta algún archivo
-WHITENOISE_USE_FINDERS = DEBUG       # En desarrollo busca en carpetas locales, en prod solo en STATIC_ROOT
+WHITENOISE_MANIFEST_STRICT = False  
+WHITENOISE_USE_FINDERS = DEBUG       
 
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+# ¡IMPORTANTE! En desarrollo local usamos el disco duro, en Railway usamos Cloudinary.
+if DEBUG:
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+else:
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-
+# Configuración flexible de Cloudinary (soporta URL completa o claves separadas)
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME", default=""),
-    "API_KEY": env("CLOUDINARY_API_KEY", default=""),
-    "API_SECRET": env("CLOUDINARY_API_SECRET", default=""),
-    "SECURE": True, # Forzar HTTPS para todas las imágenes
+    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None)
 }
+
+if not CLOUDINARY_STORAGE["CLOUDINARY_URL"]:
+    CLOUDINARY_STORAGE.update({
+        "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME", default=""),
+        "API_KEY": env("CLOUDINARY_API_KEY", default=""),
+        "API_SECRET": env("CLOUDINARY_API_SECRET", default=""),
+    })
+
+CLOUDINARY_STORAGE["SECURE"] = True
 
 if DEBUG:
     INSTALLED_APPS += ["django_extensions"]
