@@ -22,4 +22,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        vendor_id = self.kwargs.get('vendor_id')
+        if vendor_id:
+            serializer.save(user=self.request.user, vendor_id=vendor_id)
+        else:
+            serializer.save(user=self.request.user)
