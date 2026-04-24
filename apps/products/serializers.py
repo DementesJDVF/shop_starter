@@ -33,6 +33,26 @@ class PImageWriteSerializer(serializers.Serializer):
                 validated['url_image'] = ContentFile(file_data, name=filename)
             except Exception:
                 raise serializers.ValidationError({"url_image": "Imagen Base64 inválida."})
+        
+        # Si llega como URL externa
+        elif raw.startswith(('http://', 'https://')):
+            try:
+                import requests
+                from io import BytesIO
+                response = requests.get(raw, timeout=10)
+                response.raise_for_status()
+                
+                # Intentar obtener extensión del Content-Type
+                content_type = response.headers.get('Content-Type', '')
+                ext = 'jpg'
+                if 'png' in content_type: ext = 'png'
+                elif 'gif' in content_type: ext = 'gif'
+                elif 'webp' in content_type: ext = 'webp'
+                
+                filename = f"{uuid.uuid4()}.{ext}"
+                validated['url_image'] = ContentFile(response.content, name=filename)
+            except Exception as e:
+                raise serializers.ValidationError({"url_image": f"No se pudo descargar la imagen de la URL: {str(e)}"})
 
         return validated
 
