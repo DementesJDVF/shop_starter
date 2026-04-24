@@ -237,25 +237,32 @@ _api_secret = env("CLOUDINARY_API_SECRET", default=None)
 # Usar Cloudinary siempre que haya credenciales disponibles (DEV y PROD)
 if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
     import cloudinary
-    if _cloudinary_url:
-        CLOUDINARY_STORAGE = {
-            "CLOUDINARY_URL": _cloudinary_url,
-            "SECURE": True,
-        }
-        cloudinary.config(cloudinary_url=_cloudinary_url)
-    else:
-        CLOUDINARY_STORAGE = {
-            "CLOUD_NAME": _cloud_name,
-            "API_KEY": _api_key,
-            "API_SECRET": _api_secret,
-            "SECURE": True,
-        }
-        cloudinary.config(
-            cloud_name=_cloud_name,
-            api_key=_api_key,
-            api_secret=_api_secret,
-            secure=True
-        )
+    
+    # Si tenemos la URL completa, extraemos las partes para mayor compatibilidad con django-cloudinary-storage
+    if _cloudinary_url and not all([_cloud_name, _api_key, _api_secret]):
+        try:
+            # Formato: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+            parts = _cloudinary_url.replace("cloudinary://", "").split("@")
+            creds = parts[0].split(":")
+            _api_key = creds[0]
+            _api_secret = creds[1]
+            _cloud_name = parts[1]
+        except Exception:
+            pass
+
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": _cloud_name,
+        "API_KEY": _api_key,
+        "API_SECRET": _api_secret,
+        "SECURE": True,
+    }
+    
+    cloudinary.config(
+        cloud_name=_cloud_name,
+        api_key=_api_key,
+        api_secret=_api_secret,
+        secure=True
+    )
 
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
