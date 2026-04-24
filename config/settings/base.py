@@ -222,26 +222,20 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# Media Files (Local vs Cloudinary)
-if DEBUG:
-    MEDIA_URL = "/media/"
-else:
-    # En producción Cloudinary genera URLs absolutas, no necesitamos prefijo local
+# ¡IMPORTANTE! En Railway usamos Cloudinary si la URL existe, de lo contrario local.
+if CLOUDINARY_STORAGE.get("CLOUDINARY_URL"):
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
+else:
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+    MEDIA_URL = "/media/"
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Storage Configuration: STATIC (WhiteNoise) vs MEDIA (Cloudinary in Prod, Local in Dev)
+# Storage Configuration: STATIC (WhiteNoise)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False  
 WHITENOISE_USE_FINDERS = DEBUG       
-
-# ¡IMPORTANTE! En desarrollo local usamos el disco duro, en Railway usamos Cloudinary.
-if DEBUG:
-    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-else:
-    # Cloudinary maneja el almacenamiento y entrega de imágenes en producción
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 # Configuración flexible de Cloudinary (soporta URL completa o claves separadas)
 CLOUDINARY_STORAGE = {
