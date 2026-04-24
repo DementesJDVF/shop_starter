@@ -19,8 +19,10 @@ class ImageSerializer(serializers.ModelSerializer):
             from django.conf import settings
             import os
             if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
+                import os
+                public_id, _ = os.path.splitext(url.lstrip('/'))
                 import cloudinary
-                public_id = url.lstrip('/')
+                # Forzamos format='jpg' para que la URL termine en .jpg como pidió el usuario
                 ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             else:
                 request = self.context.get("request")
@@ -114,8 +116,10 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
                     return None
                 if name.startswith(('http://', 'https://')):
                     return name
+                import os
+                public_id, _ = os.path.splitext(name)
                 import cloudinary.utils
-                return cloudinary.utils.cloudinary_url(name, secure=True, format="jpg")[0]
+                return cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             except Exception:
                 return None
 
