@@ -62,7 +62,8 @@ class PImageReadSerializer(serializers.ModelSerializer):
             from django.conf import settings
             # En producción Railway forzamos el dominio de Cloudinary si la URL es relativa
             if not settings.DEBUG:
-                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{url}"
+                clean_url = url.lstrip('/')
+                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{clean_url}"
 
             # En desarrollo local
             request = self.context.get('request')

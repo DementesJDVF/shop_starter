@@ -21,7 +21,8 @@ class ImageSerializer(serializers.ModelSerializer):
 
             from django.conf import settings
             if not settings.DEBUG:
-                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{url}"
+                clean_url = url.lstrip('/')
+                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{clean_url}"
 
             request = self.context.get('request')
             if request:
