@@ -4,10 +4,30 @@ from apps.users.models import User
 from drf_extra_fields.fields import Base64ImageField
 # from apps.users.constants import UserRoles
 class ImageSerializer(serializers.ModelSerializer):
-    url_image = Base64ImageField () # Allows you to receive a string in base64 and save it as a file
+    url_image = serializers.SerializerMethodField()
+
     class Meta:
         model = LImages
         fields = ["id", "url_image", "is_main"]
+
+    def get_url_image(self, obj):
+        if not obj.url_image:
+            return None
+        url = obj.url_image.url
+        if url.startswith(('http://', 'https://')):
+            return url
+
+        from django.conf import settings
+        if not settings.DEBUG:
+            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME')
+            if cloud_name:
+                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
+            return None
+
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
 class LocationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     images = ImageSerializer(many=True, required=False)
