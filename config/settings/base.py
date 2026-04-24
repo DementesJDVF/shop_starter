@@ -226,7 +226,8 @@ SPECTACULAR_SETTINGS = {
 
 # 1. Cloudinary (Media)
 CLOUDINARY_STORAGE = {
-    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None)
+    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None),
+    "SECURE": True,
 }
 
 if CLOUDINARY_STORAGE.get("CLOUDINARY_URL"):
