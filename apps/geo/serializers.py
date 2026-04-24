@@ -17,10 +17,15 @@ class ImageSerializer(serializers.ModelSerializer):
         
         if url and not url.startswith(('http', 'data:')):
             from django.conf import settings
-            if not settings.DEBUG:
+            import os
+            if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
                 import cloudinary
                 public_id = url.lstrip('/')
                 ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
+            else:
+                request = self.context.get("request")
+                if request:
+                    ret['url_image'] = request.build_absolute_uri(url)
         return ret
 class LocationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
@@ -107,8 +112,9 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
                 return url
 
             from django.conf import settings
-            # En producción Railway
-            if not settings.DEBUG:
+            import os
+            # Si tenemos CLOUDINARY_URL o no estamos en DEBUG (producción)
+            if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
                 import cloudinary
                 public_id = url.lstrip('/')
                 return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]

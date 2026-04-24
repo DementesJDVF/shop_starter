@@ -80,13 +80,14 @@ class PImageReadSerializer(serializers.ModelSerializer):
                 return url
 
             from django.conf import settings
-            # En producción Railway
-            if not settings.DEBUG:
+            import os
+            # Si tenemos CLOUDINARY_URL en el entorno o no estamos en DEBUG (producción)
+            if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
                 import cloudinary
                 public_id = url.lstrip('/')
                 return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
 
-            # En desarrollo local
+            # En desarrollo local sin Cloudinary
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(url)
