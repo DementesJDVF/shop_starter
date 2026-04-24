@@ -20,24 +20,14 @@ class LocationViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'retrieve']:
             from apps.users.permissions import IsVendorOrAdmin
             return [IsVendorOrAdmin()] 
-        return [IsAuthenticated()]
+        return [AllowAny()]
 
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):
-        user = serializer.validated_data.pop('user', None) or self.request.user
-        
-        # Validar explícitamente que no sea AnonymousUser para evitar errores de UUID
-        if not user or not user.is_authenticated:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Debe autenticarse para realizar esta acción.")
-
-        # El método update_or_create es perfecto para relaciones OneToOne
-        location, created = Location.objects.update_or_create(
-            user=user,
-            defaults=serializer.validated_data)
-        # Sincronizamos el objeto con el serializador
-        serializer.instance = location
+        # Usamos el serializador para guardar, pasando el usuario de la petición.
+        # El método create del serializador se encargará de manejar imágenes y update_or_create.
+        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_location(self, request):

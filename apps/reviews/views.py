@@ -8,8 +8,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     
     def get_queryset(self):
-        # Permite filtrar por vendedor: GET /api/reviews/?vendor=UUID
-        vendor_id = self.request.query_params.get('vendor')
+        # Soporta filtrar por vendedor vía URL (kwargs) o vía Query Param
+        vendor_id = self.kwargs.get('vendor_id') or self.request.query_params.get('vendor')
+        
         if vendor_id:
             return Review.objects.filter(vendor__id=vendor_id).order_by('-created_at')
         return Review.objects.all().order_by('-created_at')
