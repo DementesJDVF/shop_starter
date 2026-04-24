@@ -19,42 +19,48 @@ class PImageWriteSerializer(serializers.Serializer):
     url_image = serializers.CharField()  # Base64 string del frontend
     is_main = serializers.BooleanField(default=False)
 
-    def to_internal_value(self, data):
-        validated = super().to_internal_value(data)
-        raw = validated.get('url_image', '')
+    def validate(self, data):
+        raw = data.get('url_image', '')
 
         # Si llega como Base64 (data:image/jpeg;base64,...)
         if raw.startswith('data:'):
             try:
+                import cloudinary.uploader
                 header, encoded = raw.split(';base64,', 1)
-                ext = header.split('/')[-1]
                 file_data = base64.b64decode(encoded)
-                filename = f"{uuid.uuid4()}.{ext}"
-                validated['url_image'] = ContentFile(file_data, name=filename)
-            except Exception:
-                raise serializers.ValidationError({"url_image": "Imagen Base64 inválida."})
+                
+                # Subida directa a Cloudinary para evitar fallos de configuración de storage
+                upload_result = cloudinary.uploader.upload(
+                    file_data,
+                    folder="products/images/",
+                    resource_type="auto"
+                )
+                
+                # Guardamos el public_id en el campo url_image
+                data['url_image'] = upload_result['public_id']
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error subiendo a Cloudinary: {e}")
+                raise serializers.ValidationError({"url_image": f"Error al subir imagen a la nube: {str(e)}"})
         
         # Si llega como URL externa
         elif raw.startswith(('http://', 'https://')):
             try:
                 import requests
-                from io import BytesIO
+                import cloudinary.uploader
                 response = requests.get(raw, timeout=10)
                 response.raise_for_status()
                 
-                # Intentar obtener extensión del Content-Type
-                content_type = response.headers.get('Content-Type', '')
-                ext = 'jpg'
-                if 'png' in content_type: ext = 'png'
-                elif 'gif' in content_type: ext = 'gif'
-                elif 'webp' in content_type: ext = 'webp'
-                
-                filename = f"{uuid.uuid4()}.{ext}"
-                validated['url_image'] = ContentFile(response.content, name=filename)
+                upload_result = cloudinary.uploader.upload(
+                    response.content,
+                    folder="products/images/",
+                    resource_type="auto"
+                )
+                data['url_image'] = upload_result['public_id']
             except Exception as e:
-                raise serializers.ValidationError({"url_image": f"No se pudo descargar la imagen de la URL: {str(e)}"})
+                raise serializers.ValidationError({"url_image": f"No se pudo procesar la imagen de la URL: {str(e)}"})
 
-        return validated
+        return data
 
 
 class PImageReadSerializer(serializers.ModelSerializer):
