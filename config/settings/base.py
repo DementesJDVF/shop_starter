@@ -234,6 +234,7 @@ _cloud_name = env("CLOUDINARY_CLOUD_NAME", default=None)
 _api_key = env("CLOUDINARY_API_KEY", default=None)
 _api_secret = env("CLOUDINARY_API_SECRET", default=None)
 
+# Usar Cloudinary siempre que haya credenciales disponibles (DEV y PROD)
 if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
     import cloudinary
     if _cloudinary_url:
@@ -255,7 +256,7 @@ if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
             api_secret=_api_secret,
             secure=True
         )
-    
+
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
 else:
