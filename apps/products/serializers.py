@@ -82,19 +82,16 @@ class PImageReadSerializer(serializers.ModelSerializer):
             from django.conf import settings
             # EN DESARROLLO LOCAL (DEBUG=True)
             if settings.DEBUG:
+                # Si la URL empieza con /media/ o parece local
                 request = self.context.get('request')
-                # Si la URL empieza con /media/, la dejamos para que Django la sirva localmente
-                if url.startswith('/media/') or url.startswith('media/'):
-                    if request:
-                        return request.build_absolute_uri(url)
-                    return url
+                backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
                 
-                # Si no empieza con media, intentamos Cloudinary también por si acaso
-                import cloudinary
-                public_id = url.lstrip('/')
-                return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
+                # Forzamos que si es local, devuelva la URL absoluta del servidor local
+                if not url.startswith('http'):
+                    clean_path = url if url.startswith('/') else f'/{url}'
+                    return f"{backend_url}{clean_path}"
 
-            # EN PRODUCCIÓN
+            # EN PRODUCCIÓN O SI NO ES LOCAL
             import cloudinary
             public_id = url.lstrip('/')
             return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
