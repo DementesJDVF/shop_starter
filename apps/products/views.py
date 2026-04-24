@@ -29,14 +29,18 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
 
     def get_queryset(self):
-        """Filtra los productos para devolver solo los del vendedor autenticado, a menos que sea ADMIN."""
+        """Filtra los productos: los clientes ven los activos, los vendedores los suyos y el admin todo."""
         user = self.request.user
+        
+        # 1. Usuarios no autenticados (Clientes anónimos)
         if not user.is_authenticated:
-            return Product.objects.none()
+            return Product.objects.filter(status='ACTIVE').order_by('-created_at')
             
+        # 2. Administradores y Superusuarios (Control total)
         if user.role == 'ADMIN' or user.is_superuser:
             return Product.objects.all().order_by('-created_at')
             
+        # 3. Vendedores (Ven sus propios productos en cualquier estado)
         return Product.objects.filter(vendor=user).order_by('-created_at')
     
     def get_permissions(self):

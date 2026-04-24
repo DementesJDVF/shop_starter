@@ -4,32 +4,23 @@ from apps.users.models import User
 from drf_extra_fields.fields import Base64ImageField
 # from apps.users.constants import UserRoles
 class ImageSerializer(serializers.ModelSerializer):
-    url_image = serializers.SerializerMethodField()
+    url_image = Base64ImageField()
 
     class Meta:
         model = LImages
         fields = ["id", "url_image", "is_main"]
 
-    def get_url_image(self, obj):
-        if not obj.url_image:
-            return None
-
-        try:
-            url = obj.url_image.url
-            if url.startswith(('http://', 'https://')):
-                return url
-
+    def to_representation(self, instance):
+        """Asegura que la URL sea absoluta en producción sin romper el campo original."""
+        ret = super().to_representation(instance)
+        url = ret.get('url_image')
+        
+        if url and not url.startswith(('http', 'data:')):
             from django.conf import settings
             if not settings.DEBUG:
                 clean_url = url.lstrip('/')
-                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{clean_url}"
-
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(url)
-            return url
-        except:
-            return None
+                ret['url_image'] = f"https://res.cloudinary.com/dgmzze0k4/image/upload/{clean_url}"
+        return ret
 class LocationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     images = ImageSerializer(many=True, required=False)
