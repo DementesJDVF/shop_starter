@@ -198,7 +198,9 @@ def moderate_image(pimage_instance) -> str:
         return new_status
 
     except Exception as e:
-        logger.error(f"Error crítico en moderate_image: {e}")
+        logger.error(f"Error crítico en moderate_image (ID: {pimage_instance.pk}): {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return PImages.ModerationStatus.PENDING
 
 
