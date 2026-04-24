@@ -257,7 +257,12 @@ if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
         )
     
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    MEDIA_URL = ""
+    # Solo usamos MEDIA_URL vacío si estamos en producción para que Cloudinary tome el control total.
+    # En desarrollo local (DEBUG=True), permitimos /media/ para servir archivos que quedaron en el disco.
+    if DEBUG:
+        MEDIA_URL = "/media/"
+    else:
+        MEDIA_URL = ""
 else:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
     MEDIA_URL = "/media/"
