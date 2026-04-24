@@ -21,7 +21,7 @@ class ImageSerializer(serializers.ModelSerializer):
             if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
                 import cloudinary
                 public_id = url.lstrip('/')
-                ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
+                ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             else:
                 request = self.context.get("request")
                 if request:
@@ -115,7 +115,7 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
                 if name.startswith(('http://', 'https://')):
                     return name
                 import cloudinary.utils
-                return cloudinary.utils.cloudinary_url(name, secure=True)[0]
+                return cloudinary.utils.cloudinary_url(name, secure=True, format="jpg")[0]
             except Exception:
                 return None
 
