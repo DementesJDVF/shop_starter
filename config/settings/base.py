@@ -228,17 +228,34 @@ SPECTACULAR_SETTINGS = {
 # --- CONFIGURACIÓN DE ARCHIVOS (MEDIA & STATIC) ---
 import os
 
-# 1. Cloudinary (Media) - Forzamos lectura directa de os.environ para Railway
-_cloudinary_url = os.environ.get("CLOUDINARY_URL")
+# 1. Cloudinary (Media)
+_cloudinary_url = env("CLOUDINARY_URL", default=None)
+_cloud_name = env("CLOUDINARY_CLOUD_NAME", default=None)
+_api_key = env("CLOUDINARY_API_KEY", default=None)
+_api_secret = env("CLOUDINARY_API_SECRET", default=None)
 
-if _cloudinary_url:
+if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
     import cloudinary
-    CLOUDINARY_STORAGE = {
-        "CLOUDINARY_URL": _cloudinary_url,
-        "SECURE": True,
-    }
-    # Inicialización global de la librería para serializers
-    cloudinary.config(cloudinary_url=_cloudinary_url)
+    if _cloudinary_url:
+        CLOUDINARY_STORAGE = {
+            "CLOUDINARY_URL": _cloudinary_url,
+            "SECURE": True,
+        }
+        cloudinary.config(cloudinary_url=_cloudinary_url)
+    else:
+        CLOUDINARY_STORAGE = {
+            "CLOUD_NAME": _cloud_name,
+            "API_KEY": _api_key,
+            "API_SECRET": _api_secret,
+            "SECURE": True,
+        }
+        cloudinary.config(
+            cloud_name=_cloud_name,
+            api_key=_api_key,
+            api_secret=_api_secret,
+            secure=True
+        )
+    
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
 else:
