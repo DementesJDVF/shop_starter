@@ -232,10 +232,13 @@ import os
 _cloudinary_url = os.environ.get("CLOUDINARY_URL")
 
 if _cloudinary_url:
+    import cloudinary
     CLOUDINARY_STORAGE = {
         "CLOUDINARY_URL": _cloudinary_url,
         "SECURE": True,
     }
+    # Inicialización global de la librería para serializers
+    cloudinary.config(cloudinary_url=_cloudinary_url)
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
 else:

@@ -18,8 +18,9 @@ class ImageSerializer(serializers.ModelSerializer):
         if url and not url.startswith(('http', 'data:')):
             from django.conf import settings
             if not settings.DEBUG:
-                clean_url = url.lstrip('/')
-                ret['url_image'] = f"https://res.cloudinary.com/dgmzze0k4/image/upload/{clean_url}"
+                import cloudinary
+                public_id = url.lstrip('/')
+                ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
         return ret
 class LocationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
