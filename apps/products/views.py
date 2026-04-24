@@ -34,7 +34,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Product.objects.none()
             
-        if user.role == 'ADMIN':
+        if user.role == 'ADMIN' or user.is_superuser:
             return Product.objects.all().order_by('-created_at')
             
         return Product.objects.filter(vendor=user).order_by('-created_at')
@@ -49,8 +49,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import PermissionDenied, ValidationError
         user = self.request.user
         
-        # Si es ADMIN, puede especificar el vendor o auto-asignarse si el serializer lo trae
-        if user.role == "ADMIN":
+        # Si es ADMIN o SUPERUSER, puede especificar el vendor
+        if user.role == "ADMIN" or user.is_superuser:
             vendor_id = self.request.data.get('vendor')
             if vendor_id:
                 from apps.users.models import User
@@ -82,7 +82,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         # Seguridad: Solo los Administradores pueden aprobar (PENDIENTE -> ACTIVO) o rechazar (PENDIENTE -> RECHAZADO)
         if old_status == "PENDING" and new_status in ["ACTIVE", "REJECTED"]:
-            if user.role != 'ADMIN':
+            if user.role != 'ADMIN' and not user.is_superuser:
                 raise PermissionDenied("Solo los administradores pueden aprobar o rechazar productos.")
         
         # Seguridad adicional: Evitar que los vendedores se auto-aprueben productos
@@ -127,8 +127,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         product = self.get_object()
         
-        # Seguridad: Solo el dueño vendedor o un ADMIN pueden generarlo
-        if request.user.role not in ['VENDEDOR', 'ADMIN'] or (request.user.role == 'VENDEDOR' and product.vendor != request.user):
+        # Seguridad: Solo el dueño vendedor o un ADMIN (o superuser) pueden generarlo
+        if (request.user.role not in ['VENDEDOR', 'ADMIN'] and not request.user.is_superuser) or (request.user.role == 'VENDEDOR' and product.vendor != request.user):
             raise PermissionDenied("No tienes permisos para generar una descripción IA para este producto.")
             
         if product.ai_description:
