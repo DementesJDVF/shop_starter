@@ -98,7 +98,7 @@ class PImages(BaseModel):
     moderation_status = models.CharField(
         max_length=20, 
         choices=ModerationStatus.choices, 
-        default=ModerationStatus.PENDING,
+        default=ModerationStatus.APPROVED,
         db_index=True
     )
     moderation_details = models.JSONField(null=True, blank=True)
@@ -113,16 +113,16 @@ class PImages(BaseModel):
         # Apenas se sube una imagen nueva, el motor de IA la analiza en segundo plano.
         # Si es obscena o ilegal → se rechaza automáticamente y se notifica al vendedor.
         # Si es segura → se aprueba y el producto puede publicarse sin intervención humana.
-        if is_new and self.url_image:
-            try:
-                from apps.moderation.services import moderate_image
-                from threading import Thread
-                # Lanzamos en un hilo separado para no bloquear la respuesta al usuario
-                thread = Thread(target=moderate_image, args=(self,), daemon=True)
-                thread.start()
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Error al iniciar moderación de imagen: {e}")
+        # IA DESACTIVADA TEMPORALMENTE A PETICIÓN DEL USUARIO
+        # if is_new and self.url_image:
+        #     try:
+        #         from apps.moderation.services import moderate_image
+        #         from threading import Thread
+        #         thread = Thread(target=moderate_image, args=(self,), daemon=True)
+        #         thread.start()
+        #     except Exception as e:
+        #         import logging
+        #         logging.getLogger(__name__).error(f"Error al iniciar moderación de imagen: {e}")
 
     class Meta:
         db_table = "products_images"

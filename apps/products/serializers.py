@@ -69,9 +69,9 @@ class PImageReadSerializer(serializers.ModelSerializer):
         if not obj.url_image:
             return None
         
-        # Si la imagen está rechazada por la IA, no la mostramos
-        if getattr(obj, 'moderation_status', None) == 'REJECTED':
-            return None
+        # IA DESACTIVADA: Mostramos todas las imágenes
+        # if getattr(obj, 'moderation_status', None) == 'REJECTED':
+        #     return None
 
         try:
             url = obj.url_image.url
