@@ -113,6 +113,9 @@ if env("DATABASE_URL", default=None):
     DATABASES = {
         "default": env.db("DATABASE_URL")
     }
+    # Optimización para Railway: Reutilización de conexiones y chequeos de salud
+    DATABASES["default"]["CONN_MAX_AGE"] = 600
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 else:
     DATABASES = {
         "default": {
