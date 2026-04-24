@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.products.views import (
     ProductViewSet,
-    ProductViewGet,
+    ProductCatalogView,
+    ProductDetailPublicView,
     CategoryViewSet,
     CategoryViewGet,
     nearby_products,
@@ -33,11 +34,11 @@ urlpatterns = [
         'delete': 'destroy'
     }), name="category-admin-detail"),
 
-    # Resto de rutas del router
-    path("", include(router.urls)),
-    path("<int:id>/", ProductViewGet.as_view({"get": "retrieve"}), name="product-read-id"),
-
-    # Ruta pública para el catálogo de clientes (solo productos ACTIVE)
-    path("catalog/", ProductViewGet.as_view({"get": "list"}), name="product-catalog-public"),
+    # Rutas públicas específicas ANTES del router genérico
+    path("catalog/", ProductCatalogView.as_view(), name="product-catalog-public"),
     path("nearby/", nearby_products, name="product-nearby"),
+    path("<int:id>/", ProductDetailPublicView.as_view(), name="product-read-id"),
+
+    # Resto de rutas del router (CRUD privado)
+    path("", include(router.urls)),
 ]
