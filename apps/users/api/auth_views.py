@@ -58,7 +58,7 @@ class LoginView(APIView):
             status=status.HTTP_200_OK,
         )
 class UserView(APIView):
-    permission_classes =  [permissions.AllowAny]
+    permission_classes =  (permissions.IsAuthenticated, IsAdmin)
     def get(self, request):
         search_query = request.query_params.get('search', '').lower()
         users = User.objects.all()
