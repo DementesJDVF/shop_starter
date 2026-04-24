@@ -12,6 +12,8 @@ from apps.products.serializers import (CreProSerializer,
 from apps.core.services.email_service import send_product_status_notification
 from apps.core.models import Notification
 from apps.ai.services.ai_service import generate_product_description
+from apps.products.services import ProductService
+from rest_framework import generics
 
 class ProductPagination(PageNumberPagination):
     page_size = 10
@@ -29,19 +31,11 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
 
     def get_queryset(self):
-        """Filtra los productos: los clientes ven los activos, los vendedores los suyos y el admin todo."""
-        user = self.request.user
-        
-        # 1. Usuarios no autenticados (Clientes anónimos)
-        if not user.is_authenticated:
-            return Product.objects.filter(status='ACTIVE').order_by('-created_at')
-            
-        # 2. Administradores y Superusuarios (Control total)
-        if user.role == 'ADMIN' or user.is_superuser:
-            return Product.objects.all().order_by('-created_at')
-            
-        # 3. Vendedores (Ven sus propios productos en cualquier estado)
-        return Product.objects.filter(vendor=user).order_by('-created_at')
+        """
+        Retrieves products for management dashboard.
+        Delegates logic to ProductService.
+        """
+        return ProductService.get_manageable_products(self.request.user)
     
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -189,20 +183,38 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({"error": f"Error IA: {str(e)}"}, status=500)
 
 
-class ProductViewGet(viewsets.ReadOnlyModelViewSet):
+class ProductCatalogView(generics.ListAPIView):
     """
-    Esta vista solo permite listar (GET /products/) 
-    y ver detalle (GET /products/{id}/).
+    Public endpoint for listing active products from active vendors.
+    Supports filtering by vendor via query parameter.
     """
-    queryset = Product.objects.filter(status=Product.ProductStatus.ACTIVE).order_by('-created_at')
     serializer_class = ReadProSerializer
-    # Especificamos que busque por el campo 'id'
-    lookup_field = 'id'
     authentication_classes = []
     permission_classes = [AllowAny]
     pagination_class = ProductPagination
-    filterset_fields = ['category', 'vendor']
+    filterset_fields = ['category']
     search_fields = ['name', 'description']
+
+    def get_queryset(self):
+        vendor_id = self.request.query_params.get('vendor')
+        return ProductService.get_public_catalog(vendor_id=vendor_id)
+
+class ProductDetailPublicView(generics.RetrieveAPIView):
+    """
+    Public endpoint for retrieving a single active product detail.
+    """
+    serializer_class = ReadProSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        # The service returns a single product or None, but RetrieveAPIView 
+        # expects a queryset. So we filter using the service logic.
+        return Product.objects.filter(
+            status=Product.ProductStatus.ACTIVE,
+            vendor__status='ACTIVE'
+        )
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
