@@ -19,7 +19,12 @@ class ImageSerializer(serializers.ModelSerializer):
 
         from django.conf import settings
         if not settings.DEBUG:
-            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME')
+            storage_conf = settings.CLOUDINARY_STORAGE
+            cloud_name = storage_conf.get('CLOUD_NAME')
+            
+            if not cloud_name and storage_conf.get('CLOUDINARY_URL'):
+                cloud_name = storage_conf['CLOUDINARY_URL'].split('@')[-1]
+
             if cloud_name:
                 return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
             return None
