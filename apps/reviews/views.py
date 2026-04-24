@@ -19,9 +19,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [AllowAny]
-
-    def perform_create(self, serializer):
-        serializer.save()
+    htpp_method_names = ["get", "geat", "options"]
 
 
 class VendorReviewView(APIView):
