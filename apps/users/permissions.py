@@ -14,6 +14,12 @@ class HasRole(BasePermission):
 
 class IsAdmin(HasRole):
     allowed_roles = [UserRoles.ADMIN]
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and
+            (request.user.role == UserRoles.ADMIN or request.user.is_superuser)
+        )
 class IsVendor(HasRole):
     allowed_roles = [UserRoles.VENDEDOR]
 class IsVendorOrAdmin(HasRole):

@@ -26,10 +26,19 @@ class LocationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         images_data = validated_data.pop("images", [])
-        location = Location.objects.create(**validated_data)
+        user = validated_data.pop("user", None) or self.context['request'].user
         
-        for image_data in images_data:
-            LImages.objects.create(location=location, **image_data)
+        # Usamos update_or_create porque un usuario solo puede tener UNA ubicación
+        location, created = Location.objects.update_or_create(
+            user=user,
+            defaults=validated_data
+        )
+        
+        # Si hay imágenes nuevas, limpiamos las anteriores y guardamos las nuevas
+        if images_data:
+            location.images.all().delete()
+            for image_data in images_data:
+                LImages.objects.create(location=location, **image_data)
             
         return location
 
