@@ -106,23 +106,25 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
         main_image = obj.images.filter(is_main=True).first()
 
         if main_image and main_image.url_image:
-            url = main_image.url_image.url
-            # Si ya es una URL absoluta (Cloudinary), la devolvemos tal cual
-            if url.startswith(('http://', 'https://')):
-                return url
+            try:
+                url = main_image.url_image.url
+                # Si ya es absoluta (Cloudinary), la devolvemos tal cual
+                if url.startswith(('http://', 'https://')):
+                    return url
 
-            from django.conf import settings
-            import os
-            # Si tenemos CLOUDINARY_URL o no estamos en DEBUG (producción)
-            if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
+                from django.conf import settings
+                # EN DESARROLLO LOCAL (DEBUG=True)
+                if settings.DEBUG:
+                    backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+                    if not url.startswith('http'):
+                        clean_path = url if url.startswith('/') else f'/{url}'
+                        return f"{backend_url}{clean_path}"
+
+                # EN PRODUCCIÓN
                 import cloudinary
                 public_id = url.lstrip('/')
                 return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
-
-            # En desarrollo local
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(url)
-            return url
+            except:
+                return None
 
         return None
