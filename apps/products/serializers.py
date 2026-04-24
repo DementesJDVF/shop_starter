@@ -46,39 +46,31 @@ class PImageReadSerializer(serializers.ModelSerializer):
         fields = ["id", "url_image", "is_main", "moderation_status"]
 
     def get_url_image(self, obj):
-        # Si la imagen está rechazada por la IA, no la mostramos
-        if obj.moderation_status == PImages.ModerationStatus.REJECTED:
-            return None
-
         if not obj.url_image:
             return None
-
-        url = obj.url_image.url
-
-        # 1. Si ya es una URL absoluta (Cloudinary), la devolvemos tal cual
-        if url.startswith(('http://', 'https://')):
-            return url
-
-        # 2. Si es una URL relativa (legacy) y estamos en PRODUCCIÓN (Railway)
-        from django.conf import settings
-        if not settings.DEBUG:
-            storage_conf = settings.CLOUDINARY_STORAGE
-            cloud_name = storage_conf.get('CLOUD_NAME')
-            
-            # Si no hay CLOUD_NAME pero hay CLOUDINARY_URL, lo extraemos (formato: ...@cloud_name)
-            if not cloud_name and storage_conf.get('CLOUDINARY_URL'):
-                cloud_name = storage_conf['CLOUDINARY_URL'].split('@')[-1]
-
-            if cloud_name:
-                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
+        
+        # Si la imagen está rechazada por la IA, no la mostramos
+        if getattr(obj, 'moderation_status', None) == 'REJECTED':
             return None
 
-        # 3. Solo en DESARROLLO local (DEBUG=True) generamos URLs absolutas locales
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-            
-        return url
+        try:
+            url = obj.url_image.url
+            # Si ya es absoluta, la devolvemos tal cual
+            if url.startswith(('http://', 'https://')):
+                return url
+
+            from django.conf import settings
+            # En producción Railway forzamos el dominio de Cloudinary si la URL es relativa
+            if not settings.DEBUG:
+                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{url}"
+
+            # En desarrollo local
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except:
+            return None
 
 
 class CreProSerializer(serializers.ModelSerializer):

@@ -13,26 +13,22 @@ class ImageSerializer(serializers.ModelSerializer):
     def get_url_image(self, obj):
         if not obj.url_image:
             return None
-        url = obj.url_image.url
-        if url.startswith(('http://', 'https://')):
+
+        try:
+            url = obj.url_image.url
+            if url.startswith(('http://', 'https://')):
+                return url
+
+            from django.conf import settings
+            if not settings.DEBUG:
+                return f"https://res.cloudinary.com/dgmzze0k4/image/upload/{url}"
+
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
             return url
-
-        from django.conf import settings
-        if not settings.DEBUG:
-            storage_conf = settings.CLOUDINARY_STORAGE
-            cloud_name = storage_conf.get('CLOUD_NAME')
-            
-            if not cloud_name and storage_conf.get('CLOUDINARY_URL'):
-                cloud_name = storage_conf['CLOUDINARY_URL'].split('@')[-1]
-
-            if cloud_name:
-                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
+        except:
             return None
-
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-        return url
 class LocationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     images = ImageSerializer(many=True, required=False)
