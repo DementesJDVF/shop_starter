@@ -104,26 +104,19 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
     # 🔥 ESTA FUNCIÓN ES LA CLAVE
     def get_image(self, obj):
         main_image = obj.images.filter(is_main=True).first()
+        if not main_image:
+            main_image = obj.images.first()
 
         if main_image and main_image.url_image:
             try:
-                from django.conf import settings
-                url = main_image.url_image.url
-                if url.startswith(('http://', 'https://')):
-                    return url
-
-                # EN DESARROLLO LOCAL (DEBUG=True)
-                if settings.DEBUG:
-                    request = self.context.get('request')
-                    if request:
-                        return request.build_absolute_uri(url)
-                    return url
-
-                # EN PRODUCCIÓN
-                import cloudinary
-                public_id = url.lstrip('/')
-                return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
-            except:
+                name = main_image.url_image.name
+                if not name:
+                    return None
+                if name.startswith(('http://', 'https://')):
+                    return name
+                import cloudinary.utils
+                return cloudinary.utils.cloudinary_url(name, secure=True)[0]
+            except Exception:
                 return None
 
         return None
