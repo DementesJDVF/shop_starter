@@ -62,9 +62,13 @@ class PImageReadSerializer(serializers.ModelSerializer):
         # 2. Si es una URL relativa (legacy) y estamos en PRODUCCIÓN (Railway)
         from django.conf import settings
         if not settings.DEBUG:
-            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME')
-            # Intentamos reconstruir la URL de Cloudinary. Si no hay cloud_name,
-            # devolvemos None porque Railway no puede servir archivos locales.
+            storage_conf = settings.CLOUDINARY_STORAGE
+            cloud_name = storage_conf.get('CLOUD_NAME')
+            
+            # Si no hay CLOUD_NAME pero hay CLOUDINARY_URL, lo extraemos (formato: ...@cloud_name)
+            if not cloud_name and storage_conf.get('CLOUDINARY_URL'):
+                cloud_name = storage_conf['CLOUDINARY_URL'].split('@')[-1]
+
             if cloud_name:
                 return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
             return None
