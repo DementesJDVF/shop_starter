@@ -222,7 +222,12 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# ¡IMPORTANTE! En Railway usamos Cloudinary si la URL existe, de lo contrario local.
+# 1. Configuración de Cloudinary (Credenciales)
+CLOUDINARY_STORAGE = {
+    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None)
+}
+
+# 2. Configuración de Almacenamiento (Storage)
 if CLOUDINARY_STORAGE.get("CLOUDINARY_URL"):
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
@@ -232,24 +237,13 @@ else:
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Storage Configuration: STATIC (WhiteNoise)
+# 3. Configuración de Estáticos (WhiteNoise)
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False  
 WHITENOISE_USE_FINDERS = DEBUG       
-
-# Configuración flexible de Cloudinary (soporta URL completa o claves separadas)
-CLOUDINARY_STORAGE = {
-    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None)
-}
-
-if not CLOUDINARY_STORAGE["CLOUDINARY_URL"]:
-    CLOUDINARY_STORAGE.update({
-        "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME", default=""),
-        "API_KEY": env("CLOUDINARY_API_KEY", default=""),
-        "API_SECRET": env("CLOUDINARY_API_SECRET", default=""),
-    })
-
-CLOUDINARY_STORAGE["SECURE"] = True
 
 if DEBUG:
     INSTALLED_APPS += ["django_extensions"]
