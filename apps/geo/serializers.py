@@ -112,15 +112,12 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
                 if url.startswith(('http://', 'https://')):
                     return url
 
-                from django.conf import settings
-                # EN DESARROLLO LOCAL (DEBUG=True)
-                if settings.DEBUG:
-                    backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
-                    if not url.startswith('http'):
-                        clean_path = url if url.startswith('/') else f'/{url}'
-                        return f"{backend_url}{clean_path}"
+                # Intentamos construir una URL absoluta con el request si está disponible
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(url)
 
-                # EN PRODUCCIÓN
+                # Si no hay request, usamos Cloudinary como fallback (producción)
                 import cloudinary
                 public_id = url.lstrip('/')
                 return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
