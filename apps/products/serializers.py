@@ -85,8 +85,9 @@ class PImageReadSerializer(serializers.ModelSerializer):
                 return name
 
             # Generar la URL segura de Cloudinary usando el nombre del archivo
+            # Forzamos format='jpg' para que la URL termine en .jpg como pidió el usuario
             import cloudinary.utils
-            return cloudinary.utils.cloudinary_url(name, secure=True)[0]
+            return cloudinary.utils.cloudinary_url(name, secure=True, format="jpg")[0]
         except Exception as e:
             return None
 
