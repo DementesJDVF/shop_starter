@@ -177,7 +177,27 @@ class AuditService:
             ip_address=ip_address,
         )
 
-    # ... los demás métodos (soft_delete, restore, etc) siguen la misma lógica humanizada ...
+    @classmethod
+    def log_soft_delete(cls, user, instance, ip_address=None):
+        """Registra cuando un objeto se marca como 'eliminado' (Soft Delete) pero sigue en la base de datos."""
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.SOFT_DELETE,
+            instance=instance,
+            previous_data=cls._serialize(instance),
+            ip_address=ip_address,
+        )
+
+    @classmethod
+    def log_restore(cls, user, instance, ip_address=None):
+        """Registra cuando un objeto 'eliminado' vuelve a estar activo."""
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.RESTORE,
+            instance=instance,
+            new_data=cls._serialize(instance),
+            ip_address=ip_address,
+        )
 
     @staticmethod
     def _serialize(instance):
