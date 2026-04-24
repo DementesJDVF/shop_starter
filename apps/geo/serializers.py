@@ -100,8 +100,15 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
     def get_image(self, obj):
         main_image = obj.images.filter(is_main=True).first()
 
-        if main_image:
+        if main_image and main_image.url_image:
+            url = main_image.url_image.url
+            # Si ya es una URL absoluta (Cloudinary), la devolvemos tal cual
+            if url.startswith(('http://', 'https://')):
+                return url
+
             request = self.context.get("request")
-            return request.build_absolute_uri(main_image.url_image.url)
+            if request:
+                return request.build_absolute_uri(url)
+            return url
 
         return None
