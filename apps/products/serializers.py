@@ -74,25 +74,20 @@ class PImageReadSerializer(serializers.ModelSerializer):
         #     return None
 
         try:
-            url = obj.url_image.url
-            # Si ya es absoluta (Cloudinary), la devolvemos tal cual
-            if url.startswith(('http://', 'https://')):
-                return url
+            if not obj.url_image or not obj.url_image.name:
+                return None
 
-            from django.conf import settings
-            import os
-            # Si tenemos CLOUDINARY_URL en el entorno o no estamos en DEBUG (producción)
-            if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
-                import cloudinary
-                public_id = url.lstrip('/')
-                return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
+            # El .name contiene la ruta del archivo (ej: products/images/xyz.jpeg)
+            name = obj.url_image.name
 
-            # En desarrollo local sin Cloudinary
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(url)
-            return url
-        except:
+            # Si ya es una URL absoluta, devolverla directo
+            if name.startswith(('http://', 'https://')):
+                return name
+
+            # Generar la URL segura de Cloudinary usando el nombre del archivo
+            import cloudinary.utils
+            return cloudinary.utils.cloudinary_url(name, secure=True)[0]
+        except Exception as e:
             return None
 
 
