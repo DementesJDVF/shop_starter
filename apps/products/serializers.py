@@ -74,17 +74,21 @@ class PImageReadSerializer(serializers.ModelSerializer):
         #     return None
 
         try:
+            from django.conf import settings
             url = obj.url_image.url
-            # Si ya es absoluta (Cloudinary), la devolvemos tal cual
+
+            # Si ya es absoluta (Cloudinary o dev server absoluto), la devolvemos tal cual
             if url.startswith(('http://', 'https://')):
                 return url
 
-            # Intentamos construir una URL absoluta con el request si está disponible
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(url)
+            # EN DESARROLLO LOCAL (DEBUG=True)
+            if settings.DEBUG:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(url)
+                return url
 
-            # Si no hay request, usamos Cloudinary como fallback (producción)
+            # EN PRODUCCIÓN
             import cloudinary
             public_id = url.lstrip('/')
             return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]

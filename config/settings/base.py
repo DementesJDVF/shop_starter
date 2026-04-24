@@ -234,7 +234,8 @@ _cloud_name = env("CLOUDINARY_CLOUD_NAME", default=None)
 _api_key = env("CLOUDINARY_API_KEY", default=None)
 _api_secret = env("CLOUDINARY_API_SECRET", default=None)
 
-if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
+# Solo usamos Cloudinary en producción (DEBUG=False)
+if not DEBUG and (_cloudinary_url or (_cloud_name and _api_key and _api_secret)):
     import cloudinary
     if _cloudinary_url:
         CLOUDINARY_STORAGE = {
@@ -257,12 +258,7 @@ if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
         )
     
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    # Solo usamos MEDIA_URL vacío si estamos en producción para que Cloudinary tome el control total.
-    # En desarrollo local (DEBUG=True), permitimos /media/ para servir archivos que quedaron en el disco.
-    if DEBUG:
-        MEDIA_URL = "/media/"
-    else:
-        MEDIA_URL = ""
+    MEDIA_URL = ""
 else:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
     MEDIA_URL = "/media/"
