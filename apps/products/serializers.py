@@ -46,7 +46,7 @@ class PImageReadSerializer(serializers.ModelSerializer):
         fields = ["id", "url_image", "is_main", "moderation_status"]
 
     def get_url_image(self, obj):
-        # Si la imagen está rechazada, no devolvemos la URL por seguridad
+        # Si la imagen está rechazada por la IA, no la mostramos
         if obj.moderation_status == PImages.ModerationStatus.REJECTED:
             return None
 
@@ -54,20 +54,25 @@ class PImageReadSerializer(serializers.ModelSerializer):
             return None
 
         url = obj.url_image.url
-        # Cloudinary (y otros storages remotos) ya devuelven URLs absolutas.
-        # Solo usamos build_absolute_uri para archivos locales (rutas relativas).
+
+        # 1. Si ya es una URL absoluta (Cloudinary), la devolvemos tal cual
         if url.startswith(('http://', 'https://')):
             return url
 
+        # 2. Si es una URL relativa (legacy) y estamos en PRODUCCIÓN (Railway)
+        from django.conf import settings
+        if not settings.DEBUG:
+            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME')
+            # Intentamos reconstruir la URL de Cloudinary. Si no hay cloud_name,
+            # devolvemos None porque Railway no puede servir archivos locales.
+            if cloud_name:
+                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{url}"
+            return None
+
+        # 3. Solo en DESARROLLO local (DEBUG=True) generamos URLs absolutas locales
         request = self.context.get('request')
         if request:
             return request.build_absolute_uri(url)
-            
-        # Si no hay request (ej: tareas en segundo plano), intentamos usar el host configurado
-        from django.conf import settings
-        backend_url = getattr(settings, 'BACKEND_URL', None)
-        if backend_url:
-            return f"{backend_url.rstrip('/')}{url}"
             
         return url
 
