@@ -222,12 +222,13 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# 1. Configuración de Cloudinary (Credenciales)
+# --- CONFIGURACIÓN DE ARCHIVOS (MEDIA & STATIC) ---
+
+# 1. Cloudinary (Media)
 CLOUDINARY_STORAGE = {
     "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None)
 }
 
-# 2. Configuración de Almacenamiento (Storage)
 if CLOUDINARY_STORAGE.get("CLOUDINARY_URL"):
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
@@ -237,13 +238,17 @@ else:
 
 MEDIA_ROOT = BASE_DIR / "media"
 
-# 3. Configuración de Estáticos (WhiteNoise)
+# 2. WhiteNoise (Static)
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+_static_dir = BASE_DIR / "static"
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False  
 WHITENOISE_USE_FINDERS = DEBUG       
+
+# --- FIN CONFIGURACIÓN DE ARCHIVOS ---
 
 if DEBUG:
     INSTALLED_APPS += ["django_extensions"]
