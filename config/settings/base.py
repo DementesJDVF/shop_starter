@@ -226,14 +226,16 @@ SPECTACULAR_SETTINGS = {
 }
 
 # --- CONFIGURACIÓN DE ARCHIVOS (MEDIA & STATIC) ---
+import os
 
-# 1. Cloudinary (Media)
-CLOUDINARY_STORAGE = {
-    "CLOUDINARY_URL": env("CLOUDINARY_URL", default=None),
-    "SECURE": True,
-}
+# 1. Cloudinary (Media) - Forzamos lectura directa de os.environ para Railway
+_cloudinary_url = os.environ.get("CLOUDINARY_URL")
 
-if CLOUDINARY_STORAGE.get("CLOUDINARY_URL"):
+if _cloudinary_url:
+    CLOUDINARY_STORAGE = {
+        "CLOUDINARY_URL": _cloudinary_url,
+        "SECURE": True,
+    }
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
 else:
