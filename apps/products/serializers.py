@@ -75,15 +75,14 @@ class PImageReadSerializer(serializers.ModelSerializer):
 
         try:
             url = obj.url_image.url
-            # Si ya es absoluta, la devolvemos tal cual
+            # Si ya es absoluta (Cloudinary), la devolvemos tal cual
             if url.startswith(('http://', 'https://')):
                 return url
 
             from django.conf import settings
-            # En producción Railway usamos la librería oficial para generar la URL
+            # En producción Railway
             if not settings.DEBUG:
                 import cloudinary
-                # Cloudinary espera el public_id sin la barra inicial si existe
                 public_id = url.lstrip('/')
                 return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
 

@@ -106,6 +106,14 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
             if url.startswith(('http://', 'https://')):
                 return url
 
+            from django.conf import settings
+            # En producción Railway
+            if not settings.DEBUG:
+                import cloudinary
+                public_id = url.lstrip('/')
+                return cloudinary.utils.cloudinary_url(public_id, secure=True)[0]
+
+            # En desarrollo local
             request = self.context.get("request")
             if request:
                 return request.build_absolute_uri(url)
