@@ -162,3 +162,13 @@ class CSRFTokenView(APIView):
     def get(self, request):
         from django.middleware.csrf import get_token
         return Response({"csrfToken": get_token(request)})
+
+class LogoutView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
+        # Limpiar cookies de autenticación y CSRF
+        response.delete_cookie('access_token', samesite='None')
+        response.delete_cookie('refresh_token', samesite='None')
+        response.delete_cookie('csrftoken', samesite='None')
+        return response

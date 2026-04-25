@@ -28,27 +28,32 @@ class CustomJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         header = self.get_header(request)
         if header is None:
+            # Intentar obtener el token de la cookie HttpOnly
             raw_token = request.COOKIES.get('access_token')
-            if raw_token is not None:
-                # Se envía como string plana, no codificado (dependiendo de JWTAuthentication internals)
-                raw_token = raw_token.encode('utf-8')
+            if raw_token is None:
+                return None
         else:
             raw_token = self.get_raw_token(header)
+            if raw_token is None:
+                return None
+
+        try:
+            # Validar el token usando la lógica base de SimpleJWT
+            validated_token = self.get_validated_token(raw_token)
+            user = self.get_user(validated_token)
             
-        if raw_token is None:
-            return None
+            # Ejecutar validación CSRF solo para solicitudes autenticadas vía Cookies
+            if header is None:
+                self.enforce_csrf(request)
 
-        validated_token = self.get_validated_token(raw_token)
-        user = self.get_user(validated_token)
-        
-        # Inyectar Validacion CSRF Estricta (FAANG-001 mitigación)
-        self.enforce_csrf(request)
+            # Validaciones adicionales de estado de cuenta
+            if not user.is_active:
+                raise exceptions.AuthenticationFailed('Usuario inactivo', code='user_inactive')
+                
+            if getattr(user, 'status', 'ACTIVE') == 'BLOCKED':
+                raise exceptions.PermissionDenied('Cuenta bloqueada', code='user_blocked')
 
-        # Validación de seguridad: El usuario debe estar activo y NO estar bloqueado
-        if not user.is_active:
-            raise exceptions.AuthenticationFailed('Usuario inactivo', code='user_inactive')
-            
-        if getattr(user, 'status', 'ACTIVE') == 'BLOCKED':
-            raise exceptions.PermissionDenied('Esta cuenta ha sido bloqueada por seguridad.', code='user_blocked')
-
-        return user, validated_token
+            return user, validated_token
+        except Exception as e:
+            # Si el token es inválido, dejamos que DRF maneje la excepción de SimpleJWT
+            raise e

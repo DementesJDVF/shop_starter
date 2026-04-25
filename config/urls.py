@@ -12,7 +12,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
 
-from apps.users.api.auth_views import LoginView, CustomTokenRefreshView, CSRFTokenView
+from apps.users.api.auth_views import LoginView, CustomTokenRefreshView, CSRFTokenView, LogoutView
 from apps.users.views import RegisterView, MeView
 from apps.users.api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
 
@@ -40,6 +40,8 @@ urlpatterns = [
     path("api/auth/password-reset/", RequestPasswordResetView.as_view(), name="password-reset-alias"),
     path("api/auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password-reset-confirm-alias"),
     path("api/auth/csrf/", CSRFTokenView.as_view(), name="csrf-token"),
+    path("api/auth/logout/", LogoutView.as_view(), name="logout-alias"),
+
 
     
     # Alias para corregir llamadas antiguas del frontend a /api/vendors/
