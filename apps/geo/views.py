@@ -23,8 +23,8 @@ class LocationViewSet(viewsets.ModelViewSet):
             return [IsVendor()]
             
         if self.action in ['list', 'retrieve']:
-            # Solo Admins pueden ver la lista bruta de coordenadas globales del sistema
-            return [IsAdmin()]
+            # Permitir acceso público para el mapa de vendedores
+            return [AllowAny()]
             
         if self.action == 'my_location':
             return [IsVendor()]
