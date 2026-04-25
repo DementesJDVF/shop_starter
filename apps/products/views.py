@@ -14,6 +14,9 @@ from apps.core.models import Notification
 from apps.ai.services.ai_service import generate_product_description
 from apps.products.services import ProductService
 from rest_framework import generics
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProductPagination(PageNumberPagination):
     page_size = 10
@@ -180,17 +183,65 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not source:
             return Response({"error": "Se requiere una imagen (URL o archivo)."}, status=400)
 
+        from apps.products.tasks import task_generate_suggestion
+        
+        # Seteamos el estado del producto si existe
+        if product:
+            product.ai_status = Product.AIStatus.PENDING
+            product.save(update_fields=['ai_status'])
+
+        # Si es un archivo, debemos convertirlo a un formato serializable para Celery (base64)
+        serializable_source = source
+        if not is_url:
+            import base64
+            try:
+                # Asegurar que estamos al principio del archivo antes de leer
+                if hasattr(source, 'seek'):
+                    source.seek(0)
+                file_content = source.read()
+                serializable_source = base64.b64encode(file_content).decode('utf-8')
+            except Exception as e:
+                logger.error(f"[SRE] Error al leer archivo de imagen: {str(e)}")
+                return Response({"error": f"No se pudo procesar el archivo: {str(e)}"}, status=400)
+
         try:
-            suggestion = generate_product_description(source, is_url=is_url)
+            # Disparamos tarea asíncrona
+            task = task_generate_suggestion.delay(serializable_source, is_url=is_url)
             
-            # Guardar en caché si hay producto
-            if product:
-                product.ai_description = suggestion
-                product.save()
-                
-            return Response({"suggestion": suggestion, "cached": False})
+            return Response({
+                "status": "processing",
+                "task_id": task.id,
+                "message": "Solicitud de sugerencia enviada al servidor IA."
+            }, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
-            return Response({"error": f"Error IA: {str(e)}"}, status=500)
+            logger.error(f"[SRE] Error crítico al disparar sugerencia IA: {str(e)}")
+            return Response({"error": f"Error interno en el orquestador de tareas: {str(e)}"}, status=500)
+
+    @action(detail=False, methods=['get'], url_path='tasks/(?P<task_id>[^/.]+)')
+    def get_task_status(self, request, task_id=None):
+        """
+        Endpoint para consultar el estado de una tarea de Celery por su ID.
+        """
+        try:
+            from celery.result import AsyncResult
+            res = AsyncResult(task_id)
+            
+            if res.ready():
+                if res.successful():
+                    return Response({
+                        "status": "DONE",
+                        "result": res.result
+                    })
+                else:
+                    return Response({
+                        "status": "FAILED",
+                        "error": str(res.result)
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({"status": "PROCESSING"})
+        except Exception as e:
+            logger.error(f"[SRE] Error al consultar tarea {task_id}: {str(e)}")
+            return Response({"error": "No se pudo consultar el estado de la tarea."}, status=500)
 
 
 class ProductCatalogView(generics.ListAPIView):
