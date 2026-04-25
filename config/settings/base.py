@@ -334,19 +334,20 @@ BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 # ==============================================================================
 # CELERY Y REDIS CONFIGURATION (PRODUCCIÓN ROBUSTA)
 # ==============================================================================
-# Intentar obtener la URL de Redis desde REDIS_URL o REDIS_PRIVATE_URL (común en Railway)
-REDIS_URL = env("REDIS_URL", default=env("REDIS_PRIVATE_URL", default=None))
+# Intentar obtener la URL de Redis (usamos os.environ para máxima compatibilidad con Railway)
+import os
+REDIS_URL = os.environ.get("REDIS_URL") or os.environ.get("REDIS_PRIVATE_URL")
 
 # Fallback: Construir la URL si Railway provee variables individuales
 if not REDIS_URL:
-    REDIS_HOST = env("REDISHOST", default=None)
-    REDIS_PORT = env("REDISPORT", default=None)
-    REDIS_USER = env("REDISUSER", default=None)
-    REDIS_PASS = env("REDISPASSWORD", default=None)
+    R_HOST = os.environ.get("REDISHOST")
+    R_PORT = os.environ.get("REDISPORT")
+    R_USER = os.environ.get("REDISUSER")
+    R_PASS = os.environ.get("REDISPASSWORD")
     
-    if REDIS_HOST and REDIS_PORT:
-        auth = f"{REDIS_USER}:{REDIS_PASS}@" if REDIS_USER and REDIS_PASS else ""
-        REDIS_URL = f"redis://{auth}{REDIS_HOST}:{REDIS_PORT}"
+    if R_HOST and R_PORT:
+        auth = f"{R_USER}:{R_PASS}@" if R_USER and R_PASS else ""
+        REDIS_URL = f"redis://{auth}{R_HOST}:{R_PORT}"
 
 # Log de configuración para depuración (aparecerá en logs de Railway)
 if REDIS_URL:
@@ -354,8 +355,13 @@ if REDIS_URL:
 else:
     print("[CONFIG] No Redis URL detected, falling back to localhost")
 
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/1")
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL if REDIS_URL else "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL if REDIS_URL else "redis://localhost:6379/1")
+
+# Si estamos en modo DEBUG y no hay Redis, permitimos que las tareas corran síncronas
+# para que no falle el servidor local si no tienes Redis instalado.
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_ALWAYS_EAGER", default=DEBUG and not REDIS_URL)
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
