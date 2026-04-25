@@ -337,6 +337,23 @@ BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 # Intentar obtener la URL de Redis desde REDIS_URL o REDIS_PRIVATE_URL (común en Railway)
 REDIS_URL = env("REDIS_URL", default=env("REDIS_PRIVATE_URL", default=None))
 
+# Fallback: Construir la URL si Railway provee variables individuales
+if not REDIS_URL:
+    REDIS_HOST = env("REDISHOST", default=None)
+    REDIS_PORT = env("REDISPORT", default=None)
+    REDIS_USER = env("REDISUSER", default=None)
+    REDIS_PASS = env("REDISPASSWORD", default=None)
+    
+    if REDIS_HOST and REDIS_PORT:
+        auth = f"{REDIS_USER}:{REDIS_PASS}@" if REDIS_USER and REDIS_PASS else ""
+        REDIS_URL = f"redis://{auth}{REDIS_HOST}:{REDIS_PORT}"
+
+# Log de configuración para depuración (aparecerá en logs de Railway)
+if REDIS_URL:
+    print(f"[CONFIG] Redis URL detected: {REDIS_URL[:15]}...")
+else:
+    print("[CONFIG] No Redis URL detected, falling back to localhost")
+
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/1")
 CELERY_ACCEPT_CONTENT = ["json"]
