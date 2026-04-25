@@ -7,6 +7,15 @@ class CustomJWTAuthentication(JWTAuthentication):
         if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
             return
             
+        # Estrategia SRE: Cross-Origin Resource Sharing (CORS) Trust
+        # Si el Origen de la petición está en nuestra lista blanca de confianza (Vercel/Dominio),
+        # podemos permitir la acción JWT sin el token CSRF manual, ya que el navegador
+        # bloquea peticiones de orígenes no autorizados antes de llegar aquí.
+        origin = request.META.get('HTTP_ORIGIN')
+        from django.conf import settings
+        if origin in settings.CORS_ALLOWED_ORIGINS or settings.DEBUG:
+            return
+
         def dummy_get_response(request):
             return None
         check = CSRFCheck(dummy_get_response)
