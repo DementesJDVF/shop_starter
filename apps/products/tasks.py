@@ -98,6 +98,13 @@ def task_generate_suggestion(self, image_source, is_url=True):
     Tarea simple para generar una sugerencia de descripción sin tocar la DB directamente.
     """
     try:
+        # Si recibimos base64 (archivo subido), lo convertimos a BytesIO para el servicio
+        if not is_url:
+            import base64
+            import io
+            logger.info("[Celery] Decodificando imagen base64")
+            image_source = io.BytesIO(base64.b64decode(image_source))
+
         logger.info("[Celery] Solicitando sugerencia IA (sin persistencia)")
         return generate_product_description(image_source, is_url=is_url)
     except Exception as e:

@@ -187,8 +187,19 @@ class ProductViewSet(viewsets.ModelViewSet):
             product.ai_status = Product.AIStatus.PENDING
             product.save(update_fields=['ai_status'])
 
+        # Si es un archivo, debemos convertirlo a un formato serializable para Celery (base64)
+        # ya que Celery no puede serializar objetos de archivo de Django/Python directamente a Redis.
+        serializable_source = source
+        if not is_url:
+            import base64
+            try:
+                file_content = source.read()
+                serializable_source = base64.b64encode(file_content).decode('utf-8')
+            except Exception as e:
+                return Response({"error": f"No se pudo procesar el archivo: {str(e)}"}, status=400)
+
         # Disparamos tarea asíncrona
-        task = task_generate_suggestion.delay(source, is_url=is_url)
+        task = task_generate_suggestion.delay(serializable_source, is_url=is_url)
         
         return Response({
             "status": "processing",
