@@ -16,8 +16,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return Review.objects.all().order_by('-created_at')
 
     def get_permissions(self):
-        # Solo lectura es pública, escritura requiere autenticación
+        # Solo lectura es pública, escritura requiere autenticación.
+        # Restricción: Los administradores NO pueden colocar reseñas (son solo monitores).
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            from apps.users.constants import UserRoles
+            from rest_framework import exceptions
+            
+            # Si el usuario es ADMIN, denegamos permiso para escribir reseñas
+            if self.request.user.is_authenticated and self.request.user.role == UserRoles.ADMIN:
+                return [] # Denegado (se evaluará como falso el set de permisos)
+
             return [IsAuthenticated()]
         return [AllowAny()]
 
