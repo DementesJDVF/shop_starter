@@ -4,12 +4,16 @@ from rest_framework.authentication import CSRFCheck
 
 class CustomJWTAuthentication(JWTAuthentication):
     def enforce_csrf(self, request):
+        if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+            return
+            
         def dummy_get_response(request):
             return None
         check = CSRFCheck(dummy_get_response)
         check.process_request(request)
         reason = check.process_view(request, None, (), {})
         if reason:
+            # Error detallado para depuración en producción (SRE)
             raise exceptions.PermissionDenied('CSRF Failed: %s' % reason)
 
     def authenticate(self, request):
