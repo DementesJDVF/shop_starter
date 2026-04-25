@@ -180,17 +180,43 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not source:
             return Response({"error": "Se requiere una imagen (URL o archivo)."}, status=400)
 
-        try:
-            suggestion = generate_product_description(source, is_url=is_url)
-            
-            # Guardar en caché si hay producto
-            if product:
-                product.ai_description = suggestion
-                product.save()
-                
-            return Response({"suggestion": suggestion, "cached": False})
-        except Exception as e:
-            return Response({"error": f"Error IA: {str(e)}"}, status=500)
+        from apps.products.tasks import task_generate_suggestion
+        
+        # Seteamos el estado del producto si existe
+        if product:
+            product.ai_status = Product.AIStatus.PENDING
+            product.save(update_fields=['ai_status'])
+
+        # Disparamos tarea asíncrona
+        task = task_generate_suggestion.delay(source, is_url=is_url)
+        
+        return Response({
+            "status": "processing",
+            "task_id": task.id,
+            "message": "Solicitud de sugerencia enviada al servidor IA."
+        }, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=False, methods=['get'], url_path='tasks/(?P<task_id>[^/.]+)')
+    def get_task_status(self, request, task_id=None):
+        """
+        Endpoint para consultar el estado de una tarea de Celery por su ID.
+        """
+        from celery.result import AsyncResult
+        res = AsyncResult(task_id)
+        
+        if res.ready():
+            if res.successful():
+                return Response({
+                    "status": "DONE",
+                    "result": res.result
+                })
+            else:
+                return Response({
+                    "status": "FAILED",
+                    "error": str(res.result)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({"status": "PROCESSING"})
 
 
 class ProductCatalogView(generics.ListAPIView):

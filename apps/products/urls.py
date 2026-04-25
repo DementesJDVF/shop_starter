@@ -21,6 +21,8 @@ urlpatterns = [
     # Ruta para generación de descripción IA (vendedores)
     path("<int:pk>/generate_ai_description/", ProductViewSet.as_view({"post": "generate_ai_description"}), name="product-ai-gen"),
     path("suggest_description/", ProductViewSet.as_view({"post": "suggest_description"}), name="product-suggest-desc"),
+    path("tasks/<str:task_id>/", ProductViewSet.as_view({"get": "get_task_status"}), name="product-task-status"),
+
 
     # Ruta pública de categorías (para vendedores y clientes)
     path("get-categories/", CategoryViewGet.as_view({'get': 'list'}), name="category-list-public"),

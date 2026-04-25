@@ -3,13 +3,12 @@ import billiard
 from celery import shared_task
 from django.db import transaction
 from apps.products.models import Product
-# from apps.products.application.services import generate_product_description # asumiendo que esa funcion existe
-# (El servicio original que hacia request a OpenAI/Hugginface lo invocaremos aquí de manera simulada o real)
+# El servicio original que hacia request a OpenAI/Hugginface lo invocaremos aquí de manera simulada o real
 
 logger = logging.getLogger(__name__)
 
 # NOTA: Debes de tener la funcion real importada
-from apps.products.application.services import generate_product_description
+from apps.ai.services.ai_service import generate_product_description
 
 @shared_task(
     bind=True,
@@ -85,4 +84,23 @@ def reap_zombie_ai_tasks():
         logger.error(f"[Zombie Reaper] Se han forzado {count} productos ahogados a FAILED.")
     
     return f"Reaped {count} zombies"
+
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=2,
+    soft_time_limit=60,
+    time_limit=80
+)
+def task_generate_suggestion(self, image_source, is_url=True):
+    """
+    Tarea simple para generar una sugerencia de descripción sin tocar la DB directamente.
+    """
+    try:
+        logger.info("[Celery] Solicitando sugerencia IA (sin persistencia)")
+        return generate_product_description(image_source, is_url=is_url)
+    except Exception as e:
+        logger.error(f"[Celery] Error en sugerencia IA: {e}")
+        raise e
 
