@@ -103,25 +103,30 @@ class UserView(APIView):
 
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
-        # Sobrescribir el payload para inyectar el refresh_token desde la Cookie
+        # Intentar obtener el refresh token prioritariamente de la cookie httponly
         refresh_token = request.COOKIES.get('refresh_token')
+        
+        # Inyectar el token en el cuerpo de la solicitud para que el serializer de SimpleJWT lo procese
         if refresh_token:
-            if not request.data:
-                # request.data es inmutable por defecto en DRF, usamos una copia
-                from django.http import QueryDict
-                mutable_data = request.data.copy() if hasattr(request.data, 'copy') else {}
-                mutable_data['refresh'] = refresh_token
-                request._full_data = mutable_data
+            # Creamos un diccionario mutable con los datos actuales
+            from django.http import QueryDict
+            if isinstance(request.data, QueryDict):
+                data = request.data.copy()
             else:
-                try:    
-                    request.data['refresh'] = refresh_token
-                except:
-                    pass
+                data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+            
+            data['refresh'] = refresh_token
+            # Sobrescribimos el atributo interno de DRF que alimenta a request.data
+            request._full_data = data
 
         try:
+            # Llamamos al comportamiento base (que usará el token inyectado)
             response = super().post(request, *args, **kwargs)
         except InvalidToken as e:
-            return Response({"detail": str(e)}, status=401)
+            # Si el token en la cookie es inválido (ej: expiró o fue manipulado)
+            return Response({"detail": "Token de refresco inválido o expirado."}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # DRF SimpleJWT responde con nuevo access_token (y opcional refresh).
         if response.status_code == 200:
@@ -151,3 +156,9 @@ class CustomTokenRefreshView(TokenRefreshView):
             response.data = {"message": "Sesión refrescada"}
             
         return response
+
+class CSRFTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        from django.middleware.csrf import get_token
+        return Response({"csrfToken": get_token(request)})
