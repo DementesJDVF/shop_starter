@@ -9,10 +9,15 @@ from apps.users.models import User
 from apps.core.middleware import get_client_ip_from_request
 from apps.users.application.services import UserService
 from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerAll
-from apps.users.throttles import LoginRateThrottle
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.exceptions import InvalidToken
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.users.models import User
 from apps.users.permissions import IsAdmin
+from apps.users.throttles import LoginRateThrottle
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginView(APIView):
     serializer_class = LoginSerializer
     authentication_classes = []
@@ -48,15 +53,34 @@ class LoginView(APIView):
         refresh = UserService.login_user(
             user=user,
             ip_address=get_client_ip_from_request(request),)
-        return Response(
+
+        response = Response(
             {
                 "message": "Login exitoso",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
                 "user": UserSerializer(user).data,
             },
             status=status.HTTP_200_OK,
         )
+        
+        response.set_cookie(
+            key='access_token',
+            value=str(refresh.access_token),
+            httponly=True,
+            secure=True,
+            samesite='None',
+            max_age=3600*24 # 1 día
+        )
+        response.set_cookie(
+            key='refresh_token',
+            value=str(refresh),
+            httponly=True,
+            secure=True,
+            samesite='None',
+            max_age=3600*24*7 # 7 días
+        )
+        
+        return response
+
 class UserView(APIView):
     permission_classes =  (permissions.IsAuthenticated, IsAdmin)
     def get(self, request):
@@ -76,3 +100,54 @@ class UserView(APIView):
             serializer_data = filtered_data
 
         return Response(serializer_data, status=status.HTTP_200_OK)
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        # Sobrescribir el payload para inyectar el refresh_token desde la Cookie
+        refresh_token = request.COOKIES.get('refresh_token')
+        if refresh_token:
+            if not request.data:
+                # request.data es inmutable por defecto en DRF, usamos una copia
+                from django.http import QueryDict
+                mutable_data = request.data.copy() if hasattr(request.data, 'copy') else {}
+                mutable_data['refresh'] = refresh_token
+                request._full_data = mutable_data
+            else:
+                try:    
+                    request.data['refresh'] = refresh_token
+                except:
+                    pass
+
+        try:
+            response = super().post(request, *args, **kwargs)
+        except InvalidToken as e:
+            return Response({"detail": str(e)}, status=401)
+
+        # DRF SimpleJWT responde con nuevo access_token (y opcional refresh).
+        if response.status_code == 200:
+            access_token = response.data.get('access')
+            if access_token:
+                response.set_cookie(
+                    key='access_token',
+                    value=access_token,
+                    httponly=True,
+                    secure=True,
+                    samesite='None',
+                    max_age=3600*24
+                )
+            
+            new_refresh = response.data.get('refresh')
+            if new_refresh:
+                response.set_cookie(
+                    key='refresh_token',
+                    value=new_refresh,
+                    httponly=True,
+                    secure=True,
+                    samesite='None',
+                    max_age=3600*24*7
+                )
+                
+            # Limpiar payload por seguridad antes de devolver (Axios no necesita ver los tokens)
+            response.data = {"message": "Sesión refrescada"}
+            
+        return response

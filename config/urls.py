@@ -10,10 +10,9 @@ from drf_spectacular.views import (
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
-    TokenRefreshView,
 )
 
-from apps.users.api.auth_views import LoginView
+from apps.users.api.auth_views import LoginView, CustomTokenRefreshView
 from apps.users.views import RegisterView, MeView
 from apps.users.api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
 
@@ -23,7 +22,7 @@ urlpatterns = [
 
     # JWT
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh_global"),
+    path("api/token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh_global"),
 
     # Apps
     path("api/users/", include("apps.users.urls")),
@@ -37,7 +36,7 @@ urlpatterns = [
     path("api/auth/login/", LoginView.as_view(), name="login-alias"),
     path("api/auth/register/", RegisterView.as_view(), name="register-alias"),
     path("api/auth/me/", MeView.as_view(), name="me-alias"),
-    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh-alias"),
+    path("api/auth/token/refresh/", CustomTokenRefreshView.as_view(), name="token-refresh-alias"),
     path("api/auth/password-reset/", RequestPasswordResetView.as_view(), name="password-reset-alias"),
     path("api/auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password-reset-confirm-alias"),
     

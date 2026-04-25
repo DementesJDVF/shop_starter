@@ -53,32 +53,32 @@ def nearby_vendors(request):
     except:
         return Response([], status=400)
 
+    from django.db.models.expressions import RawSQL
+    
+    # Fórmula de Haversine en SQL nativo para descargar la memoria de Django
+    query = """
+        6371 * acos(
+            cos(radians(%s)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians(%s)) +
+            sin(radians(%s)) * sin(radians(latitude))
+        )
+    """
+
     qs = Location.objects.select_related(
         "user"
     ).filter(
         latitude__isnull=False,
         longitude__isnull=False,
-        # Filtramos para que traiga solo locaciones de cuentas "Activas"
         user__status='ACTIVE'
-    )
-
-    results = []
-
-    for loc in qs:
-        dist = haversine(lat, lng, float(loc.latitude), float(loc.longitude))
-        if dist <= radius:
-            results.append({
-                "instance": loc,
-                "distance": round(dist, 2),
-            })
-
-    results.sort(key=lambda x: x["distance"])
+    ).annotate(
+        distance=RawSQL(query, (lat, lng, lat))
+    ).filter(distance__lte=radius).order_by('distance')
 
     data = []
-    for r in results:
-        instance = r["instance"]
-        instance.distance = r["distance"]  # Asignamos el valor dinámico para que el serializador lo lea
-        serializer = NearbyVendorSerializer(instance, context={"request": request})
+    for loc in qs:
+        # La distancia ya viene calculada en la propiedad por el annotate
+        loc.distance = round(loc.distance, 2)
+        serializer = NearbyVendorSerializer(loc, context={"request": request})
         data.append(serializer.data)
 
     return Response(data)

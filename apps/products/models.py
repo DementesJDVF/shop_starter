@@ -23,6 +23,13 @@ class Product(BaseModel):
         REJECTED = "REJECTED", "Rejected"
         RESERVED = "RESERVED", "Reserved"
 
+    class AIStatus(models.TextChoices):
+        NONE = "NONE", "Ninguno"
+        PENDING = "PENDING", "En cola"
+        PROCESSING = "PROCESSING", "Procesando IA"
+        DONE = "DONE", "Completado"
+        FAILED = "FAILED", "Error"
+
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,  # Apunta dinámicamente a tu clase User personalizada
         on_delete=models.CASCADE,
@@ -45,6 +52,11 @@ class Product(BaseModel):
         db_index=True)
     rejection_reason = models.TextField(null=True, blank=True)
     is_featured = models.BooleanField(default=False, db_index=True)
+    ai_status = models.CharField(
+        max_length=20,
+        choices=AIStatus.choices,
+        default=AIStatus.NONE,
+        db_index=True)
     class Meta:
         db_table = "products_product"
         indexes = [
