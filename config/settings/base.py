@@ -334,8 +334,11 @@ BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 # ==============================================================================
 # CELERY Y REDIS CONFIGURATION (PRODUCCIÓN ROBUSTA)
 # ==============================================================================
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
+# Intentar obtener la URL de Redis desde REDIS_URL o REDIS_PRIVATE_URL (común en Railway)
+REDIS_URL = env("REDIS_URL", default=env("REDIS_PRIVATE_URL", default=None))
+
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL if REDIS_URL else "redis://localhost:6379/1")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

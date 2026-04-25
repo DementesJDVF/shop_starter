@@ -14,6 +14,9 @@ from apps.core.models import Notification
 from apps.ai.services.ai_service import generate_product_description
 from apps.products.services import ProductService
 from rest_framework import generics
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProductPagination(PageNumberPagination):
     page_size = 10
