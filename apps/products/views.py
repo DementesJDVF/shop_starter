@@ -139,13 +139,23 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not main_image or not main_image.url_image:
             return Response({"error": "No hay imágenes disponibles para analizar."}, status=status.HTTP_400_BAD_REQUEST)
             
-        try:
-            ai_text = generate_product_description(main_image.url_image)
-            product.ai_description = ai_text
-            product.save()
-            return Response({"ai_description": product.ai_description, "cached": False})
-        except Exception as e:
-            return Response({"error": f"Error del servicio IA: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        from apps.products.tasks import generate_ai_description_task
+        
+        # Enviar tarea a Celery con .delay()
+        source_url = main_image.url_image.url if hasattr(main_image.url_image, 'url') else main_image.url_image
+        
+        product.ai_status = Product.AIStatus.PENDING
+        product.save(update_fields=['ai_status'])
+
+        # Disparamos worker en Redis
+        task_info = generate_ai_description_task.delay(product.id, source_url, is_url=True)
+        
+        return Response({
+            "status": "processing",
+            "task_id": task_info.id,
+            "message": "Generando descripción en servidor de IA Celery. Este proceso es monitoreado.",
+            "cached": False
+        }, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def suggest_description(self, request):
@@ -261,27 +271,35 @@ def nearby_products(request):
     except:
         return Response([], status=400)
 
-    # 1. Obtenemos locaciones de vendedores activos
+    from django.db.models.expressions import RawSQL
+    query = """
+        6371 * acos(
+            cos(radians(%s)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians(%s)) +
+            sin(radians(%s)) * sin(radians(latitude))
+        )
+    """
+
+    # 1 & 2. Filtramos locaciones en SQL puro limitando el dataset en disco
     locations = Location.objects.select_related("user").filter(
         latitude__isnull=False,
         longitude__isnull=False,
         user__status='ACTIVE',
         user__role='VENDEDOR'
-    )
+    ).annotate(
+        distance=RawSQL(query, (lat, lng, lat))
+    ).filter(distance__lte=radius)
 
-    # 2. Filtramos por distancia y recolectamos IDs de usuarios
-    nearby_users = []
+    nearby_user_ids = []
     user_distances = {} # userId -> distance
 
     for loc in locations:
-        dist = haversine(lat, lng, float(loc.latitude), float(loc.longitude))
-        if dist <= radius:
-            nearby_users.append(loc.user)
-            user_distances[loc.user.id] = round(dist, 2)
+        nearby_user_ids.append(loc.user.id)
+        user_distances[loc.user.id] = round(loc.distance, 2)
 
     # 3. Obtenemos productos de esos vendedores (solo los activos)
     products = Product.objects.filter(
-        vendor__in=nearby_users,
+        vendor__in=nearby_user_ids,
         status='ACTIVE'
     ).select_related('category', 'vendor').prefetch_related('images')
 

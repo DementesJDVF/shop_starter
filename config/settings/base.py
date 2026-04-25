@@ -33,7 +33,7 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # Permitir a Axios leer csrf token
 SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
 
@@ -330,3 +330,19 @@ ANYMAIL = {
 # Frontend configuration
 FRONTEND_URL = env("FRONTEND_URL", default="https://shopstarter.online")
 BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
+
+# ==============================================================================
+# CELERY Y REDIS CONFIGURATION (PRODUCCIÓN ROBUSTA)
+# ==============================================================================
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# Configuración Avanzada FAANG
+CELERY_TASK_ACKS_LATE = True  # Asegura que las tasks se confirmen SOLO cuando terminan bien
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Evita que un worker monopolice tareas pesadas (IA)
+CELERY_TASK_TIME_LIMIT = 300  # Hard limit (5 min max por proceso)
+CELERY_TASK_SOFT_TIME_LIMIT = 240  # Soft limit (arroja excepcion antes de matar)

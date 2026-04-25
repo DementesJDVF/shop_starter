@@ -25,7 +25,7 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     authentication_classes = []  # IMPORTANTE: No validar tokens en registro para evitar errores con sesiones expiradas
     permission_classes = (permissions.AllowAny,)
-    throttle_classes = () # Desactivado temporalmente para pruebas
+    throttle_classes = (RegisterRateThrottle,)
 
 
     def create(self, request, *args, **kwargs):
@@ -121,9 +121,10 @@ class ChangeUserStatusView(APIView):
             
         target_user.save()
 
-        # Notificar si el estado cambió a ACTIVE o BLOCKED
+        # Notificar si el estado cambió a ACTIVE o BLOCKED usando Celery Backend
         if old_status != new_status and new_status in [User.Status.ACTIVE, User.Status.BLOCKED]:
-            send_user_status_notification(target_user)
+            from apps.users.tasks import send_user_status_notification_task
+            send_user_status_notification_task.delay(target_user.id)
 
 
         return Response(
