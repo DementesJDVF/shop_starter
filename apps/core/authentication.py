@@ -38,4 +38,4 @@ class CustomJWTAuthentication(JWTAuthentication):
         if getattr(user, 'status', 'ACTIVE') == 'BLOCKED':
             raise exceptions.PermissionDenied('Esta cuenta ha sido bloqueada por seguridad.', code='user_blocked')
 
-        return user, token
+        return user, validated_token
