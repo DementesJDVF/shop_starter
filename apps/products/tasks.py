@@ -43,6 +43,7 @@ def generate_ai_description_task(self, product_id, image_source, is_url=True):
         Product.objects.filter(id=product_id).update(ai_status=Product.AIStatus.FAILED)
         return "Timeout"
     except Exception as e:
+        logger.error(f"[SRE] Error crítico en generate_ai_description_task para prod_{product_id}: {str(e)}")
         if self.request.retries >= self.max_retries:
             Product.objects.filter(id=product_id).update(ai_status=Product.AIStatus.FAILED)
         raise e
@@ -72,6 +73,11 @@ def task_generate_suggestion(self, image_source, is_url=True):
             import io
             image_source = io.BytesIO(base64.b64decode(image_source))
 
-        return generate_product_description(image_source, is_url=is_url)
+        try:
+            return generate_product_description(image_source, is_url=is_url)
+        finally:
+            if not is_url and 'image_source' in locals() and hasattr(image_source, 'close'):
+                image_source.close()
     except Exception as e:
+        logger.error(f"[SRE] Error en task_generate_suggestion: {str(e)}")
         raise e
