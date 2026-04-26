@@ -334,33 +334,70 @@ BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 # ==============================================================================
 # CELERY Y REDIS CONFIGURATION (PRODUCCIÓN ROBUSTA)
 # ==============================================================================
-# Intentar obtener la URL de Redis (usamos os.environ para máxima compatibilidad con Railway)
 import os
-REDIS_URL = os.environ.get("REDIS_URL") or os.environ.get("REDIS_PRIVATE_URL")
+import logging
 
-# Fallback: Construir la URL si Railway provee variables individuales
+_redis_logger = logging.getLogger(__name__)
+
+
+def _get_env_stripped(key: str) -> str:
+    """Return os.environ[key] stripped of whitespace, or empty string.
+
+    Railway occasionally injects values with trailing newlines or spaces;
+    stripping prevents silent mismatches that cause 'Connection refused'.
+    """
+    return os.environ.get(key, "").strip()
+
+
+# Priority order: REDIS_URL → REDIS_PRIVATE_URL → individual host/port vars
+REDIS_URL = _get_env_stripped("REDIS_URL") or _get_env_stripped("REDIS_PRIVATE_URL")
+
+# Fallback: construct URL from individual Railway Redis variables
 if not REDIS_URL:
-    R_HOST = os.environ.get("REDISHOST")
-    R_PORT = os.environ.get("REDISPORT")
-    R_USER = os.environ.get("REDISUSER")
-    R_PASS = os.environ.get("REDISPASSWORD")
-    
+    R_HOST = _get_env_stripped("REDISHOST")
+    R_PORT = _get_env_stripped("REDISPORT")
+    R_USER = _get_env_stripped("REDISUSER")
+    R_PASS = _get_env_stripped("REDISPASSWORD")
+
     if R_HOST and R_PORT:
         auth = f"{R_USER}:{R_PASS}@" if R_USER and R_PASS else ""
         REDIS_URL = f"redis://{auth}{R_HOST}:{R_PORT}"
+        print("[CONFIG] Redis URL built from individual REDISHOST/REDISPORT variables")
 
-# Log de configuración para depuración (aparecerá en logs de Railway)
+# Log the outcome so it appears clearly in Railway's deployment logs
 if REDIS_URL:
-    print(f"[CONFIG] Redis URL detected: {REDIS_URL[:15]}...")
+    print(f"[CONFIG] Redis URL detected: {REDIS_URL[:20]}...")
 else:
-    print("[CONFIG] No Redis URL detected, falling back to localhost")
+    print("[CONFIG] No Redis URL detected in environment")
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL if REDIS_URL else "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL if REDIS_URL else "redis://localhost:6379/1")
+# In production, refuse to silently fall back to localhost — that is always wrong
+# and produces the exact "Error 111 connecting to localhost:6379" we are fixing.
+if not REDIS_URL and not DEBUG:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Add the Redis service to this Railway environment and link REDIS_URL."
+    )
 
-# Si estamos en modo DEBUG y no hay Redis, permitimos que las tareas corran síncronas
-# para que no falle el servidor local si no tienes Redis instalado.
+_REDIS_LOCALHOST_BROKER = "redis://localhost:6379/0"
+_REDIS_LOCALHOST_BACKEND = "redis://localhost:6379/1"
+
+CELERY_BROKER_URL = (
+    _get_env_stripped("CELERY_BROKER_URL")
+    or (f"{REDIS_URL}/0" if REDIS_URL else _REDIS_LOCALHOST_BROKER)
+)
+CELERY_RESULT_BACKEND = (
+    _get_env_stripped("CELERY_RESULT_BACKEND")
+    or (f"{REDIS_URL}/1" if REDIS_URL else _REDIS_LOCALHOST_BACKEND)
+)
+
+print(f"[CONFIG] CELERY_BROKER_URL     = {CELERY_BROKER_URL[:40]}")
+print(f"[CONFIG] CELERY_RESULT_BACKEND = {CELERY_RESULT_BACKEND[:40]}")
+
+# In DEBUG mode with no Redis, run tasks synchronously so local dev works
+# without a running Redis instance.
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_ALWAYS_EAGER", default=DEBUG and not REDIS_URL)
+
+
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
