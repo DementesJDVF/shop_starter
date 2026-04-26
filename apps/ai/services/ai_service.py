@@ -11,7 +11,7 @@ GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY', 
 # Endpoint de Groq
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # Modelo Vision de Groq (Llama 3.2 Vision - El más rápido y estable)
-GROQ_MODEL = "llama-3.2-11b-vision-preview"
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 def generate_product_description(image_file_path_or_url, is_url=False):
     """
