@@ -35,8 +35,8 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                 image_file_path_or_url.seek(0) # Reset pointer
 
         # 2. Procesar imagen (Redimensionar para ahorrar tokens y evitar errores 400)
-        # Groq y la mayoría de las IAs prefieren máx 1024 o 1536 px
-        max_size = (1024, 1024)
+        # Groq y la mayoría de las IAs prefieren máx 1024 o 1536 px, pero 800 es ideal para latencia
+        max_size = (800, 800)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         
         # Convertir a RGB si es necesario (ej: PNG transparente a JPEG)
