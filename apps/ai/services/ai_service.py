@@ -24,7 +24,7 @@ def generate_product_description(image_file_path_or_url, is_url=False):
     try:
         # 1. Obtener imagen
         if is_url:
-            response = requests.get(image_file_path_or_url)
+            response = requests.get(image_file_path_or_url, timeout=15)
             img = Image.open(io.BytesIO(response.content))
         else:
             if hasattr(image_file_path_or_url, 'read'):
