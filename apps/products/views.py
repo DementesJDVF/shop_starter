@@ -229,19 +229,26 @@ class ProductViewSet(viewsets.ModelViewSet):
             from celery.result import AsyncResult
             res = AsyncResult(task_id)
             
-            if res.ready():
-                if res.successful():
-                    return Response({
-                        "status": "DONE",
-                        "result": res.result
-                    })
-                else:
-                    return Response({
-                        "status": "FAILED",
-                        "error": str(res.result)
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            state = res.state
             
-            return Response({"status": "PROCESSING"})
+            if state == 'SUCCESS':
+                return Response({
+                    "status": "DONE",
+                    "result": res.result
+                })
+            elif state in ['FAILURE', 'REVOKED']:
+                return Response({
+                    "status": "FAILED",
+                    "error": str(res.result) or "La tarea fue cancelada o falló."
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            elif state == 'RETRY':
+                return Response({"status": "RETRYING"})
+            elif state == 'STARTED':
+                return Response({"status": "PROCESSING"})
+            
+            # PENDING o estados desconocidos
+            return Response({"status": "PENDING"})
+            
         except Exception as e:
             logger.error(f"[SRE] Error al consultar tarea {task_id}: {str(e)}")
             return Response({"error": "No se pudo consultar el estado de la tarea."}, status=500)
