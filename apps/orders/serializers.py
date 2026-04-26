@@ -5,7 +5,7 @@ from apps.users.models import User
 from apps.orders.models import Order
 class OrderSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    client = serializers.PrimaryKeyRelatedField(read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
     client_name = serializers.CharField(source='client.username', read_only=True)
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
