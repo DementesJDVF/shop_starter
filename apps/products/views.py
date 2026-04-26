@@ -208,7 +208,19 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return Response({"error": f"No se pudo procesar el archivo: {str(e)}"}, status=400)
 
         try:
-            # Disparamos tarea asíncrona
+            # Soporte para modo síncrono (Bypass de Celery) si hay problemas con los workers
+            is_sync = request.data.get('sync') == 'true' or request.data.get('sync') == True
+            
+            if is_sync:
+                from apps.ai.services.ai_service import generate_product_description
+                suggestion = generate_product_description(serializable_source, is_url=is_url)
+                return Response({
+                    "status": "DONE",
+                    "result": suggestion,
+                    "message": "Procesado en modo directo (Bypass)."
+                }, status=status.HTTP_200_OK)
+
+            # Disparamos tarea asíncrona (comportamiento normal)
             task = task_generate_suggestion.delay(serializable_source, is_url=is_url)
             
             return Response({
