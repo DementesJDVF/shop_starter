@@ -36,8 +36,8 @@ class PImageWriteSerializer(serializers.Serializer):
                     resource_type="auto"
                 )
                 
-                # Guardamos el public_id en el campo url_image
-                data['url_image'] = upload_result['public_id']
+                # Guardamos la URL COMPLETA para que sea infalible al leer
+                data['url_image'] = upload_result['secure_url']
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).error(f"Error subiendo a Cloudinary: {e}")
@@ -56,7 +56,8 @@ class PImageWriteSerializer(serializers.Serializer):
                     folder="products/images/",
                     resource_type="auto"
                 )
-                data['url_image'] = upload_result['public_id']
+                # Guardamos la URL COMPLETA
+                data['url_image'] = upload_result['secure_url']
             except Exception as e:
                 raise serializers.ValidationError({"url_image": f"No se pudo procesar la imagen de la URL: {str(e)}"})
 
@@ -74,31 +75,25 @@ class PImageReadSerializer(serializers.ModelSerializer):
     def get_url_image(self, obj):
         if not obj.url_image:
             return None
-        
-        # IA DESACTIVADA: Mostramos todas las imágenes
-        # if getattr(obj, 'moderation_status', None) == 'REJECTED':
-        #     return None
 
         try:
-            if not obj.url_image or not obj.url_image.name:
+            # Si el almacenamiento es Cloudinary, obj.url_image.url ya es la URL correcta.
+            # Si el almacenamiento es local, obj.url_image.url es /media/...
+            url = obj.url_image.url
+
+            # Si la URL ya es completa (http...), la devolvemos tal cual.
+            if url.startswith(('http://', 'https://')):
+                return url
+
+            # Si es una ruta relativa (/media/...), el frontend ya sabe ponerle el dominio 
+            # gracias al cambio que hicimos en VendorCatalogModal.
+            return url
+        except Exception:
+            # Fallback seguro: devolver el nombre crudo si falla el .url
+            try:
+                return obj.url_image.name if obj.url_image else None
+            except:
                 return None
-
-            # El .name contiene la ruta del archivo (ej: products/images/xyz.jpeg)
-            name = obj.url_image.name
-
-            # Si ya es una URL absoluta, devolverla directo
-            if name.startswith(('http://', 'https://')):
-                return name
-
-            # LIMPIEZA: Quitamos la extensión si la tiene (evita .jpeg.jpg)
-            import os
-            public_id, _ = os.path.splitext(name)
-
-            # Generar la URL segura de Cloudinary
-            import cloudinary.utils
-            return cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
-        except Exception as e:
-            return None
 
 
 class CreProSerializer(serializers.ModelSerializer):
