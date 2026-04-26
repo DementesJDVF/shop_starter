@@ -145,23 +145,27 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not main_image or not main_image.url_image:
             return Response({"error": "No hay imágenes disponibles para analizar."}, status=status.HTTP_400_BAD_REQUEST)
             
-        from apps.products.tasks import generate_ai_description_task
-        
-        # Enviar tarea a Celery con .delay()
+        # Procesamiento DIRECTO y SÍNCRONO para máxima confiabilidad
+        from apps.ai.services.ai_service import generate_product_description
         source_url = main_image.url_image.url if hasattr(main_image.url_image, 'url') else main_image.url_image
         
-        product.ai_status = Product.AIStatus.PENDING
-        product.save(update_fields=['ai_status'])
+        try:
+            ai_text = generate_product_description(source_url, is_url=True)
+            product.ai_description = ai_text
+            product.ai_status = Product.AIStatus.DONE
+            product.save(update_fields=['ai_description', 'ai_status'])
 
-        # Disparamos worker en Redis
-        task_info = generate_ai_description_task.delay(product.id, source_url, is_url=True)
-        
-        return Response({
-            "status": "processing",
-            "task_id": task_info.id,
-            "message": "Generando descripción en servidor de IA Celery. Este proceso es monitoreado.",
-            "cached": False
-        }, status=status.HTTP_202_ACCEPTED)
+            return Response({
+                "status": "DONE",
+                "ai_description": ai_text,
+                "message": "Descripción generada correctamente (Modo Directo).",
+                "cached": False
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            product.ai_status = Product.AIStatus.FAILED
+            product.save(update_fields=['ai_status'])
+            logger.error(f"[SRE] Error en generación directa de IA: {str(e)}")
+            return Response({"error": f"Error en el motor de IA: {str(e)}"}, status=500)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
     def suggest_description(self, request):
@@ -208,42 +212,31 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return Response({"error": f"No se pudo procesar el archivo: {str(e)}"}, status=400)
 
         try:
-            # Soporte para modo síncrono (Bypass de Celery) si hay problemas con los workers
-            is_sync = request.data.get('sync') == 'true' or request.data.get('sync') == True
+            from apps.ai.services.ai_service import generate_product_description
             
-            if is_sync:
-                from apps.ai.services.ai_service import generate_product_description
-                
-                # Decodificar si es base64 (archivo)
-                source_to_process = serializable_source
-                if not is_url:
-                    import base64
-                    import io
-                    source_to_process = io.BytesIO(base64.b64decode(serializable_source))
-                
-                suggestion = generate_product_description(source_to_process, is_url=is_url)
-                
-                # Limpiar si es buffer
-                if hasattr(source_to_process, 'close'):
-                    source_to_process.close()
-
-                return Response({
-                    "status": "DONE",
-                    "result": suggestion,
-                    "message": "Procesado en modo directo (Bypass)."
-                }, status=status.HTTP_200_OK)
-
-            # Disparamos tarea asíncrona (comportamiento normal)
-            task = task_generate_suggestion.delay(serializable_source, is_url=is_url)
+            # Decodificar si es base64 (archivo)
+            source_to_process = serializable_source
+            if not is_url:
+                import base64
+                import io
+                source_to_process = io.BytesIO(base64.b64decode(serializable_source))
             
+            # Procesamiento DIRECTO y SÍNCRONO para máxima confiabilidad
+            suggestion = generate_product_description(source_to_process, is_url=is_url)
+            
+            # Limpiar si es buffer
+            if hasattr(source_to_process, 'close'):
+                source_to_process.close()
+
             return Response({
-                "status": "processing",
-                "task_id": task.id,
-                "message": "Solicitud de sugerencia enviada al servidor IA."
-            }, status=status.HTTP_202_ACCEPTED)
+                "status": "DONE",
+                "result": suggestion,
+                "message": "Procesado en modo directo (Alta Confiabilidad)."
+            }, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logger.error(f"[SRE] Error crítico al disparar sugerencia IA: {str(e)}")
-            return Response({"error": f"Error interno en el orquestador de tareas: {str(e)}"}, status=500)
+            logger.error(f"[SRE] Error crítico en sugerencia IA síncrona: {str(e)}")
+            return Response({"error": f"Error interno en el motor de IA: {str(e)}"}, status=500)
 
     @action(detail=False, methods=['get'], url_path='tasks/(?P<task_id>[^/.]+)')
     def get_task_status(self, request, task_id=None):
