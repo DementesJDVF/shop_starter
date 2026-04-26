@@ -22,9 +22,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
             from apps.users.constants import UserRoles
             from rest_framework import exceptions
             
-            # Si el usuario es ADMIN, denegamos permiso para escribir reseñas
+            # Política de Neutralidad: Los administradores NO pueden colocar reseñas ni comentarios.
             if self.request.user.is_authenticated and self.request.user.role == UserRoles.ADMIN:
-                return [] # Denegado (se evaluará como falso el set de permisos)
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Como Administrador debes mantener la neutralidad. No puedes publicar reseñas.")
 
             return [IsAuthenticated()]
         return [AllowAny()]
