@@ -89,9 +89,9 @@ def reap_zombie_ai_tasks():
     bind=True,
     autoretry_for=(Exception,),
     retry_backoff=True,
-    max_retries=2,
-    soft_time_limit=60,
-    time_limit=80
+    max_retries=3,
+    soft_time_limit=120,
+    time_limit=150
 )
 def task_generate_suggestion(self, image_source, is_url=True):
     """
