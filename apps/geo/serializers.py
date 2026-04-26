@@ -35,9 +35,40 @@ class LocationSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.username", read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_status = serializers.CharField(source="user.status", read_only=True)
+    products = serializers.SerializerMethodField()
+
     class Meta:
         model = Location
-        fields = ["id", "user", "user_name", "user_email", "user_status", "latitude", "longitude", "description", "images"]
+        fields = ["id", "user", "user_name", "user_email", "user_status", "latitude", "longitude", "description", "images", "products"]
+
+    def get_products(self, obj):
+        """Devuelve un resumen de productos para la vista de Admin."""
+        from apps.products.models import Product
+        products = Product.objects.filter(vendor=obj.user).exclude(status='SOLD')[:4]
+        data = []
+        for p in products:
+            img_url = None
+            main_img = p.images.filter(is_main=True).first() or p.images.first()
+            if main_img and main_img.url_image:
+                try:
+                    name = main_img.url_image.name
+                    if name.startswith(('http://', 'https://')):
+                        img_url = name
+                    else:
+                        import os
+                        public_id, _ = os.path.splitext(name)
+                        import cloudinary.utils
+                        img_url = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg", width=100, height=100, crop="fill")[0]
+                except: pass
+            
+            data.append({
+                "name": p.name,
+                "price": p.price,
+                "image": img_url,
+                "status": p.status
+            })
+        return data
+
     def validate_images(self, value):
         if len(value) > 10:
             raise serializers.ValidationError("Se permiten máximo 10 imágenes.")
