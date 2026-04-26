@@ -171,78 +171,34 @@ class ProductViewSet(viewsets.ModelViewSet):
     def suggest_description(self, request):
         """
         Sugiere una descripción basada en una imagen (URL o archivo).
-        Puede recibir 'product_id' para usar/guardar en caché.
+        Modo Directo (Síncrono) para máxima confiabilidad.
         """
         image_url = request.data.get('image_url')
         image_file = request.FILES.get('image_file')
-        product_id = request.data.get('product_id')
         
-        product = None
-        if product_id:
-            product = Product.objects.filter(id=product_id).first()
-            if product and product.ai_description:
-                return Response({"suggestion": product.ai_description, "cached": True})
-
-        # Determinar qué enviar al servicio
+        # 1. Validación de entrada
         source = image_file if image_file else image_url
         is_url = bool(image_url and not image_file)
 
         if not source:
             return Response({"error": "Se requiere una imagen (URL o archivo)."}, status=400)
 
-        from apps.products.tasks import task_generate_suggestion
-        
-        # Seteamos el estado del producto si existe
-        if product:
-            product.ai_status = Product.AIStatus.PENDING
-            product.save(update_fields=['ai_status'])
-
-        # Si es un archivo, debemos convertirlo a un formato serializable para Celery (base64)
-        serializable_source = source
-        if not is_url:
-            import base64
-            try:
-                # Asegurar que estamos al principio del archivo antes de leer
-                if hasattr(source, 'seek'):
-                    source.seek(0)
-                file_content = source.read()
-                serializable_source = base64.b64encode(file_content).decode('utf-8')
-            except Exception as e:
-                logger.error(f"[SRE] Error al leer archivo de imagen: {str(e)}")
-                return Response({"error": f"No se pudo procesar el archivo: {str(e)}"}, status=400)
-
         try:
             from apps.ai.services.ai_service import generate_product_description
             
-            # Decodificar si es base64 (archivo)
-            source_to_process = serializable_source
-            if not is_url:
-                import base64
-                import io
-                
-                # Limpieza de prefijo Base64 (Data URI)
-                b64_data = serializable_source
-                if "," in b64_data:
-                    b64_data = b64_data.split(",")[1]
-                    
-                source_to_process = io.BytesIO(base64.b64decode(b64_data))
+            # 2. Procesamiento DIRECTO (Sin conversiones Base64 innecesarias)
+            # El motor de IA (Pillow) puede leer el archivo directamente de request.FILES
+            suggestion = generate_product_description(source, is_url=is_url)
             
-            # Procesamiento DIRECTO y SÍNCRONO para máxima confiabilidad
-            suggestion = generate_product_description(source_to_process, is_url=is_url)
-            
-            # Limpiar si es buffer
-            if hasattr(source_to_process, 'close'):
-                source_to_process.close()
-
             return Response({
                 "status": "DONE",
                 "result": suggestion,
-                "message": "Procesado en modo directo (Alta Confiabilidad)."
+                "message": "Sugerencia generada correctamente (Modo Directo)."
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"[SRE] Error crítico en sugerencia IA síncrona: {str(e)}")
-            return Response({"error": f"Error interno en el motor de IA: {str(e)}"}, status=500)
+            return Response({"error": f"Error en el motor de IA: {str(e)}"}, status=500)
 
     @action(detail=False, methods=['get'], url_path='tasks/(?P<task_id>[^/.]+)')
     def get_task_status(self, request, task_id=None):
