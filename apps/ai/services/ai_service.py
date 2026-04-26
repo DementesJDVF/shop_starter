@@ -63,7 +63,7 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                     "content": [
                         {
                             "type": "text",
-                            "text": "Escribe una descripción técnica y elegante (MÁX 15 PALABRAS) para este producto. En español."
+                            "text": "Escribe una descripción técnica, llamativa y elegante (ENTRE 20 Y 30 PALABRAS) para este producto. En español. Enfócate en calidad y beneficios."
                         },
                         {
                             "type": "image_url",
@@ -74,8 +74,8 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                     ]
                 }
             ],
-            "temperature": 0.2,
-            "max_tokens": 150
+            "temperature": 0.3,
+            "max_tokens": 250
         }
 
         # 5. Llamar a Groq
