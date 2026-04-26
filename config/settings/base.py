@@ -2,8 +2,6 @@ import environ
 import dj_database_url
 from pathlib import Path
 from datetime import timedelta
-
-import environ
 import os
 
 # Base directory
@@ -113,7 +111,6 @@ if env("DATABASE_URL", default=None):
     DATABASES = {
         "default": env.db("DATABASE_URL")
     }
-    # Optimización para Railway: Reutilización de conexiones y chequeos de salud
     DATABASES["default"]["CONN_MAX_AGE"] = 600
     DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 else:
@@ -186,12 +183,14 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": env("DRF_THROTTLE_ANON", default="100/hour"),
         "user": env("DRF_THROTTLE_USER", default="1000/hour"),
         "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
         "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
+        "ia_limit": "10/hour",
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
@@ -209,12 +208,9 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
-
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
-
     "AUTH_HEADER_TYPES": ("Bearer",),
-
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
@@ -226,22 +222,16 @@ SPECTACULAR_SETTINGS = {
 }
 
 # --- CONFIGURACIÓN DE ARCHIVOS (MEDIA & STATIC) ---
-import os
-
 # 1. Cloudinary (Media)
 _cloudinary_url = env("CLOUDINARY_URL", default=None)
 _cloud_name = env("CLOUDINARY_CLOUD_NAME", default=None)
 _api_key = env("CLOUDINARY_API_KEY", default=None)
 _api_secret = env("CLOUDINARY_API_SECRET", default=None)
 
-# Usar Cloudinary siempre que haya credenciales disponibles (DEV y PROD)
 if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
     import cloudinary
-    
-    # Si tenemos la URL completa, extraemos las partes para mayor compatibilidad con django-cloudinary-storage
     if _cloudinary_url and not all([_cloud_name, _api_key, _api_secret]):
         try:
-            # Formato: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
             parts = _cloudinary_url.replace("cloudinary://", "").split("@")
             creds = parts[0].split(":")
             _api_key = creds[0]
@@ -256,14 +246,12 @@ if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
         "API_SECRET": _api_secret,
         "SECURE": True,
     }
-    
     cloudinary.config(
         cloud_name=_cloud_name,
         api_key=_api_key,
         api_secret=_api_secret,
         secure=True
     )
-
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
 else:
@@ -277,12 +265,9 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 _static_dir = BASE_DIR / "static"
 STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
-
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False  
 WHITENOISE_USE_FINDERS = DEBUG       
-
-# --- FIN CONFIGURACIÓN DE ARCHIVOS ---
 
 if DEBUG:
     INSTALLED_APPS += ["django_extensions"]
@@ -311,72 +296,40 @@ LOGGING = {
     },
 }
 
-# Email Configuration (Anymail + Brevo)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="anymail.backends.brevo.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="ShopStarter <noreply@shopstarter.com>")
-
 HUGGINGFACE_API_TOKEN = env("HUGGINGFACE_API_TOKEN", default="")
 GROQ_API_KEY = env("GROQ_API_KEY", default="")
 
-# Asegurar que el directorio de estáticos exista al arrancar (silencia el UserWarning)
 if not STATIC_ROOT.exists():
     STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 ANYMAIL = {
-
     "BREVO_API_KEY": env("BREVO_API_KEY", default=""),
 }
 
-# Frontend configuration
 FRONTEND_URL = env("FRONTEND_URL", default="https://shopstarter.online")
 BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 
-# ==============================================================================
-# CELERY Y REDIS CONFIGURATION (PRODUCCIÓN ROBUSTA)
-# ==============================================================================
-import os
-import logging
-
-_redis_logger = logging.getLogger(__name__)
-
+# CELERY Y REDIS
+_redis_logger = logging.getLogger(__name__) if 'logging' in locals() else None
 
 def _get_env_stripped(key: str) -> str:
-    """Return os.environ[key] stripped of whitespace, or empty string.
-
-    Railway occasionally injects values with trailing newlines or spaces;
-    stripping prevents silent mismatches that cause 'Connection refused'.
-    """
     return os.environ.get(key, "").strip()
 
-
-# Priority order: REDIS_URL → REDIS_PRIVATE_URL → individual host/port vars
 REDIS_URL = _get_env_stripped("REDIS_URL") or _get_env_stripped("REDIS_PRIVATE_URL")
 
-# Fallback: construct URL from individual Railway Redis variables
 if not REDIS_URL:
     R_HOST = _get_env_stripped("REDISHOST")
     R_PORT = _get_env_stripped("REDISPORT")
     R_USER = _get_env_stripped("REDISUSER")
     R_PASS = _get_env_stripped("REDISPASSWORD")
-
     if R_HOST and R_PORT:
         auth = f"{R_USER}:{R_PASS}@" if R_USER and R_PASS else ""
         REDIS_URL = f"redis://{auth}{R_HOST}:{R_PORT}"
-        print("[CONFIG] Redis URL built from individual REDISHOST/REDISPORT variables")
 
-# Log the outcome so it appears clearly in Railway's deployment logs
-if REDIS_URL:
-    print(f"[CONFIG] Redis URL detected: {REDIS_URL[:20]}...")
-else:
-    print("[CONFIG] No Redis URL detected in environment")
-
-# In production, refuse to silently fall back to localhost — that is always wrong
-# and produces the exact "Error 111 connecting to localhost:6379" we are fixing.
 if not REDIS_URL and not DEBUG:
-    raise RuntimeError(
-        "REDIS_URL is not set. "
-        "Add the Redis service to this Railway environment and link REDIS_URL."
-    )
+    raise RuntimeError("REDIS_URL is not set.")
 
 _REDIS_LOCALHOST_BROKER = "redis://localhost:6379/0"
 _REDIS_LOCALHOST_BACKEND = "redis://localhost:6379/1"
@@ -390,22 +343,12 @@ CELERY_RESULT_BACKEND = (
     or (f"{REDIS_URL}/1" if REDIS_URL else _REDIS_LOCALHOST_BACKEND)
 )
 
-print(f"[CONFIG] CELERY_BROKER_URL     = {CELERY_BROKER_URL[:40]}")
-print(f"[CONFIG] CELERY_RESULT_BACKEND = {CELERY_RESULT_BACKEND[:40]}")
-
-# In DEBUG mode with no Redis, run tasks synchronously so local dev works
-# without a running Redis instance.
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_ALWAYS_EAGER", default=DEBUG and not REDIS_URL)
-
-
-
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-
-# Configuración Avanzada FAANG
-CELERY_TASK_ACKS_LATE = True  # Asegura que las tasks se confirmen SOLO cuando terminan bien
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Evita que un worker monopolice tareas pesadas (IA)
-CELERY_TASK_TIME_LIMIT = 300  # Hard limit (5 min max por proceso)
-CELERY_TASK_SOFT_TIME_LIMIT = 240  # Soft limit (arroja excepcion antes de matar)
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_TASK_SOFT_TIME_LIMIT = 240
