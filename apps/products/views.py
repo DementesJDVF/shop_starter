@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -122,7 +123,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
     def generate_ai_description(self, request, pk=None):
         from rest_framework.exceptions import PermissionDenied
         
@@ -160,7 +161,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             "cached": False
         }, status=status.HTTP_202_ACCEPTED)
 
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
     def suggest_description(self, request):
         """
         Sugiere una descripción basada en una imagen (URL o archivo).
