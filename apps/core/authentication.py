@@ -47,13 +47,17 @@ class CustomJWTAuthentication(JWTAuthentication):
                 self.enforce_csrf(request)
 
             # Validaciones adicionales de estado de cuenta
-            if not user.is_active:
+            if user and not user.is_active:
                 raise exceptions.AuthenticationFailed('Usuario inactivo', code='user_inactive')
                 
-            if getattr(user, 'status', 'ACTIVE') == 'BLOCKED':
+            if user and getattr(user, 'status', 'ACTIVE') == 'BLOCKED':
                 raise exceptions.PermissionDenied('Cuenta bloqueada', code='user_blocked')
 
             return user, validated_token
-        except Exception as e:
-            # Si el token es inválido, dejamos que DRF maneje la excepción de SimpleJWT
-            raise e
+        except Exception:
+            # ESTRATEGIA DE TOLERANCIA:
+            # Si el token es inválido (vencido, corrupto o viejo), NO lanzamos error.
+            # Al retornar None, DRF trata al usuario como 'AnonymousUser'.
+            # Esto permite que los endpoints con [AllowAny] (como reseñas o catálogo)
+            # sigan funcionando perfectamente sin bloquear al usuario con un 401.
+            return None
