@@ -47,6 +47,20 @@ class LocationViewSet(viewsets.ModelViewSet):
             
         serializer = self.get_serializer(location)
         return Response([serializer.data])
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def all_locations(self, request):
+        """
+        Vista de Águila exclusiva para el Administrador.
+        Devuelve todas las ubicaciones registradas sin filtros.
+        """
+        from apps.users.permissions import IsAdmin
+        if not IsAdmin().has_permission(request, self):
+            return Response({"error": "No tienes permisos para ver todas las ubicaciones."}, status=403)
+            
+        locations = Location.objects.all()
+        serializer = self.get_serializer(locations, many=True)
+        return Response(serializer.data)
         
 @api_view(["GET"])
 @permission_classes([AllowAny])
