@@ -25,6 +25,8 @@ class ProductPagination(PageNumberPagination):
     max_page_size = 100
 
 class ProductViewSet(viewsets.ModelViewSet):
+    throttle_scope = None
+
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
             return ReadProSerializer
