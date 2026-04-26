@@ -30,8 +30,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def perform_create(self, serializer):
-        vendor_id = self.kwargs.get('vendor_id')
-        if vendor_id:
-            serializer.save(user=self.request.user, vendor_id=vendor_id)
-        else:
-            serializer.save(user=self.request.user)
+        # 1. Obtener el vendedor del contexto de la URL o del body
+        vendor_id = self.kwargs.get('vendor_id') or self.request.data.get('vendor')
+        
+        if not vendor_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"vendor": "Es necesario especificar el vendedor para la reseña."})
+            
+        # 2. Guardar con los datos automáticos
+        serializer.save(
+            user=self.request.user, 
+            vendor_id=vendor_id
+        )

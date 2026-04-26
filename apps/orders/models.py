@@ -50,9 +50,17 @@ class Order(BaseModel):
         db_table = "orders_order"
     def clean(self):
         """Validación: No pedir más de lo que hay en inventario"""
-        if self.quantity > self.product.stock:
+        if self.product and self.quantity > self.product.stock:
             raise ValidationError(
                 f"No puedes pedir {self.quantity} unidades. Solo quedan {self.product.stock} en stock.")
+
+    def _handle_stock_restoration(self):
+        """Helper to restore stock atomically when an order is cancelled."""
+        with transaction.atomic():
+            self.product.refresh_from_db()
+            self.product.stock += self.quantity
+            self.product.save(update_fields=['stock'])
+
     def _handle_stock_reduction(self):
         """Helper to reduce stock atomically."""
         with transaction.atomic():
@@ -65,33 +73,43 @@ class Order(BaseModel):
                 raise ValidationError(f"No hay stock suficiente para confirmar (Disponible: {self.product.stock})")
 
     def save(self, *args, **kwargs):
-        #  Congelar el precio si es la primera vez que se guarda
-        if self._state.adding:
-        # Aquí 'congelamos' el precio del momento de la compra
-            self.unit_price = self.product.price
-        # 2. Calcular total usando el precio congelado
-        self.total = (self.unit_price * self.quantity)
-        # Asignación automática del vendor
+        # 1. Asignación automática del vendor y congelación de precio
         if self.product:
+            if self._state.adding:
+                self.unit_price = self.product.price
             self.vendor = self.product.vendor
-        # Lógica de actualización de stock por estado
+        
+        # 2. Calcular total usando el precio congelado
+        if self.unit_price:
+            self.total = (self.unit_price * self.quantity)
+
+        # 3. Lógica de actualización de stock por estado
         if not self._state.adding:
-            # Obtenemos la orden como está actualmente en la BD antes de guardar
             try:
                 old_instance = Order.objects.get(pk=self.pk)
-                # Si cambia a CONFIRMED y antes no lo estaba
-                if self.status == self.Status.CONFIRMED and old_instance.status != self.Status.CONFIRMED:
+                # Caso A: Confirmación (Ya se redujo al crear, así que solo si cambia de algo no-confirmado a confirmado)
+                # Pero espera: Si ya se redujo al crear (como PENDING), no debemos reducirlo de nuevo.
+                # En este sistema, CUALQUIER orden activa (PENDING, CONFIRMED, COMPLETED) consume stock.
+                
+                # Caso B: Cancelación de una orden que consumía stock (Restaura Stock)
+                if self.status == self.Status.CANCELLED and old_instance.status != self.Status.CANCELLED:
+                    self._handle_stock_restoration()
+                
+                # Caso C: Reactivación de una orden cancelada (Reduce Stock)
+                elif self.status != self.Status.CANCELLED and old_instance.status == self.Status.CANCELLED:
                     self._handle_stock_reduction()
+                    
             except Order.DoesNotExist:
-                # Caso extremo: pk existe pero no está en DB (uuid prefijado)
-                if self.status == self.Status.CONFIRMED:
+                if self.status != self.Status.CANCELLED:
                     self._handle_stock_reduction()
         else:
-            # Si la orden se crea directamente como CONFIRMED
-            if self.status == self.Status.CONFIRMED:
+            # Al CREAR: Si la orden no nace cancelada, reservamos el stock
+            if self.status != self.Status.CANCELLED:
                 self._handle_stock_reduction()
-        # Validar todo
-        self.full_clean()
+
+        # 4. Validar y Guardar
+        if self.product:
+            self.full_clean()
         super().save(*args, **kwargs)
     def __str__(self):
         return f"Pedido {self.id} - {self.product.name}"

@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
 from apps.users.models import User
-from apps.users.application.services import send_user_status_notification
+from apps.core.services.email_service import send_user_status_notification
 
 logger = logging.getLogger(__name__)
 

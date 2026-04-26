@@ -4,8 +4,8 @@ from apps.users.models import User
 from apps.reviews.models import Review
 
 class ReviewSerializer(serializers.ModelSerializer):
-    vendor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    vendor = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = Review
         fields = "__all__"

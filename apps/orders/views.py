@@ -49,25 +49,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         if hasattr(product, 'stock') and quantity > product.stock:
             return Response({"error": f"No stock suficiente. Quedan {product.stock} unidades."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 3. Crear el pedido
-        order = Order.objects.create(
-            client=self.request.user,
-            vendor=product.vendor,
-            product=product,
-            quantity=quantity,
-            unit_price=product.price,
-            total=product.price * quantity
-        )
+        # El modelo Order.save() se encarga de la lógica de negocio y stock
+        order = serializer.save(client=self.request.user)
 
-        # 4. Ajustar inventarios y estado
-        if hasattr(product, 'stock'):
-            product.stock -= quantity
-            if product.stock <= 0:
-                product.status = Product.ProductStatus.RESERVED
-        else:
+        # UX: Si el stock llega a 0, marcamos como RESERVADO
+        if product.stock <= 0:
             product.status = Product.ProductStatus.RESERVED
-            
-        product.save()
+            product.save(update_fields=['status'])
 
         # Respuesta con payload serializado
         out_serializer = self.get_serializer(order)
