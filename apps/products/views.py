@@ -213,7 +213,20 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             if is_sync:
                 from apps.ai.services.ai_service import generate_product_description
-                suggestion = generate_product_description(serializable_source, is_url=is_url)
+                
+                # Decodificar si es base64 (archivo)
+                source_to_process = serializable_source
+                if not is_url:
+                    import base64
+                    import io
+                    source_to_process = io.BytesIO(base64.b64decode(serializable_source))
+                
+                suggestion = generate_product_description(source_to_process, is_url=is_url)
+                
+                # Limpiar si es buffer
+                if hasattr(source_to_process, 'close'):
+                    source_to_process.close()
+
                 return Response({
                     "status": "DONE",
                     "result": suggestion,
