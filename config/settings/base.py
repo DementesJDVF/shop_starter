@@ -254,9 +254,11 @@ if _cloudinary_url or (_cloud_name and _api_key and _api_secret):
     )
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = ""
+    print("✅ CLOUDINARY CONFIGURADO: Usando almacenamiento persistente en la nube.")
 else:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
     MEDIA_URL = "/media/"
+    print("⚠️ ADVERTENCIA: Cloudinary no detectado. Guardando fotos LOCALMENTE (se borrarán en Railway).")
 
 MEDIA_ROOT = BASE_DIR / "media"
 
