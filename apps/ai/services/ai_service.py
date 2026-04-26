@@ -10,12 +10,12 @@ GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY', 
 
 # Endpoint de Groq
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-# Modelo Vision de Groq (Llama 4 Scout - Multimodal)
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Modelo Vision de Groq (Llama 3.2 Vision - El más rápido y estable)
+GROQ_MODEL = "llama-3.2-11b-vision-preview"
 
 def generate_product_description(image_file_path_or_url, is_url=False):
     """
-    Toma una imagen, la redimensiona y usa Groq (Llama 3 Vision) 
+    Toma una imagen, la redimensiona y usa Groq (Llama 3.2 Vision) 
     para generar una descripción técnica y llamativa en español.
     """
     if not GROQ_API_KEY:
@@ -32,6 +32,7 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                 image_file_path_or_url.seek(0)
             else:
                 img = Image.open(image_file_path_or_url)
+                image_file_path_or_url.seek(0) # Reset pointer
 
         # 2. Procesar imagen (Redimensionar para ahorrar tokens y evitar errores 400)
         # Groq y la mayoría de las IAs prefieren máx 1024 o 1536 px
@@ -42,9 +43,9 @@ def generate_product_description(image_file_path_or_url, is_url=False):
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
             
-        # 3. Guardar en memoria como JPEG comprimido
+        # 3. Guardar en memoria como JPEG comprimido (Calidad 60 para máxima velocidad)
         buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=85)
+        img.save(buffer, format="JPEG", quality=60)
         base64_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
 
         # 4. Preparar la petición para Groq
