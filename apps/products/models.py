@@ -16,12 +16,11 @@ class Product(BaseModel):
     """Represents a product published by a vendor profile."""
     class ProductStatus(models.TextChoices):
         PENDING = "PENDING", "Pending Approval"
-        ACTIVE = "ACTIVE", "Active"
-        INACTIVE = "INACTIVE", "Inactive"
-        PAUSED = "PAUSED", "Paused"
-        OUT_OF_STOCK = "OUT_OF_STOCK", "Out of stock"
-        REJECTED = "REJECTED", "Rejected"
+        AVAILABLE = "AVAILABLE", "Available"
         RESERVED = "RESERVED", "Reserved"
+        SOLD = "SOLD", "Sold"
+        INACTIVE = "INACTIVE", "Inactive"
+        REJECTED = "REJECTED", "Rejected"
 
     class AIStatus(models.TextChoices):
         NONE = "NONE", "Ninguno"
@@ -44,12 +43,22 @@ class Product(BaseModel):
     description = models.TextField()
     ai_description = models.TextField(null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    stock = models.PositiveIntegerField(default=0)
+    stock = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=20,
         choices=ProductStatus.choices,
         default=ProductStatus.PENDING,
         db_index=True)
+    
+    # Control de Reservas Reales (SRE)
+    reserved_at = models.DateTimeField(null=True, blank=True)
+    reserved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name="reserved_products"
+    )
     rejection_reason = models.TextField(null=True, blank=True)
     is_featured = models.BooleanField(default=False, db_index=True)
     ai_status = models.CharField(
