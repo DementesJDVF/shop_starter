@@ -219,7 +219,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             if not is_url:
                 import base64
                 import io
-                source_to_process = io.BytesIO(base64.b64decode(serializable_source))
+                
+                # Limpieza de prefijo Base64 (Data URI)
+                b64_data = serializable_source
+                if "," in b64_data:
+                    b64_data = b64_data.split(",")[1]
+                    
+                source_to_process = io.BytesIO(base64.b64decode(b64_data))
             
             # Procesamiento DIRECTO y SÍNCRONO para máxima confiabilidad
             suggestion = generate_product_description(source_to_process, is_url=is_url)
