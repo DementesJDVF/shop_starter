@@ -76,9 +76,7 @@ def nearby_vendors(request):
     except:
         return Response([], status=400)
 
-    from django.db.models.expressions import RawSQL
-    
-    # Fórmula de Haversine en SQL nativo para descargar la memoria de Django
+    # Fórmula de Haversine en SQL nativo
     query = """
         6371 * acos(
             cos(radians(%s)) * cos(radians(latitude)) *
@@ -87,6 +85,16 @@ def nearby_vendors(request):
         )
     """
 
+    from django.db.models import Exists, OuterRef
+    from apps.products.models import Product
+
+    # Subquery para verificar si el vendedor tiene productos disponibles con stock
+    available_products = Product.objects.filter(
+        vendor=OuterRef('user'),
+        status=Product.ProductStatus.AVAILABLE,
+        stock__gt=0
+    )
+
     qs = Location.objects.select_related(
         "user"
     ).filter(
@@ -94,8 +102,12 @@ def nearby_vendors(request):
         longitude__isnull=False,
         user__status='ACTIVE'
     ).annotate(
-        distance=RawSQL(query, (lat, lng, lat))
-    ).filter(distance__lte=radius).order_by('distance')
+        distance=RawSQL(query, (lat, lng, lat)),
+        has_stock=Exists(available_products)
+    ).filter(
+        distance__lte=radius,
+        has_stock=True # Solo vendedores con productos reales
+    ).order_by('distance')
 
     data = []
     for loc in qs:
