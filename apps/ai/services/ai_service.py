@@ -62,7 +62,7 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                     "content": [
                         {
                             "type": "text",
-                            "text": "Eres un experto en marketing digital. Describe el producto de la imagen de forma técnica, sumamente llamativa y elegante (MÁXIMO 20 PALABRAS). Enfócate en calidad y beneficios. Responde solo con el texto de la descripción en español, sin preámbulos ni comentarios."
+                            "text": "Escribe una descripción técnica y elegante (MÁX 15 PALABRAS) para este producto. En español."
                         },
                         {
                             "type": "image_url",
@@ -73,8 +73,8 @@ def generate_product_description(image_file_path_or_url, is_url=False):
                     ]
                 }
             ],
-            "temperature": 0.5,
-            "max_tokens": 1024
+            "temperature": 0.2,
+            "max_tokens": 150
         }
 
         # 5. Llamar a Groq
