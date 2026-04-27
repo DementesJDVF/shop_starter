@@ -49,7 +49,7 @@ class ProductService:
         ).first()
 
     @staticmethod
-    def get_manageable_products(user) -> QuerySet[Product]:
+    def get_manageable_products(user, vendor_id: str = None) -> QuerySet[Product]:
         """
         Retrieves products that a specific user can manage in their dashboard.
         - Admins/Superusers see everything.
@@ -59,10 +59,17 @@ class ProductService:
         if not user.is_authenticated:
             return Product.objects.none()
 
+        queryset = Product.objects.all().order_by('-created_at')
+
         if user.role == UserRoles.ADMIN or user.is_superuser:
-            return Product.objects.all().order_by('-created_at')
+            if vendor_id:
+                try:
+                    uuid.UUID(str(vendor_id))
+                    queryset = queryset.filter(vendor_id=vendor_id)
+                except: pass
+            return queryset
             
         if user.role == UserRoles.VENDEDOR:
-            return Product.objects.filter(vendor=user).order_by('-created_at')
+            return queryset.filter(vendor=user)
 
         return Product.objects.none()

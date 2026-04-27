@@ -265,7 +265,7 @@ class ProductCatalogView(generics.ListAPIView):
     Supports filtering by vendor via query parameter.
     """
     serializer_class = ReadProSerializer
-    authentication_classes = []
+
     permission_classes = [AllowAny]
     pagination_class = ProductPagination
     filterset_fields = ['category']
@@ -273,6 +273,12 @@ class ProductCatalogView(generics.ListAPIView):
 
     def get_queryset(self):
         vendor_id = self.request.query_params.get('vendor')
+        user = self.request.user
+        
+        # Si un ADMIN o el VENDEDOR dueño está viendo el catálogo (ej. inspección), mostrar todo.
+        if user.is_authenticated and (user.role == 'ADMIN' or user.is_superuser):
+             return ProductService.get_manageable_products(user, vendor_id=vendor_id)
+             
         return ProductService.get_public_catalog(vendor_id=vendor_id)
 
 class ProductDetailPublicView(generics.RetrieveAPIView):
