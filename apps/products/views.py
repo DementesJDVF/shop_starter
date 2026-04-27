@@ -169,6 +169,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         source_url = main_image.url_image.url if hasattr(main_image.url_image, 'url') else main_image.url_image
         
         try:
+            # Aseguramos URL absoluta para imágenes locales (media)
+            if not source_url.startswith('http'):
+                from django.conf import settings
+                backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+                source_url = f"{backend_url}{'' if source_url.startswith('/') else '/'}{source_url}"
+            
             ai_text = generate_product_description(source_url, is_url=True)
             product.ai_description = ai_text
             product.ai_status = Product.AIStatus.DONE
@@ -359,10 +365,10 @@ def nearby_products(request):
         nearby_user_ids.append(loc.user.id)
         user_distances[loc.user.id] = round(loc.distance, 2)
 
-    # 3. Obtenemos productos de esos vendedores (solo los activos)
+    # 3. Obtenemos productos de esos vendedores (solo los disponibles)
     products = Product.objects.filter(
         vendor__in=nearby_user_ids,
-        status='ACTIVE'
+        status=Product.ProductStatus.AVAILABLE
     ).select_related('category', 'vendor').prefetch_related('images')
 
     # 4. Serializamos y añadimos la distancia
