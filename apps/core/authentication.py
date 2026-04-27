@@ -54,10 +54,13 @@ class CustomJWTAuthentication(JWTAuthentication):
                 raise exceptions.PermissionDenied('Cuenta bloqueada', code='user_blocked')
 
             return user, validated_token
-        except Exception:
-            # ESTRATEGIA DE TOLERANCIA:
-            # Si el token es inválido (vencido, corrupto o viejo), NO lanzamos error.
-            # Al retornar None, DRF trata al usuario como 'AnonymousUser'.
-            # Esto permite que los endpoints con [AllowAny] (como reseñas o catálogo)
-            # sigan funcionando perfectamente sin bloquear al usuario con un 401.
+        except exceptions.AuthenticationFailed:
+            # Re-lanzar errores de autenticación (usuario inactivo, bloqueado, etc)
+            raise
+        except Exception as e:
+            # Para otros errores (token expirado, inválido), retornamos None 
+            # solo si no hay un header presente (basado en cookies).
+            # Si hay un header y falla, es mejor dejar que DRF falle.
+            if header:
+                raise
             return None

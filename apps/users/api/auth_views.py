@@ -54,28 +54,35 @@ class LoginView(APIView):
             user=user,
             ip_address=get_client_ip_from_request(request),)
 
+        response_data = {
+            "message": "Login exitoso",
+            "user": UserSerializer(user).data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }
+
         response = Response(
-            {
-                "message": "Login exitoso",
-                "user": UserSerializer(user).data,
-            },
+            response_data,
             status=status.HTTP_200_OK,
         )
         
+        is_secure = request.is_secure()
+        samesite = 'None' if is_secure else 'Lax'
+
         response.set_cookie(
             key='access_token',
             value=str(refresh.access_token),
             httponly=True,
-            secure=True,
-            samesite='None',
+            secure=is_secure,
+            samesite=samesite,
             max_age=3600*24 # 1 día
         )
         response.set_cookie(
             key='refresh_token',
             value=str(refresh),
             httponly=True,
-            secure=True,
-            samesite='None',
+            secure=is_secure,
+            samesite=samesite,
             max_age=3600*24*7 # 7 días
         )
         
@@ -130,14 +137,17 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         # DRF SimpleJWT responde con nuevo access_token (y opcional refresh).
         if response.status_code == 200:
+            is_secure = request.is_secure()
+            samesite = 'None' if is_secure else 'Lax'
+            
             access_token = response.data.get('access')
             if access_token:
                 response.set_cookie(
                     key='access_token',
                     value=access_token,
                     httponly=True,
-                    secure=True,
-                    samesite='None',
+                    secure=is_secure,
+                    samesite=samesite,
                     max_age=3600*24
                 )
             
@@ -147,8 +157,8 @@ class CustomTokenRefreshView(TokenRefreshView):
                     key='refresh_token',
                     value=new_refresh,
                     httponly=True,
-                    secure=True,
-                    samesite='None',
+                    secure=is_secure,
+                    samesite=samesite,
                     max_age=3600*24*7
                 )
                 
@@ -168,7 +178,10 @@ class LogoutView(APIView):
     def post(self, request):
         response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
         # Limpiar cookies de autenticación y CSRF
-        response.delete_cookie('access_token', samesite='None')
-        response.delete_cookie('refresh_token', samesite='None')
-        response.delete_cookie('csrftoken', samesite='None')
+        is_secure = request.is_secure()
+        samesite = 'None' if is_secure else 'Lax'
+        
+        response.delete_cookie('access_token', samesite=samesite)
+        response.delete_cookie('refresh_token', samesite=samesite)
+        response.delete_cookie('csrftoken', samesite=samesite)
         return response
