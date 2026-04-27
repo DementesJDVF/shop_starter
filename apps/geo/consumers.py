@@ -29,9 +29,16 @@ class LocationConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         """
-        RECIBIR COORDENADAS:
-        Procesa el mensaje enviado por el cliente (vendedor) y lo difunde al grupo.
+        RECIBIR COORDENADAS (SECURITY-FIRST):
+        Procesa el mensaje y solo permite la difusión si el emisor es el VENDEDOR dueño del ID.
         """
+        user = self.scope.get('user')
+        
+        # VALIDACIÓN DE IDENTIDAD: Solo el dueño del vendor_id puede emitir
+        if not user or not user.is_authenticated or str(user.id) != self.vendor_id:
+            # SRE: Intento de suplantación detectado o usuario no autorizado
+            return
+
         try:
             data = json.loads(text_data)
             lat = data.get('lat')
