@@ -91,7 +91,7 @@ def nearby_vendors(request):
     # Subquery para verificar si el vendedor tiene productos disponibles con stock
     available_products = Product.objects.filter(
         vendor=OuterRef('user'),
-        status=Product.ProductStatus.AVAILABLE,
+        status=Product.ProductStatus.ACTIVE,
         stock__gt=0
     )
 
