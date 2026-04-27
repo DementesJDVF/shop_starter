@@ -47,6 +47,7 @@ class Order(BaseModel):
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, editable=False)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     payment_notified = models.BooleanField(default=False) # 🔥 Flag para que el vendedor sepa que el cliente ya reportó el pago
+    expires_at = models.DateTimeField(null=True, blank=True) # 🔥 Límite para pagar antes de liberar stock
 
     class Meta:
         db_table = "orders_order"
@@ -81,20 +82,20 @@ class Order(BaseModel):
             product = Product.objects.select_for_update().get(pk=self.product.pk)
 
             if is_new:
-                # Al crear una orden, validamos y descontamos el stock
+                # Al crear una orden, nace como RESERVADA
                 if product.stock < self.quantity:
-                    raise ValidationError("Stock insuficiente para procesar la orden.")
+                    raise ValidationError("Stock insuficiente para procesar la reserva.")
+                
+                # Configurar expiración (15 minutos para pagar)
+                self.expires_at = timezone.now() + timezone.timedelta(minutes=15)
+                self.status = self.Status.RESERVED
                 
                 product.stock -= self.quantity
                 
                 # El estado del producto solo cambia a SOLD si el stock llega a 0
                 if product.stock <= 0:
                     product.status = Product.ProductStatus.SOLD
-                # IMPORTANTE: Ya NO cambiamos a RESERVED si hay más stock,
-                # para que el producto siga siendo visible para otros clientes.
                 
-                product.reserved_at = timezone.now()
-                product.reserved_by = self.client
                 product.save()
             else:
                 # Si la orden ya existe, evaluamos cambios de estado (Pago/Cancelación)

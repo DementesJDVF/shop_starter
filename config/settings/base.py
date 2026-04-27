@@ -48,6 +48,7 @@ else:
 
 # Applications
 INSTALLED_APPS = [
+    "daphne", # Requerido para WebSockets (Debe ser el primero)
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -57,6 +58,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "cloudinary",
     "corsheaders",
+    "channels",
 
     # Local Apps
     "apps.core",
@@ -95,6 +97,18 @@ MIDDLEWARE = [
 AUTH_USER_MODEL = "users.User"
 
 ROOT_URLCONF = "config.urls"
+ASGI_APPLICATION = "config.asgi.application"
+
+# --- REAL-TIME (CHANNELS) ---
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [env("REDIS_URL", default="redis://localhost:6379/0")],
+        },
+    },
+}
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
