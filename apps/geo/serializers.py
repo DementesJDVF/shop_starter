@@ -18,12 +18,15 @@ class ImageSerializer(serializers.ModelSerializer):
         ret = super().to_representation(instance)
         url = ret.get('url_image')
         
+        # Si url_image es un string (TextField)
+        if isinstance(url, str) and url.startswith(('http://', 'https://')):
+            return ret
+
         if url and not url.startswith(('http', 'data:')):
             from django.conf import settings
             import os
             if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
                 public_id, _ = os.path.splitext(url.lstrip('/'))
-                # Forzamos format='jpg' para que la URL termine en .jpg como pidió el usuario
                 ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             else:
                 request = self.context.get("request")
@@ -51,14 +54,14 @@ class LocationSerializer(serializers.ModelSerializer):
             img_url = None
             main_img = p.images.filter(is_main=True).first() or p.images.first()
             if main_img and main_img.url_image:
-                try:
-                    name = main_img.url_image.name
-                    if name.startswith(('http://', 'https://')):
-                        img_url = name
-                    else:
-                        public_id, _ = os.path.splitext(name)
+                url_str = str(main_img.url_image)
+                if url_str.startswith(('http://', 'https://')):
+                    img_url = url_str
+                else:
+                    try:
+                        public_id, _ = os.path.splitext(url_str.lstrip('/'))
                         img_url = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg", width=100, height=100, crop="fill")[0]
-                except: pass
+                    except: img_url = url_str
             
             data.append({
                 "name": p.name,
@@ -141,17 +144,16 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
             main_image = obj.images.first()
 
         if main_image and main_image.url_image:
+            url_str = str(main_image.url_image)
+            if url_str.startswith(('http://', 'https://')):
+                return url_str
+            
             try:
-                name = main_image.url_image.name
-                if not name:
-                    return None
-                if name.startswith(('http://', 'https://')):
-                    return name
                 import os
-                public_id, _ = os.path.splitext(name)
+                public_id, _ = os.path.splitext(url_str.lstrip('/'))
                 import cloudinary.utils
                 return cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             except Exception:
-                return None
+                return url_str
 
         return None
