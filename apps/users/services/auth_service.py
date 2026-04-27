@@ -95,18 +95,30 @@ class AuthService:
     @staticmethod
     def refresh_session(refresh_token_str: str, ip_address: str, user_agent: str):
         """
-        Renueva la sesión y verifica que el usuario no haya sido bloqueado o invalidado.
+        Renueva la sesión, valida la UserSession y propaga los claims de seguridad.
         """
         try:
             refresh = RefreshToken(refresh_token_str)
             user_id = refresh.get('user_id')
+            session_id = refresh.get('session_id')
+            
             user = User.objects.get(id=user_id)
             
             if not user.is_active or user.status == User.Status.BLOCKED:
-                raise exceptions.AuthenticationFailed("Usuario no válido")
+                raise exceptions.AuthenticationFailed("Usuario no válido o bloqueado")
 
-            # Mantener la jwt_key en el nuevo par de tokens
+            # 1. Validar integridad de sesión persistente
+            if session_id:
+                from apps.users.models import UserSession
+                if not UserSession.objects.filter(session_id=session_id, is_active=True).exists():
+                    raise exceptions.AuthenticationFailed("Esta sesión específica ha sido invalidada")
+            else:
+                # Si es un token antiguo sin session_id, obligamos a re-login en este entorno estricto
+                raise exceptions.AuthenticationFailed("Token antiguo. Por favor inicia sesión de nuevo.")
+
+            # 2. Propagar claims de seguridad al nuevo par de tokens (Rotación)
             refresh['jwt_key'] = str(user.jwt_key)
+            refresh['session_id'] = str(session_id)
             
             AuditService.log_refresh(user, ip_address=ip_address, user_agent=user_agent)
             return refresh
