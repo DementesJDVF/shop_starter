@@ -105,7 +105,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 send_product_status_notification(instance)
             
             # 2. Notificación dentro de la Aplicación (Notification model)
-            status_label = "Aprobado" if instance.status == "ACTIVE" else "Rechazado"
+            status_label = "Aprobado" if instance.status == "AVAILABLE" else "Rechazado"
             reason_text = f"\nMotivo: {instance.rejection_reason}" if instance.status == "REJECTED" and instance.rejection_reason else ""
             
             Notification.objects.create(
