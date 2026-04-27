@@ -8,7 +8,7 @@ def send_product_status_notification(product):
     Envía un correo electrónico al vendedor informando sobre el cambio de estado de su producto.
     """
     vendor_email = product.vendor.email
-    status_label = "APROBADO" if product.status == "ACTIVE" else "RECHAZADO"
+    status_label = "APROBADO" if product.status == "AVAILABLE" else "RECHAZADO"
     
     subject = f"Actualización de tu producto: {product.name}"
     

@@ -52,7 +52,7 @@ class ChatAssistantView(APIView):
 
         # 4. Búsqueda Tradicional con Django ORM usando los parámetros de IA
         # Buscamos en Productos Activos
-        query = Q(status="ACTIVE")
+        query = Q(status="AVAILABLE")
         if keywords:
             # Separar palabras clave extraídas y buscar ocurrencias
             words = keywords.split()
