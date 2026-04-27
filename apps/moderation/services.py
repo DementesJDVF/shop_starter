@@ -218,11 +218,11 @@ def _check_and_auto_approve_product(product):
     )
 
     if all_approved and product.status == Product.ProductStatus.PENDING:
-        Product.objects.filter(pk=product.pk).update(status=Product.ProductStatus.ACTIVE)
+        Product.objects.filter(pk=product.pk).update(status=Product.ProductStatus.AVAILABLE)
         logger.info(f"Producto '{product.name}' AUTO-APROBADO por Groq IA.")
         try:
             from apps.core.services.email_service import send_product_status_notification
-            product.status = Product.ProductStatus.ACTIVE
+            product.status = Product.ProductStatus.AVAILABLE
             send_product_status_notification(product)
         except Exception as e:
             logger.warning(f"No se pudo enviar email de aprobación: {e}")

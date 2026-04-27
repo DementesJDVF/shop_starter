@@ -16,7 +16,7 @@ class Product(BaseModel):
     """Represents a product published by a vendor profile."""
     class ProductStatus(models.TextChoices):
         PENDING = "PENDING", "Pending Approval"
-        ACTIVE = "ACTIVE", "Active"
+        AVAILABLE = "AVAILABLE", "Available"
         RESERVED = "RESERVED", "Reserved"
         SOLD = "SOLD", "Sold"
         INACTIVE = "INACTIVE", "Inactive"
