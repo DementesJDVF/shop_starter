@@ -2,7 +2,10 @@ from rest_framework import serializers
 from apps.geo.models import Location, LImages
 from apps.users.models import User
 from drf_extra_fields.fields import Base64ImageField
-# from apps.users.constants import UserRoles
+import cloudinary
+import cloudinary.utils
+import cloudinary.uploader
+import os
 class ImageSerializer(serializers.ModelSerializer):
     url_image = Base64ImageField()
 
@@ -19,9 +22,7 @@ class ImageSerializer(serializers.ModelSerializer):
             from django.conf import settings
             import os
             if os.environ.get('CLOUDINARY_URL') or not settings.DEBUG:
-                import os
                 public_id, _ = os.path.splitext(url.lstrip('/'))
-                import cloudinary
                 # Forzamos format='jpg' para que la URL termine en .jpg como pidió el usuario
                 ret['url_image'] = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg")[0]
             else:
@@ -55,9 +56,7 @@ class LocationSerializer(serializers.ModelSerializer):
                     if name.startswith(('http://', 'https://')):
                         img_url = name
                     else:
-                        import os
                         public_id, _ = os.path.splitext(name)
-                        import cloudinary.utils
                         img_url = cloudinary.utils.cloudinary_url(public_id, secure=True, format="jpg", width=100, height=100, crop="fill")[0]
                 except: pass
             
