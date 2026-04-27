@@ -1,3 +1,4 @@
+from django.db.models.query import QuerySet
 from apps.products.models import Product
 from apps.users.constants import UserRoles
 import uuid
