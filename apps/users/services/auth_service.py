@@ -43,15 +43,22 @@ class AuthService:
         return refresh
 
     @staticmethod
-    def logout_user(refresh_token_str: str, user: User, ip_address: str, user_agent: str):
+    def logout_user(refresh_token_str: str, user: User = None, ip_address: str = None, user_agent: str = None):
         """
         Cierra la sesión actual invalidando el Refresh Token y desactivando la UserSession.
+        Identifica al usuario desde el token si no se provee.
         """
+        identified_user = user
         try:
             if refresh_token_str:
                 token = RefreshToken(refresh_token_str)
                 session_id = token.get('session_id')
+                user_id = token.get('user_id')
                 
+                # Identificar usuario si no viene en el request (Token válido pero Access expired)
+                if not identified_user and user_id:
+                    identified_user = User.objects.filter(id=user_id).first()
+
                 # Desactivar sesión en DB
                 from apps.users.models import UserSession
                 UserSession.objects.filter(session_id=session_id).update(is_active=False)
@@ -61,7 +68,10 @@ class AuthService:
         except (TokenError, InvalidToken):
             pass
             
-        AuditService.log_logout(user, ip_address=ip_address, user_agent=user_agent)
+        if identified_user:
+            AuditService.log_logout(identified_user, ip_address=ip_address, user_agent=user_agent)
+        
+        return identified_user
 
     @staticmethod
     def logout_all_sessions(user: User, ip_address: str, user_agent: str):
