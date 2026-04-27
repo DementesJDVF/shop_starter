@@ -66,23 +66,27 @@ class LoginView(APIView):
             status=status.HTTP_200_OK,
         )
         
-        is_secure = request.is_secure()
-        samesite = 'None' if is_secure else 'Lax'
+        from django.conf import settings
+        # En producción (Vercel -> Railway), SameSite=None y Secure=True son OBLIGATORIOS
+        # para que las cookies viajen entre dominios diferentes.
+        is_prod = not settings.DEBUG
+        cookie_secure = True if is_prod else request.is_secure()
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
 
         response.set_cookie(
             key='access_token',
             value=str(refresh.access_token),
             httponly=True,
-            secure=is_secure,
-            samesite=samesite,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
             max_age=3600*24 # 1 día
         )
         response.set_cookie(
             key='refresh_token',
             value=str(refresh),
             httponly=True,
-            secure=is_secure,
-            samesite=samesite,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
             max_age=3600*24*7 # 7 días
         )
         
@@ -137,8 +141,10 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         # DRF SimpleJWT responde con nuevo access_token (y opcional refresh).
         if response.status_code == 200:
-            is_secure = request.is_secure()
-            samesite = 'None' if is_secure else 'Lax'
+            from django.conf import settings
+            is_prod = not settings.DEBUG
+            cookie_secure = True if is_prod else request.is_secure()
+            cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
             
             access_token = response.data.get('access')
             if access_token:
@@ -146,8 +152,8 @@ class CustomTokenRefreshView(TokenRefreshView):
                     key='access_token',
                     value=access_token,
                     httponly=True,
-                    secure=is_secure,
-                    samesite=samesite,
+                    secure=cookie_secure,
+                    samesite=cookie_samesite,
                     max_age=3600*24
                 )
             
@@ -157,8 +163,8 @@ class CustomTokenRefreshView(TokenRefreshView):
                     key='refresh_token',
                     value=new_refresh,
                     httponly=True,
-                    secure=is_secure,
-                    samesite=samesite,
+                    secure=cookie_secure,
+                    samesite=cookie_samesite,
                     max_age=3600*24*7
                 )
                 
@@ -181,10 +187,11 @@ class LogoutView(APIView):
     def post(self, request):
         response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
         # Limpiar cookies de autenticación y CSRF
-        is_secure = request.is_secure()
-        samesite = 'None' if is_secure else 'Lax'
+        from django.conf import settings
+        is_prod = not settings.DEBUG
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
         
-        response.delete_cookie('access_token', samesite=samesite)
-        response.delete_cookie('refresh_token', samesite=samesite)
-        response.delete_cookie('csrftoken', samesite=samesite)
+        response.delete_cookie('access_token', samesite=cookie_samesite)
+        response.delete_cookie('refresh_token', samesite=cookie_samesite)
+        response.delete_cookie('csrftoken', samesite=cookie_samesite)
         return response
