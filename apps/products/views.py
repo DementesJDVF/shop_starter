@@ -350,10 +350,9 @@ def nearby_products(request):
 
     # 1 & 2. Filtramos locaciones en SQL puro limitando el dataset en disco
     locations = Location.objects.select_related("user").filter(
-        latitude__isnull=False,
-        longitude__isnull=False,
         user__status='ACTIVE',
-        user__role='VENDEDOR'
+        user__role='VENDEDOR',
+        is_active=True
     ).annotate(
         distance=RawSQL(query, (lat, lng, lat))
     ).filter(distance__lte=radius)

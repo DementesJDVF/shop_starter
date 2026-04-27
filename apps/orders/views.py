@@ -88,6 +88,28 @@ class OrderViewSet(viewsets.ModelViewSet):
             logger.info(f"[AUDIT] Pago confirmado para orden {order.id} por el vendedor {request.user.username}.")
             
             return Response({"message": "Pago confirmado exitosamente."})
+            
+    @action(detail=True, methods=['post'], url_path='notify-payment')
+    def mark_as_paid_client(self, request, pk=None):
+        """Botón del Cliente: Notifica que ya pagó."""
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            if order.client != request.user:
+                return Response({"error": "Solo el comprador puede notificar el pago."}, status=status.HTTP_403_FORBIDDEN)
+            
+            if order.status != Order.Status.RESERVED:
+                return Response({"error": "Solo se pueden pagar órdenes reservadas."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Aquí podríamos cambiar a un estado intermedio 'PAYMENT_SENT' si existiera,
+            # pero el usuario pide que sea 'ya pago'. Para simplificar y no cambiar el modelo
+            # (que es complejo), vamos a dejarlo en RESERVED pero añadir un flag o nota?
+            # En realidad, el usuario dijo "el cliente tiene una opcion de ya pago".
+            # Vamos a marcarlo como PAID y que el vendedor lo valide.
+            order.payment_notified = True
+            order.save()
+            logger.info(f"[AUDIT] Cliente {request.user.username} notifica pago para orden {order.id}.")
+            return Response({"message": "Notificación de pago enviada al vendedor."})
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancela la orden y libera el stock/producto de forma transaccional."""

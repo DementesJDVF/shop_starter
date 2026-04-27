@@ -15,7 +15,8 @@ class Location(models.Model):
     latitude = models.DecimalField(max_digits=21, decimal_places=18)
     longitude = models.DecimalField(max_digits=21, decimal_places=18)
     timestamp = models.DateTimeField(auto_now_add=True)
-    description =models.CharField(max_length=255, blank=True, null=True)
+    description = models.CharField(max_length=255, blank=True, null=True)
+    is_active = models.BooleanField(default=True) # 🔥 Control de visibilidad para el vendedor
     class Meta:
         db_table = "geo_location"
     def __str__(self):
