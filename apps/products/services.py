@@ -20,7 +20,7 @@ class ProductService:
             stock__gt=0,
             vendor__status='ACTIVE',
             vendor__role=UserRoles.VENDEDOR,
-            vendor__locations__is_active=True
+            vendor__location__is_active=True
         ).order_by('-created_at')
 
         if vendor_id:
