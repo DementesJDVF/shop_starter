@@ -50,7 +50,7 @@ class LocationSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user if self.context.get('request') else None
         
         # Si es Admin, ve todo. Si no, solo lo disponible con stock.
-        if user and (user.role == 'ADMIN' or user.is_superuser):
+        if user and user.is_authenticated and (getattr(user, 'role', None) == 'ADMIN' or user.is_superuser):
             products = Product.objects.filter(vendor=obj.user).exclude(status='SOLD')[:4]
         else:
             products = Product.objects.filter(
