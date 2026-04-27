@@ -106,7 +106,7 @@ class Order(BaseModel):
                 # CASO: CANCELACIÓN (Restaurar Stock)
                 elif self.status == self.Status.CANCELLED and old_order.status != self.Status.CANCELLED:
                     product.stock += self.quantity
-                    product.status = Product.ProductStatus.ACTIVE
+                    product.status = Product.ProductStatus.AVAILABLE
                     product.reserved_at = None
                     product.reserved_by = None
                     product.save()

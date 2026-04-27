@@ -15,7 +15,7 @@ class ProductService:
         Only shows AVAILABLE products with stock > 0 from ACTIVE vendors.
         """
         queryset = Product.objects.filter(
-            status=Product.ProductStatus.ACTIVE,
+            status=Product.ProductStatus.AVAILABLE,
             stock__gt=0,
             vendor__status='ACTIVE',
             vendor__role=UserRoles.VENDEDOR
@@ -33,7 +33,7 @@ class ProductService:
         """
         return Product.objects.filter(
             id=product_id,
-            status=Product.ProductStatus.ACTIVE,
+            status=Product.ProductStatus.AVAILABLE,
             stock__gt=0,
             vendor__status='ACTIVE'
         ).first()
