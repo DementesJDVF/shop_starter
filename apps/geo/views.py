@@ -62,6 +62,20 @@ class LocationViewSet(viewsets.ModelViewSet):
         locations = Location.objects.all()
         serializer = self.get_serializer(locations, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def toggle_visibility(self, request):
+        """Permite al vendedor encender/apagar su presencia en el mapa."""
+        location = Location.objects.filter(user=request.user).first()
+        if not location:
+            return Response({"error": "No tienes ubicación registrada."}, status=404)
+        
+        location.is_active = not location.is_active
+        location.save()
+        return Response({
+            "is_active": location.is_active,
+            "message": f"Ubicación {'encendida' if location.is_active else 'apagada'} exitosamente."
+        })
         
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -103,7 +117,8 @@ def nearby_vendors(request):
     ).filter(
         latitude__isnull=False,
         longitude__isnull=False,
-        user__status='ACTIVE'
+        user__status='ACTIVE',
+        is_active=True
     ).annotate(
         distance=RawSQL(query, (lat, lng, lat)),
         has_stock=Exists(available_products)

@@ -43,7 +43,7 @@ class LocationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Location
-        fields = ["id", "user", "user_name", "user_email", "user_status", "latitude", "longitude", "description", "images", "products"]
+        fields = ["id", "user", "user_name", "user_email", "user_status", "latitude", "longitude", "description", "images", "products", "is_active"]
 
     def get_products(self, obj):
         """Devuelve un resumen de productos para la vista de Admin."""
@@ -127,7 +127,8 @@ class NearbyVendorSerializer(serializers.ModelSerializer):
             "description",
             "distance",
             "vendor",
-            "image",  # 🔥 IMPORTANTE
+            "image",
+            "is_active",
         ]
 
     def get_vendor(self, obj):

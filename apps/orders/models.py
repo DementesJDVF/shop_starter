@@ -46,6 +46,7 @@ class Order(BaseModel):
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, editable=False)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    payment_notified = models.BooleanField(default=False) # 🔥 Flag para que el vendedor sepa que el cliente ya reportó el pago
 
     class Meta:
         db_table = "orders_order"
