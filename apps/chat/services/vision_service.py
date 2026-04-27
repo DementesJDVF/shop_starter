@@ -8,7 +8,7 @@ from PIL import Image
 # Configuración de Groq
 GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY', ''))
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+GROQ_MODEL = "llama-3.2-11b-vision-preview"
 
 def analyze_image_for_search(image_file, is_url=False):
     """
