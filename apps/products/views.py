@@ -101,7 +101,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Si el estado del producto cambió, notificamos al vendedor
         if old_status != instance.status:
             # 1. Notificación vía Correo Electrónico
-            if instance.status in ["ACTIVE", "REJECTED"]:
+            if instance.status in ["AVAILABLE", "REJECTED"]:
                 send_product_status_notification(instance)
             
             # 2. Notificación dentro de la Aplicación (Notification model)
