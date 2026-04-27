@@ -75,22 +75,25 @@ class Product(BaseModel):
         return self.name
 
     def save(self, *args, **kwargs):
-        # --- BLINDAJE ANTI-INYECCIÓN (Technical Immunity) ---
-        # Esta parte es vital para tu seguridad: usamos 'bleach' para limpiar cualquier rastro 
-        # de código malicioso (XSS) que un atacante intente meter en la descripción.
-        # Solo permitimos etiquetas seguras como negritas (b), cursivas (i), etc.
+        # 1. BLINDAJE ANTI-INYECCIÓN (XSS)
         try:
             import bleach
             allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li']
-            
             if self.description:
                 self.description = bleach.clean(self.description, tags=allowed_tags, strip=True)
-                
             if self.ai_description:
                 self.ai_description = bleach.clean(self.ai_description, tags=allowed_tags, strip=True)
         except ImportError:
-            # Red de seguridad: si bleach no está, la app sigue viva, pero alertamos de la falta.
             pass
+
+        # 2. AUTO-GESTIÓN DE ESTADOS (Business Logic)
+        # Si un producto vendido recibe stock, vuelve a estar disponible.
+        # Si un producto disponible pierde stock, se marca como vendido.
+        if self.status in [self.ProductStatus.AVAILABLE, self.ProductStatus.SOLD]:
+            if self.stock > 0:
+                self.status = self.ProductStatus.AVAILABLE
+            else:
+                self.status = self.ProductStatus.SOLD
             
         super().save(*args, **kwargs)
 

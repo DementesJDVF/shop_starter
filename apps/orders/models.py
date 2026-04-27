@@ -34,7 +34,7 @@ class Order(BaseModel):
     
     product = models.ForeignKey(
         Product, 
-        on_delete=models.CASCADE, 
+        on_delete=models.PROTECT, 
         related_name="orders", 
         null=True)
     
@@ -64,6 +64,10 @@ class Order(BaseModel):
         
         # 1. Congelar datos económicos
         if is_new and self.product:
+            # BLOQUEO DE SEGURIDAD: Solo se pueden comprar productos aprobados y disponibles
+            if self.product.status != Product.ProductStatus.AVAILABLE:
+                raise ValidationError(f"Este producto no está disponible para la venta (Estado: {self.product.status}).")
+            
             self.unit_price = self.product.price
             self.vendor = self.product.vendor
         
@@ -72,38 +76,38 @@ class Order(BaseModel):
 
         # 2. Lógica Transaccional de Estados (Consistencia Global)
         with transaction.atomic():
-            # Bloquear el producto para evitar Race Conditions
+            # Bloquear el producto para evitar Race Conditions (SELECT FOR UPDATE)
             product = Product.objects.select_for_update().get(pk=self.product.pk)
 
             if is_new:
-                # Al nacer una orden, descontamos el stock inmediatamente (Reserva implícita)
+                # Al crear una orden, validamos y descontamos el stock
                 if product.stock < self.quantity:
-                    raise ValidationError("El stock se agotó justo antes de procesar tu orden.")
+                    raise ValidationError("Stock insuficiente para procesar la orden.")
+                
                 product.stock -= self.quantity
                 
-                # Si el stock llega a 0, ocultamos el producto
+                # El estado del producto solo cambia a SOLD si el stock llega a 0
                 if product.stock <= 0:
                     product.status = Product.ProductStatus.SOLD
-                else:
-                    product.status = Product.ProductStatus.RESERVED
+                # IMPORTANTE: Ya NO cambiamos a RESERVED si hay más stock,
+                # para que el producto siga siendo visible para otros clientes.
                 
                 product.reserved_at = timezone.now()
                 product.reserved_by = self.client
                 product.save()
             else:
-                # Si la orden ya existe, evaluamos cambios de estado
+                # Si la orden ya existe, evaluamos cambios de estado (Pago/Cancelación)
                 old_order = Order.objects.get(pk=self.pk)
                 
-                # CASO: De Pendiente/Reservado a PAGADO
+                # De Pendiente a PAGADO
                 if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
-                    # El stock ya se descontó al crear, así que solo confirmamos el fin del ciclo
                     if product.stock <= 0:
                         product.status = Product.ProductStatus.SOLD
                     product.reserved_at = None
                     product.reserved_by = None
                     product.save()
 
-                # CASO: CANCELACIÓN (Restaurar Stock)
+                # CANCELACIÓN (Liberar Stock)
                 elif self.status == self.Status.CANCELLED and old_order.status != self.Status.CANCELLED:
                     product.stock += self.quantity
                     product.status = Product.ProductStatus.AVAILABLE
