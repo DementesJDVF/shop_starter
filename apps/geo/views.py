@@ -14,6 +14,13 @@ from apps.geo.serializers import NearbyVendorSerializer
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # El Administrador ve TODO. Los demás solo ven lo ACTIVO.
+        if self.request.user.is_authenticated and (self.request.user.role == 'ADMIN' or self.request.user.is_superuser):
+            return qs
+        return qs.filter(is_active=True)
     
     def get_permissions(self):
         from apps.users.permissions import IsVendor, IsAdmin, IsVendorOrAdmin

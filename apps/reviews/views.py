@@ -3,6 +3,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from apps.reviews.models import Review
 from apps.reviews.serializers import ReviewSerializer
+import uuid
+from django.db.models import Avg
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
@@ -15,9 +17,42 @@ class ReviewViewSet(viewsets.ModelViewSet):
         qs = Review.objects.all().order_by('-created_at')
 
         if vendor_id:
-            qs = qs.filter(vendor__id=vendor_id)
+            try:
+                uuid.UUID(str(vendor_id))
+                qs = qs.filter(vendor__id=vendor_id)
+            except (ValueError, TypeError):
+                return Review.objects.none()
             
         return qs
+
+    def list(self, request, *args, **kwargs):
+        vendor_id = self.kwargs.get('vendor_id') or request.query_params.get('vendor')
+        queryset = self.get_queryset()
+        
+        # Si estamos filtrando por un vendedor específico, devolvemos el formato enriquecido
+        if vendor_id:
+            try:
+                uuid.UUID(str(vendor_id))
+                avg_rating = queryset.aggregate(Avg('rating'))['rating__avg'] or 0
+                total_reviews = queryset.count()
+                
+                # Serializamos los resultados (puedes usar paginación si quieres, pero aquí es simple)
+                serializer = self.get_serializer(queryset, many=True)
+                
+                return Response({
+                    "average": round(float(avg_rating), 1),
+                    "total": total_reviews,
+                    "reviews": serializer.data
+                })
+            except (ValueError, TypeError):
+                return Response({
+                    "average": 0,
+                    "total": 0,
+                    "reviews": []
+                })
+
+        # Comportamiento estándar de lista si no hay vendor_id
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         # Solo lectura es pública, escritura requiere autenticación.
