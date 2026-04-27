@@ -1,6 +1,6 @@
-from django.db.models import QuerySet
 from apps.products.models import Product
 from apps.users.constants import UserRoles
+import uuid
 
 class ProductService:
     """
@@ -22,7 +22,12 @@ class ProductService:
         ).order_by('-created_at')
 
         if vendor_id:
-            queryset = queryset.filter(vendor_id=vendor_id)
+            try:
+                # Validar que sea un UUID válido para evitar el Error 500 de Django
+                uuid.UUID(str(vendor_id))
+                queryset = queryset.filter(vendor_id=vendor_id)
+            except (ValueError, TypeError):
+                return Product.objects.none()
 
         return queryset
 
@@ -31,6 +36,11 @@ class ProductService:
         """
         Retrieves a single public product detail if it is available.
         """
+        try:
+            uuid.UUID(str(product_id))
+        except (ValueError, TypeError):
+            return None
+
         return Product.objects.filter(
             id=product_id,
             status=Product.ProductStatus.AVAILABLE,

@@ -9,6 +9,7 @@ from apps.products.models import Product
 from .serializers import OrderSerializer
 from django.utils import timezone
 from datetime import timedelta
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -57,12 +58,18 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        order = serializer.save(
-            client=self.request.user,
-            status=Order.Status.RESERVED
-        )
-        logger.info(f"[AUDIT] Orden {order.id} creada por {request.user.username} para producto {product_id}.")
-        return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
+        try:
+            order = serializer.save(
+                client=self.request.user,
+                status=Order.Status.RESERVED
+            )
+            logger.info(f"[AUDIT] Orden {order.id} creada por {request.user.username} para producto {product_id}.")
+            return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
+        except DjangoValidationError as e:
+            return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"[SRE] Error inesperado al crear orden: {str(e)}")
+            return Response({"error": "No se pudo procesar la reserva en este momento."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'], url_path='mark-as-paid')
     def mark_as_paid(self, request, pk=None):
@@ -83,11 +90,13 @@ class OrderViewSet(viewsets.ModelViewSet):
             if order.status != Order.Status.RESERVED:
                 return Response({"error": f"Transición inválida. No se puede pagar una orden en estado {order.status}."}, status=status.HTTP_400_BAD_REQUEST)
             
-            order.status = Order.Status.PAID
-            order.save()
-            logger.info(f"[AUDIT] Pago confirmado para orden {order.id} por el vendedor {request.user.username}.")
-            
-            return Response({"message": "Pago confirmado exitosamente."})
+            try:
+                order.status = Order.Status.PAID
+                order.save()
+                logger.info(f"[AUDIT] Pago confirmado para orden {order.id} por el vendedor {request.user.username}.")
+                return Response({"message": "Pago confirmado exitosamente."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
             
     @action(detail=True, methods=['post'], url_path='notify-payment')
     def mark_as_paid_client(self, request, pk=None):
@@ -106,10 +115,13 @@ class OrderViewSet(viewsets.ModelViewSet):
             # (que es complejo), vamos a dejarlo en RESERVED pero añadir un flag o nota?
             # En realidad, el usuario dijo "el cliente tiene una opcion de ya pago".
             # Vamos a marcarlo como PAID y que el vendedor lo valide.
-            order.payment_notified = True
-            order.save()
-            logger.info(f"[AUDIT] Cliente {request.user.username} notifica pago para orden {order.id}.")
-            return Response({"message": "Notificación de pago enviada al vendedor."})
+            try:
+                order.payment_notified = True
+                order.save()
+                logger.info(f"[AUDIT] Cliente {request.user.username} notifica pago para orden {order.id}.")
+                return Response({"message": "Notificación de pago enviada al vendedor."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancela la orden y libera el stock/producto de forma transaccional."""
@@ -127,8 +139,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             if order.status == Order.Status.CANCELLED:
                 return Response({"message": "La orden ya está cancelada."}, status=status.HTTP_200_OK)
 
-            order.status = Order.Status.CANCELLED
-            order.save()
-            logger.info(f"[AUDIT] Orden {order.id} cancelada por {request.user.username}. Stock liberado.")
-            
-            return Response({"message": "Orden cancelada. El producto ha sido liberado."})
+            try:
+                order.status = Order.Status.CANCELLED
+                order.save()
+                logger.info(f"[AUDIT] Orden {order.id} cancelada por {request.user.username}. Stock liberado.")
+                return Response({"message": "Orden cancelada. El producto ha sido liberado."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
