@@ -85,14 +85,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         new_status = serializer.validated_data.get('status', old_status)
         
         # Seguridad: Solo los Administradores pueden aprobar (PENDIENTE -> DISPONIBLE) o rechazar (PENDIENTE -> RECHAZADO)
-        if old_status == "PENDING" and new_status in ["AVAILABLE", "REJECTED"]:
+        if old_status == "PENDING" and new_status in [Product.ProductStatus.ACTIVE, "REJECTED"]:
             if user.role != 'ADMIN' and not user.is_superuser:
                 raise PermissionDenied("Solo los administradores pueden aprobar o rechazar productos.")
         
         # Seguridad adicional: Evitar que los vendedores se auto-aprueben productos
         if user.role == 'VENDEDOR' and old_status != new_status:
              # Un vendedor solo puede desactivar sus productos, no activarlos si están pendientes o rechazados
-             if new_status == 'AVAILABLE' and old_status in ['PENDING', 'REJECTED']:
+             if new_status == Product.ProductStatus.ACTIVE and old_status in ['PENDING', 'REJECTED']:
                  raise PermissionDenied("No tienes permiso para auto-aprobar productos.")
 
         # Guardamos los cambios en la base de datos
