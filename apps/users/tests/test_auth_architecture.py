@@ -76,15 +76,47 @@ class AuthenticationArchitectureTests(APITestCase):
         self.assertTrue(AuditLog.objects.filter(action_type='LOGIN', user=self.user).exists())
         self.assertGreater(AuditLog.objects.count(), initial_count)
 
-    def test_csrf_protection_on_authenticated_cookie_request(self):
-        """Verifica que las peticiones vía Cookies exijan protección CSRF."""
-        refresh = RefreshToken.for_user(self.user)
-        self.client.cookies['access_token'] = str(refresh.access_token)
+    def test_refresh_token_validates_db_session(self):
+        """Valida que el refresco consulte la UserSession en DB."""
+        from apps.users.models import UserSession
         
-        # Petición POST sin token CSRF debería fallar si no estamos en DEBUG
-        # En el entorno de test, DRF maneja CSRF si se configura.
-        # Por simplicidad, validamos que la lógica de enforce_csrf en CustomJWTAuthentication se ejecute.
-        # (Este test es más complejo de disparar en local sin el middleware real de Django CSRF activo,
-        # pero validamos que el flujo de autenticación no rompa el acceso GET).
-        response = self.client.get(self.me_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # 1. Login para generar sesión
+        res = self.client.post(self.login_url, {'email': 'arch@test.com', 'password': 'Password123!'})
+        refresh_token = self.client.cookies['refresh_token'].value
+        
+        # 2. Refrescar (Debe funcionar)
+        self.client.cookies['refresh_token'] = refresh_token
+        res_refresh = self.client.post(self.refresh_url)
+        self.assertEqual(res_refresh.status_code, status.HTTP_200_OK)
+        
+        # 3. Desactivar sesión en DB manualmente
+        UserSession.objects.filter(user=self.user).update(is_active=False)
+        
+        # 4. Intentar refrescar de nuevo con el MISMO refresh token
+        res_fail = self.client.post(self.refresh_url)
+        self.assertEqual(res_fail.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(res_fail.data['detail'], "La sesión ha expirado o ha sido cerrada")
+
+    def test_refresh_propagates_session_id_to_both_tokens(self):
+        """Valida que no haya 'Token Drift': session_id debe estar en access y refresh."""
+        # 1. Login
+        self.client.post(self.login_url, {'email': 'arch@test.com', 'password': 'Password123!'})
+        refresh_token_str = self.client.cookies['refresh_token'].value
+        
+        # 2. Refrescar
+        self.client.cookies['refresh_token'] = refresh_token_str
+        res = self.client.post(self.refresh_url)
+        
+        # 3. Validar tokens en la respuesta (Cookies)
+        new_access = self.client.cookies['access_token'].value
+        new_refresh = self.client.cookies['refresh_token'].value
+        
+        # Decodificar tokens para ver los claims
+        from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+        acc_decoded = AccessToken(new_access)
+        ref_decoded = RefreshToken(new_refresh)
+        
+        # Deben tener el MISMO session_id y no ser nulos
+        self.assertIsNotNone(acc_decoded.get('session_id'))
+        self.assertEqual(acc_decoded.get('session_id'), ref_decoded.get('session_id'))
+        self.assertEqual(acc_decoded.get('jwt_key'), str(self.user.jwt_key))

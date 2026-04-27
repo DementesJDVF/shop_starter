@@ -54,6 +54,40 @@ class AuthenticationConcurrencyTests(APITestCase):
         response = self.client.post(self.login_url, data)
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
+    def test_concurrent_refresh_with_same_token_fails(self):
+        """Valida que bajo concurrencia, el mismo refresh token solo pueda usarse UNA vez."""
+        # 1. Login para obtener tokens
+        res = self.client.post(self.login_url, {'email': 'stress@test.com', 'password': 'Password123!'})
+        refresh_token = self.client.cookies['refresh_token'].value
+        
+        results = []
+        def attempt_refresh():
+            from django.test import Client
+            c = Client()
+            c.cookies['refresh_token'] = refresh_token
+            # Importante: En SimpleJWT, el refresh es una petición POST
+            response = c.post(reverse('token_refresh'))
+            results.append(response.status_code)
+
+        # 2. Disparar 5 peticiones simultáneas con el MISMO refresh token
+        threads = []
+        for _ in range(5):
+            t = threading.Thread(target=attempt_refresh)
+            threads.append(t)
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        # 3. Analizar resultados
+        # Al menos uno debió ser 200 (si no hay colisión atómica perfecta)
+        # Los demás DEBEN ser 401 (debido a la rotación y el blacklist inmediato)
+        successes = results.count(status.HTTP_200_OK)
+        failures = results.count(status.HTTP_401_UNAUTHORIZED)
+        
+        self.assertEqual(successes, 1, "Solo un refresh debe ser exitoso")
+        self.assertGreaterEqual(failures, 4, "Los demás intentos deben ser rechazados")
+
     def test_session_invalidation_is_immediate(self):
         """Valida que la invalidación de una sesión afecte inmediatamente a los requests en curso."""
         # 1. Login
