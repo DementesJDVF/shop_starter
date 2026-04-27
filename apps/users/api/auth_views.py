@@ -112,6 +112,29 @@ class CustomTokenRefreshView(APIView):
             httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=3600*24*7
         )
 
+class CSRFTokenView(APIView):
+    """
+    VISTA CSRF:
+    Provee el token CSRF necesario para el frontend en peticiones seguras.
+    """
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        from django.middleware.csrf import get_token
+        return Response({"csrfToken": get_token(request)})
+
+class UserView(APIView):
+    """
+    VISTA DE USUARIOS:
+    Permite obtener la lista de usuarios (protegida para administradores).
+    """
+    permission_classes = [permissions.IsAdminUser]
+    def get(self, request):
+        from apps.users.models import User
+        from apps.users.serializers import UserSerializer
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
 class LogoutView(APIView):
     """
     VISTA DE LOGOUT (ORQUESTADOR):
