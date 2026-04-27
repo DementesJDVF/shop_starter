@@ -4,6 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.shortcuts import get_list_or_404, get_object_or_404
 from django.db.models import Q 
+from django.db.models.expressions import RawSQL
 
 from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
