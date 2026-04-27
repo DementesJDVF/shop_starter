@@ -20,12 +20,10 @@ def cleanup_expired_reservations(self):
     from apps.orders.models import Order
     from django.db import transaction
     
-    timeout = timezone.now() - timedelta(minutes=15)
-    
     with transaction.atomic():
         expired_orders = Order.objects.select_for_update().filter(
             status=Order.Status.RESERVED,
-            created_at__lt=timeout
+            expires_at__lt=timezone.now()
         )
         
         count = expired_orders.count()
