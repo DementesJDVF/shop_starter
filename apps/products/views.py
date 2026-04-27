@@ -178,8 +178,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not main_image or not main_image.url_image:
             return Response({"error": "No hay imágenes disponibles para analizar."}, status=status.HTTP_400_BAD_REQUEST)
             
-        # Procesamiento DIRECTO y SÍNCRONO para máxima confiabilidad
-        from apps.ai.services.ai_service import generate_product_description
+        # Procesamiento ASÍNCRONO vía Celery (Evita bloquear el servidor)
+        from apps.products.tasks import generate_ai_description_task
         source_url = main_image.url_image.url if hasattr(main_image.url_image, 'url') else main_image.url_image
         
         try:
@@ -189,17 +189,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                 backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
                 source_url = f"{backend_url}{'' if source_url.startswith('/') else '/'}{source_url}"
             
-            ai_text = generate_product_description(source_url, is_url=True)
-            product.ai_description = ai_text
-            product.ai_status = Product.AIStatus.DONE
-            product.save(update_fields=['ai_description', 'ai_status'])
+            # Lanzamos la tarea a Celery y devolvemos estado inicial
+            task = generate_ai_description_task.delay(product.id, source_url, is_url=True)
+            
+            product.ai_status = Product.AIStatus.PROCESSING
+            product.save(update_fields=['ai_status'])
 
             return Response({
-                "status": "DONE",
-                "ai_description": ai_text,
-                "message": "Descripción generada correctamente (Modo Directo).",
+                "status": "PROCESSING",
+                "task_id": task.id,
+                "message": "La IA ha comenzado a analizar el producto en segundo plano.",
                 "cached": False
-            }, status=status.HTTP_200_OK)
+            }, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
             product.ai_status = Product.AIStatus.FAILED
             product.save(update_fields=['ai_status'])
