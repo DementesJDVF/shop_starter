@@ -19,14 +19,14 @@ class Order(BaseModel):
 
     client = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="orders_as_client",
         null=True,
         blank=True)
     
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="orders_as_vendor",
         null=True,
         blank=True,

@@ -11,9 +11,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
         # Soporta filtrar por vendedor vía URL (kwargs) o vía Query Param
         vendor_id = self.kwargs.get('vendor_id') or self.request.query_params.get('vendor')
         
+        # Filtro base: Solo reseñas no borradas
+        qs = Review.objects.all().order_by('-created_at')
+
         if vendor_id:
-            return Review.objects.filter(vendor__id=vendor_id).order_by('-created_at')
-        return Review.objects.all().order_by('-created_at')
+            qs = qs.filter(vendor__id=vendor_id)
+            
+        return qs
 
     def get_permissions(self):
         # Solo lectura es pública, escritura requiere autenticación.
@@ -55,3 +59,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
             user=self.request.user, 
             vendor_id=vendor_id
         )
+
+    def perform_update(self, serializer):
+        # SEGURIDAD: Solo el autor puede editar su reseña
+        if serializer.instance.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No tienes permiso para editar esta reseña.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # SEGURIDAD: Solo el autor o un ADMIN pueden borrar
+        user = self.request.user
+        if instance.user != user and user.role != 'ADMIN' and not user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No tienes permiso para eliminar esta reseña.")
+        instance.delete()

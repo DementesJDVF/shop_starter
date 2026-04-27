@@ -31,7 +31,7 @@ class Product(BaseModel):
 
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,  # Apunta dinámicamente a tu clase User personalizada
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="products",
         db_index=True)
     category = models.ForeignKey(

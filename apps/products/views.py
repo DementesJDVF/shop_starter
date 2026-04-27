@@ -126,7 +126,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        """Soft Delete: En lugar de borrar físicamente, cambiamos el estado a INACTIVE."""
+        """Soft Delete: En lugar de borrar físicamente, cambiamos el estado a INACTIVE y activamos is_deleted."""
         instance = self.get_object()
         
         # Opcional: Solo dueño o admin
@@ -135,12 +135,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("No tienes permisos para borrar este producto.")
 
-        # Realizar Soft Delete
+        # Realizar Soft Delete (Doble Capa de Seguridad)
         instance.status = Product.ProductStatus.INACTIVE
-        instance.save()
+        instance.delete() # Esto llama al delete() del BaseModel (is_deleted = True)
         
         import logging
-        logging.getLogger(__name__).info(f"[AUDIT] Producto {instance.id} marcado como INACTIVE por {request.user.username}.")
+        logging.getLogger(__name__).info(f"[AUDIT] Producto {instance.id} archivado (Soft Delete) por {request.user.username}.")
         
         return Response({"message": "Producto archivado (desactivado) exitosamente."}, status=status.HTTP_200_OK)
 
@@ -316,7 +316,9 @@ class CategoryViewGet(viewsets.ReadOnlyModelViewSet):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
 def nearby_products(request):
+    request.throttle_scope = 'anon' # Limitamos por IP para evitar abuso de cálculos geométricos
     from apps.geo.models import Location
     from apps.geo.utils import haversine
     

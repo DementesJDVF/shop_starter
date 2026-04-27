@@ -86,17 +86,23 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"message": "Pago confirmado exitosamente."})
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
-        """Cancela la orden y libera el stock/producto."""
-        order = self.get_object()
-        
-        # Solo el dueño o el vendedor pueden cancelar
-        if order.client != request.user and order.vendor != request.user and request.user.role != 'ADMIN':
-             return Response({"error": "No tienes permiso para cancelar esta orden."}, status=status.HTTP_403_FORBIDDEN)
+        """Cancela la orden y libera el stock/producto de forma transaccional."""
+        with transaction.atomic():
+            # Bloqueo de fila para evitar que alguien pague mientras cancelamos
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            # Solo el dueño o el vendedor pueden cancelar
+            if order.client != request.user and order.vendor != request.user and request.user.role != 'ADMIN' and not request.user.is_superuser:
+                 return Response({"error": "No tienes permiso para cancelar esta orden."}, status=status.HTTP_403_FORBIDDEN)
 
-        if order.status == Order.Status.PAID:
-            return Response({"error": "No se puede cancelar una orden ya pagada."}, status=status.HTTP_400_BAD_REQUEST)
+            if order.status == Order.Status.PAID:
+                return Response({"error": "No se puede cancelar una orden ya pagada."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if order.status == Order.Status.CANCELLED:
+                return Response({"message": "La orden ya está cancelada."}, status=status.HTTP_200_OK)
 
-        order.status = Order.Status.CANCELLED
-        order.save()
-        
-        return Response({"message": "Orden cancelada. El producto ha sido liberado."})
+            order.status = Order.Status.CANCELLED
+            order.save()
+            logger.info(f"[AUDIT] Orden {order.id} cancelada por {request.user.username}. Stock liberado.")
+            
+            return Response({"message": "Orden cancelada. El producto ha sido liberado."})
