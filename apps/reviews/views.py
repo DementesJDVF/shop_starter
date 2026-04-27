@@ -5,6 +5,9 @@ from apps.reviews.models import Review
 from apps.reviews.serializers import ReviewSerializer
 import uuid
 from django.db.models import Avg
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.response import Response
+from rest_framework import status
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
@@ -68,6 +71,24 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
             return [IsAuthenticated()]
         return [AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except DjangoValidationError as e:
+            return Response({"message": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except DjangoValidationError as e:
+            return Response({"message": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, *args, **kwargs):
+        try:
+            return super().partial_update(request, *args, **kwargs)
+        except DjangoValidationError as e:
+            return Response({"message": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         # 1. Obtener el vendedor del contexto de la URL o del body
