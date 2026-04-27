@@ -43,9 +43,10 @@ class CustomJWTAuthentication(JWTAuthentication):
             
             # --- BLINDAJE DE SESIÓN (jwt_key) ---
             # Verificamos si el token es válido para la sesión actual del usuario.
-            # Si el usuario cerró sesión en todos los dispositivos, su jwt_key habrá cambiado.
+            user_jwt_key = getattr(user, 'jwt_key', None)
             token_jwt_key = validated_token.get('jwt_key')
-            if token_jwt_key and str(user.jwt_key) != str(token_jwt_key):
+            
+            if user_jwt_key and token_jwt_key and str(user_jwt_key) != str(token_jwt_key):
                 raise exceptions.AuthenticationFailed(
                     'Esta sesión ha sido invalidada. Por favor, inicia sesión de nuevo.',
                     code='session_invalidated'
@@ -63,13 +64,12 @@ class CustomJWTAuthentication(JWTAuthentication):
                 raise exceptions.PermissionDenied('Cuenta bloqueada', code='user_blocked')
 
             return user, validated_token
-        except exceptions.AuthenticationFailed:
-            # Re-lanzar errores de autenticación (usuario inactivo, bloqueado, etc)
+        except exceptions.AuthenticationFailed as e:
+            print(f"DEBUG AUTH: AuthenticationFailed: {str(e)}")
             raise
         except Exception as e:
-            # Para otros errores (token expirado, inválido), retornamos None 
-            # solo si no hay un header presente (basado en cookies).
-            # Si hay un header y falla, es mejor dejar que DRF falle.
-            if header:
-                raise
-            return None
+            if not header:
+                print(f"DEBUG AUTH: Cookie Auth failed silently: {type(e)} - {str(e)}")
+                return None
+            print(f"DEBUG AUTH: Header Auth failed: {type(e)} - {str(e)}")
+            raise
