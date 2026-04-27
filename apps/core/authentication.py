@@ -41,15 +41,37 @@ class CustomJWTAuthentication(JWTAuthentication):
             validated_token = self.get_validated_token(raw_token)
             user = self.get_user(validated_token)
             
-            # --- BLINDAJE DE SESIÓN (jwt_key) ---
-            # Verificamos si el token es válido para la sesión actual del usuario.
+            # --- BLINDAJE DE SESIÓN ESTRICTO (jwt_key + UserSession) ---
             user_jwt_key = getattr(user, 'jwt_key', None)
             token_jwt_key = validated_token.get('jwt_key')
+            session_id = validated_token.get('session_id')
             
-            if user_jwt_key and token_jwt_key and str(user_jwt_key) != str(token_jwt_key):
+            # Principio Fail-Secure: Si falta información crítica, rechazar.
+            if not user_jwt_key or not token_jwt_key:
                 raise exceptions.AuthenticationFailed(
-                    'Esta sesión ha sido invalidada. Por favor, inicia sesión de nuevo.',
+                    'Token de seguridad incompleto. Inicia sesión de nuevo.',
+                    code='invalid_token_integrity'
+                )
+
+            # 1. Validar integridad global (jwt_key)
+            if str(user_jwt_key) != str(token_jwt_key):
+                raise exceptions.AuthenticationFailed(
+                    'Esta sesión ha sido invalidada globalmente.',
                     code='session_invalidated'
+                )
+            
+            # 2. Validar estado de la sesión específica (UserSession)
+            if not session_id:
+                raise exceptions.AuthenticationFailed(
+                    'Identificador de sesión no encontrado.',
+                    code='missing_session'
+                )
+
+            from apps.users.models import UserSession
+            if not UserSession.objects.filter(session_id=session_id, is_active=True).exists():
+                raise exceptions.AuthenticationFailed(
+                    'Tu sesión ha expirado o ha sido cerrada desde otro dispositivo.',
+                    code='session_closed'
                 )
 
             # Ejecutar validación CSRF solo para solicitudes autenticadas vía Cookies

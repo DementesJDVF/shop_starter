@@ -17,18 +17,25 @@ class AuthService:
     @staticmethod
     def login_user(user: User, ip_address: str, user_agent: str):
         """
-        Inicia una sesión segura, genera tokens con 'jwt_key' incluido y registra el evento.
+        Inicia una sesión segura, crea un UserSession y genera tokens con 'jwt_key' y 'session_id'.
         """
         if not user.is_active or user.status == User.Status.BLOCKED:
             raise exceptions.PermissionDenied("Cuenta inactiva o bloqueada")
 
-        # Generar tokens
+        # 1. Crear registro de sesión persistente
+        from apps.users.models import UserSession
+        session = UserSession.objects.create(
+            user=user,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+        # 2. Generar tokens
         refresh = RefreshToken.for_user(user)
         
-        # --- INYECCIÓN DE SEGURIDAD (jwt_key) ---
-        # Incluimos la llave actual del usuario en el token. Si la llave cambia en la DB,
-        # el token (incluso si no ha expirado) será rechazado por el middleware.
+        # --- INYECCIÓN DE SEGURIDAD ---
         refresh['jwt_key'] = str(user.jwt_key)
+        refresh['session_id'] = str(session.session_id)
         
         # Auditoría
         AuditService.log_login(user, ip_address=ip_address, user_agent=user_agent)
@@ -38,27 +45,34 @@ class AuthService:
     @staticmethod
     def logout_user(refresh_token_str: str, user: User, ip_address: str, user_agent: str):
         """
-        Cierra la sesión actual invalidando el Refresh Token.
+        Cierra la sesión actual invalidando el Refresh Token y desactivando la UserSession.
         """
         try:
             if refresh_token_str:
                 token = RefreshToken(refresh_token_str)
+                session_id = token.get('session_id')
+                
+                # Desactivar sesión en DB
+                from apps.users.models import UserSession
+                UserSession.objects.filter(session_id=session_id).update(is_active=False)
+                
+                # Blacklist token
                 token.blacklist()
         except (TokenError, InvalidToken):
-            pass # Si ya es inválido, no hacemos nada
+            pass
             
         AuditService.log_logout(user, ip_address=ip_address, user_agent=user_agent)
 
     @staticmethod
     def logout_all_sessions(user: User, ip_address: str, user_agent: str):
         """
-        ESTRATEGIA NUCLEAR:
-        Cambia la 'jwt_key' del usuario en la base de datos.
-        Esto invalida INSTANTÁNEAMENTE todos los Access Tokens emitidos hasta ahora
-        en cualquier dispositivo.
+        ESTRATEGIA NUCLEAR: Cambia jwt_key y desactiva todas las sesiones en DB.
         """
         user.jwt_key = uuid.uuid4()
         user.save(update_fields=['jwt_key'])
+        
+        from apps.users.models import UserSession
+        UserSession.objects.filter(user=user, is_active=True).update(is_active=False)
         
         AuditService.log_logout(user, ip_address=ip_address, user_agent=user_agent)
     @staticmethod

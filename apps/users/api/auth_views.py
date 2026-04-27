@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.users.serializers import LoginSerializer, UserSerializer
 from apps.users.services.auth_service import AuthService
 from apps.core.middleware import get_client_ip_from_request, get_current_user_agent
+from apps.users.throttles import LoginIPRateThrottle, LoginUserRateThrottle
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginView(APIView):
@@ -17,6 +18,7 @@ class LoginView(APIView):
     """
     serializer_class = LoginSerializer
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = (LoginIPRateThrottle, LoginUserRateThrottle)
 
     def post(self, request):
         try:

@@ -197,6 +197,8 @@ REST_FRAMEWORK = {
         "user": env("DRF_THROTTLE_USER", default="1000/hour"),
         "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
         "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
+        "login_ip": "5/min",
+        "login_user": "5/min",
         "ia_limit": "10/hour",
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
