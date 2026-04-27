@@ -16,6 +16,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'user'
     
     # 🔴 SEGURIDAD CRÍTICA: Bloquear manipulación directa
     # Solo permitimos GET (leer), POST (crear y acciones custom)
@@ -63,16 +65,17 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='mark-as-paid')
     def mark_as_paid(self, request, pk=None):
-        """Botón del Vendedor: Confirma el pago de forma idempotente."""
+        """Botón del Vendedor: Confirma el pago de forma idempotente y SEGURA."""
         # select_for_update() asegura que si llegan dos clicks simultáneos, se bloquee la fila
         with transaction.atomic():
             # IDEMPOTENCIA a nivel de DB
             order = Order.objects.select_for_update().get(pk=pk)
             
-            if request.user.role != 'VENDEDOR' and not request.user.is_superuser:
-                return Response({"error": "Solo el vendedor puede confirmar el pago."}, status=status.HTTP_403_FORBIDDEN)
+            # 🔴 SEGURIDAD: Solo el Vendedor DUEÑO del producto puede confirmar
+            if order.vendor != request.user and not request.user.is_superuser:
+                return Response({"error": "No tienes permiso para confirmar pagos de esta orden (No eres el vendedor)."}, status=status.HTTP_403_FORBIDDEN)
                 
-            # Si ya está pagado, devolvemos 200 sin error para ser idempotentes (o 400 si preferimos estricto, pero 400 es mejor para evitar confusión UI)
+            # Si ya está pagado, devolvemos 200 sin error para ser idempotentes
             if order.status == Order.Status.PAID:
                 return Response({"message": "La orden ya estaba pagada."}, status=status.HTTP_200_OK)
                 
