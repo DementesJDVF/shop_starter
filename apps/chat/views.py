@@ -9,6 +9,9 @@ from apps.chat.services.vision_service import analyze_image_for_search
 from apps.chat.services.ai_service import extract_search_parameters, generate_chat_response
 from apps.chat.models import AIRecommendationEvent
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ChatAssistantView(APIView):
     """
     Controlador para el Chat de Asistencia de Compras.
@@ -74,9 +77,9 @@ class ChatAssistantView(APIView):
         # Serializamos minimalista para enviar a Groq y al FrontEnd
         products_json = []
         for p in found_products:
-            # Obtener primera imagen
+            # Obtener primera imagen (url_image es un TextField con la URL)
             main_img = p.images.filter(is_main=True).first() or p.images.first()
-            img_url = main_img.url_image.url if main_img and main_img.url_image else None
+            img_url = str(main_img.url_image) if main_img and main_img.url_image else None
             
             p_data = {
                 "id": p.id,
@@ -89,7 +92,11 @@ class ChatAssistantView(APIView):
             products_json.append(p_data)
 
         # 5. LLM: Generar respuesta conversacional
-        reply_text = generate_chat_response(message, products_json, image_keywords)
+        try:
+            reply_text = generate_chat_response(message, products_json, image_keywords)
+        except Exception as e:
+            logger.error(f"Error en generate_chat_response: {e}")
+            reply_text = "Tengo problemas para procesar tu respuesta ahora mismo, pero aquí tienes lo que encontré."
 
         # 6. Registrar evento para el historial de ventas del Vendor (si hay usuario autenticado y productos recomendados)
         buyer = request.user if request.user.is_authenticated else None
