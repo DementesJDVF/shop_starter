@@ -74,7 +74,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         if not IsAdmin().has_permission(request, self):
             return Response({"error": "No tienes permisos para ver todas las ubicaciones."}, status=403)
             
-        locations = Location.objects.all()
+        locations = Location.objects.filter(is_active=True)
         serializer = self.get_serializer(locations, many=True)
         return Response(serializer.data)
     
