@@ -99,7 +99,8 @@ class Order(BaseModel):
                 product.save()
             else:
                 # Si la orden ya existe, evaluamos cambios de estado (Pago/Cancelación)
-                old_order = Order.objects.get(pk=self.pk)
+                # BLOQUEO DE FILA: Asegurar que nadie más toque la orden mientras evaluamos el cambio
+                old_order = Order.objects.select_for_update().get(pk=self.pk)
                 
                 # De Pendiente a PAGADO
                 if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
