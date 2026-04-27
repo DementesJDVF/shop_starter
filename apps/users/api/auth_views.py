@@ -175,6 +175,9 @@ class CSRFTokenView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return self.post(request)
+
     def post(self, request):
         response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
         # Limpiar cookies de autenticación y CSRF
