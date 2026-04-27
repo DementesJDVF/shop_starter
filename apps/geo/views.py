@@ -17,9 +17,17 @@ class LocationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # El Administrador ve TODO. Los demás solo ven lo ACTIVO.
-        if self.request.user.is_authenticated and (self.request.user.role == 'ADMIN' or self.request.user.is_superuser):
+        user = self.request.user
+        
+        # El Administrador ve TODO.
+        if user.is_authenticated and (user.role == 'ADMIN' or user.is_superuser):
             return qs
+            
+        # Para el público y otros usuarios: Solo lo ACTIVO.
+        # EXCEPCIÓN: El dueño de la ubicación siempre debe poder ver la suya (para editarla o ver estado).
+        if user.is_authenticated:
+            return qs.filter(Q(is_active=True) | Q(user=user))
+            
         return qs.filter(is_active=True)
     
     def get_permissions(self):
