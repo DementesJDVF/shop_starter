@@ -76,24 +76,21 @@ class PImageReadSerializer(serializers.ModelSerializer):
         if not obj.url_image:
             return None
 
-        try:
-            # Si el almacenamiento es Cloudinary, obj.url_image.url ya es la URL correcta.
-            # Si el almacenamiento es local, obj.url_image.url es /media/...
-            url = obj.url_image.url
+        # Si url_image es un string (TextField en el modelo)
+        if isinstance(obj.url_image, str):
+            if obj.url_image.startswith(('http://', 'https://')):
+                return obj.url_image
+            # Si es una ruta relativa, intentamos devolverla
+            return obj.url_image
 
-            # Si la URL ya es completa (http...), la devolvemos tal cual.
+        try:
+            # Fallback para cuando se usa ImageField real (aunque el modelo dice TextField)
+            url = obj.url_image.url
             if url.startswith(('http://', 'https://')):
                 return url
-
-            # Si es una ruta relativa (/media/...), el frontend ya sabe ponerle el dominio 
-            # gracias al cambio que hicimos en VendorCatalogModal.
             return url
         except Exception:
-            # Fallback seguro: devolver el nombre crudo si falla el .url
-            try:
-                return obj.url_image.name if obj.url_image else None
-            except:
-                return None
+            return str(obj.url_image) if obj.url_image else None
 
 
 class CreProSerializer(serializers.ModelSerializer):
