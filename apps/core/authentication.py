@@ -11,10 +11,9 @@ class CustomJWTAuthentication(JWTAuthentication):
         # Si el Origen de la petición está en nuestra lista blanca de confianza (Vercel/Dominio),
         # podemos permitir la acción JWT sin el token CSRF manual, ya que el navegador
         # bloquea peticiones de orígenes no autorizados antes de llegar aquí.
-        origin = request.META.get('HTTP_ORIGIN')
-        from django.conf import settings
-        if origin in settings.CORS_ALLOWED_ORIGINS or settings.DEBUG:
-            return
+        # Estrategia SRE: Cross-Origin Resource Sharing (CORS) Trust
+        # La validación CSRF es OBLIGATORIA para cualquier petición que use Cookies.
+        # No usamos bypass de Origin porque con SameSite=None el riesgo es real.
 
         def dummy_get_response(request):
             return None
@@ -42,6 +41,16 @@ class CustomJWTAuthentication(JWTAuthentication):
             validated_token = self.get_validated_token(raw_token)
             user = self.get_user(validated_token)
             
+            # --- BLINDAJE DE SESIÓN (jwt_key) ---
+            # Verificamos si el token es válido para la sesión actual del usuario.
+            # Si el usuario cerró sesión en todos los dispositivos, su jwt_key habrá cambiado.
+            token_jwt_key = validated_token.get('jwt_key')
+            if token_jwt_key and str(user.jwt_key) != str(token_jwt_key):
+                raise exceptions.AuthenticationFailed(
+                    'Esta sesión ha sido invalidada. Por favor, inicia sesión de nuevo.',
+                    code='session_invalidated'
+                )
+
             # Ejecutar validación CSRF solo para solicitudes autenticadas vía Cookies
             if header is None:
                 self.enforce_csrf(request)

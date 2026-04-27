@@ -69,7 +69,14 @@ class ConfirmPasswordResetView(APIView):
                 return Response({"error": "La contraseña debe contener al menos un carácter especial."}, status=status.HTTP_400_BAD_REQUEST)
 
             user.set_password(new_password)
+            import uuid
+            user.jwt_key = uuid.uuid4()
             user.save()
+            
+            # Auditoría
+            from apps.audit.application.services import AuditService
+            AuditService._log(user=user, action_type="PASSWORD_RESET_SUCCESS", instance=user)
+            
             return Response({"message": "Tu contraseña ha sido restablecida con éxito."}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "El enlace es inválido o ha expirado."}, status=status.HTTP_400_BAD_REQUEST)

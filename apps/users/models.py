@@ -51,7 +51,9 @@ class User(AbstractUser):
     document_number = EncryptedCharField(max_length=255, blank=True, null=True)
     birth_date = EncryptedCharField(max_length=255, blank=True, null=True)
 
-
+    # Auditoría y Seguridad de Sesión
+    jwt_key = models.UUIDField(default=uuid.uuid4, help_text="Cambiar este valor invalida todos los access tokens del usuario.")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

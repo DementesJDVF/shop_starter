@@ -214,10 +214,31 @@ class AuditService:
 
 
     @classmethod
-    def log_login(cls, user, ip_address=None):
+    def log_login(cls, user, ip_address=None, user_agent=None):
         cls._log(
             user=user,
             action_type=AuditLog.ActionType.LOGIN,
             instance=user,
             ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def log_logout(cls, user, ip_address=None, user_agent=None):
+        cls._log(
+            user=user,
+            action_type=AuditLog.ActionType.LOGOUT,
+            instance=user,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+    @classmethod
+    def log_refresh(cls, user, ip_address=None, user_agent=None):
+        cls._log(
+            user=user,
+            action_type="REFRESH", # Usamos string si no está en choices o lo añadimos
+            instance=user,
+            ip_address=ip_address,
+            user_agent=user_agent
         )
