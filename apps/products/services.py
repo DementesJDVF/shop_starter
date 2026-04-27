@@ -18,7 +18,8 @@ class ProductService:
             status=Product.ProductStatus.AVAILABLE,
             stock__gt=0,
             vendor__status='ACTIVE',
-            vendor__role=UserRoles.VENDEDOR
+            vendor__role=UserRoles.VENDEDOR,
+            vendor__locations__is_active=True
         ).order_by('-created_at')
 
         if vendor_id:
@@ -45,7 +46,8 @@ class ProductService:
             id=product_id,
             status=Product.ProductStatus.AVAILABLE,
             stock__gt=0,
-            vendor__status='ACTIVE'
+            vendor__status='ACTIVE',
+            vendor__locations__is_active=True
         ).first()
 
     @staticmethod
