@@ -27,12 +27,9 @@ def generate_product_description(image_file_path_or_url, is_url=False):
             response = requests.get(image_file_path_or_url, timeout=15)
             img = Image.open(io.BytesIO(response.content))
         else:
-            if hasattr(image_file_path_or_url, 'read'):
-                img = Image.open(image_file_path_or_url)
+            img = Image.open(image_file_path_or_url)
+            if hasattr(image_file_path_or_url, 'seek'):
                 image_file_path_or_url.seek(0)
-            else:
-                img = Image.open(image_file_path_or_url)
-                image_file_path_or_url.seek(0) # Reset pointer
 
         # 2. Procesar imagen (Redimensionar para ahorrar tokens y evitar errores 400)
         # Si la imagen ya es pequeña (optimización de frontend), saltamos el procesamiento pesado
