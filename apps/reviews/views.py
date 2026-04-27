@@ -38,7 +38,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"vendor": "Es necesario especificar el vendedor para la reseña."})
             
-        # 2. Guardar con los datos automáticos
+        # 2. ANTI-FRAUDE: Validar que el usuario haya COMPRADO algo de este vendedor
+        from apps.orders.models import Order
+        has_purchased = Order.objects.filter(
+            client=self.request.user,
+            vendor_id=vendor_id,
+            status=Order.Status.PAID
+        ).exists()
+
+        if not has_purchased:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Solo puedes reseñar a vendedores a los que les hayas comprado (y pagado).")
+
+        # 3. Guardar con los datos automáticos
         serializer.save(
             user=self.request.user, 
             vendor_id=vendor_id

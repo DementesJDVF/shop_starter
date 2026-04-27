@@ -125,6 +125,25 @@ class ProductViewSet(viewsets.ModelViewSet):
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
+    def destroy(self, request, *args, **kwargs):
+        """Soft Delete: En lugar de borrar físicamente, cambiamos el estado a INACTIVE."""
+        instance = self.get_object()
+        
+        # Opcional: Solo dueño o admin
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            if instance.vendor != request.user:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("No tienes permisos para borrar este producto.")
+
+        # Realizar Soft Delete
+        instance.status = Product.ProductStatus.INACTIVE
+        instance.save()
+        
+        import logging
+        logging.getLogger(__name__).info(f"[AUDIT] Producto {instance.id} marcado como INACTIVE por {request.user.username}.")
+        
+        return Response({"message": "Producto archivado (desactivado) exitosamente."}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
     def generate_ai_description(self, request, pk=None):
         from rest_framework.exceptions import PermissionDenied
