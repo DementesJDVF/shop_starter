@@ -9,12 +9,12 @@ class Review(models.Model):
     # Quitamos null=True: una reseña DEBE tener autor y destino
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="received_reviews",
         null=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="authored_reviews",
         null=True)
     # Si usas TextField, el MaxLengthValidator funciona,

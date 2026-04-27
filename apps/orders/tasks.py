@@ -5,29 +5,38 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@shared_task
-def cleanup_expired_reservations():
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=3,
+    retry_jitter=True
+)
+def cleanup_expired_reservations(self):
     """
     SRE: Limpia reservas de órdenes que han expirado (más de 15 minutos).
     Al cancelar la orden, el modelo de Order devuelve automáticamente el stock al producto.
     """
     from apps.orders.models import Order
+    from django.db import transaction
     
     timeout = timezone.now() - timedelta(minutes=15)
-    expired_orders = Order.objects.filter(
-        status=Order.Status.RESERVED,
-        created_at__lt=timeout
-    )
     
-    count = expired_orders.count()
-    if count > 0:
-        logger.info(f"[SRE] Iniciando limpieza de {count} reservas expiradas...")
-        for order in expired_orders:
-            try:
-                order.status = Order.Status.CANCELLED
-                order.save()
-                logger.info(f"[SRE] Orden {order.id} expirada y cancelada. Stock liberado.")
-            except Exception as e:
-                logger.error(f"[SRE] Error al limpiar orden {order.id}: {str(e)}")
+    with transaction.atomic():
+        expired_orders = Order.objects.select_for_update().filter(
+            status=Order.Status.RESERVED,
+            created_at__lt=timeout
+        )
         
-    return f"{count} reservas expiradas limpiadas."
+        count = expired_orders.count()
+        if count > 0:
+            logger.info(f"[SRE] Iniciando limpieza de {count} reservas expiradas...")
+            for order in expired_orders:
+                try:
+                    order.status = Order.Status.CANCELLED
+                    order.save()
+                    logger.info(f"[SRE] Orden {order.id} expirada y cancelada. Stock liberado.")
+                except Exception as e:
+                    logger.error(f"[SRE] Error al limpiar orden {order.id}: {str(e)}")
+            
+        return f"{count} reservas expiradas limpiadas."
