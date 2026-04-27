@@ -19,6 +19,7 @@ class AuditLog(BaseModel):
         ROLE_CHANGE = "ROLE_CHANGE"
         LOGIN = "LOGIN"
         LOGOUT = "LOGOUT"
+        REFRESH = "REFRESH"
         UNKNOWN = "UNKNOWN"
 
     class SourceType(models.TextChoices):
