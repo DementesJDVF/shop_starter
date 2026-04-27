@@ -10,7 +10,7 @@ from apps.core.middleware import get_client_ip_from_request
 from apps.users.application.services import UserService
 from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerAll
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.users.models import User
@@ -110,66 +110,58 @@ class UserView(APIView):
                     filtered_data.append(user_data)
             serializer_data = filtered_data
 
-        return Response(serializer_data, status=status.HTTP_200_OK)
-
-class CustomTokenRefreshView(TokenRefreshView):
+        return Response(serializer_data, status=status.HTTP_200_OK)class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
-        # Intentar obtener el refresh token prioritariamente de la cookie httponly
+        # 1. Extraer el refresh token de la cookie HttpOnly prioritariamente
         refresh_token = request.COOKIES.get('refresh_token')
         
-        # Inyectar el token en el cuerpo de la solicitud para que el serializer de SimpleJWT lo procese
+        # Inyectar el token en el cuerpo de la solicitud para el serializer
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
         if refresh_token:
-            # Creamos un diccionario mutable con los datos actuales
-            from django.http import QueryDict
-            if isinstance(request.data, QueryDict):
-                data = request.data.copy()
-            else:
-                data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
-            
             data['refresh'] = refresh_token
-            # Sobrescribimos el atributo interno de DRF que alimenta a request.data
-            request._full_data = data
+
+        serializer = self.get_serializer(data=data)
 
         try:
-            # Llamamos al comportamiento base (que usará el token inyectado)
-            response = super().post(request, *args, **kwargs)
-        except InvalidToken as e:
-            # Si el token en la cookie es inválido (ej: expiró o fue manipulado)
-            return Response({"detail": "Token de refresco inválido o expirado."}, status=status.HTTP_401_UNAUTHORIZED)
+            # 2. Validar el token. Si está en Blacklist o expirado, lanzará TokenError/InvalidToken
+            serializer.is_valid(raise_exception=True)
+        except (TokenError, InvalidToken):
+            return Response(
+                {"detail": "La sesión ha expirado o es inválida. Inicia sesión de nuevo."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # DRF SimpleJWT responde con nuevo access_token (y opcional refresh).
-        if response.status_code == 200:
-            from django.conf import settings
-            is_prod = not settings.DEBUG
-            cookie_secure = True if is_prod else request.is_secure()
-            cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
-            
-            access_token = response.data.get('access')
-            if access_token:
-                response.set_cookie(
-                    key='access_token',
-                    value=access_token,
-                    httponly=True,
-                    secure=cookie_secure,
-                    samesite=cookie_samesite,
-                    max_age=3600*24
-                )
-            
-            new_refresh = response.data.get('refresh')
-            if new_refresh:
-                response.set_cookie(
-                    key='refresh_token',
-                    value=new_refresh,
-                    httponly=True,
-                    secure=cookie_secure,
-                    samesite=cookie_samesite,
-                    max_age=3600*24*7
-                )
-                
-            # Limpiar payload por seguridad antes de devolver (Axios no necesita ver los tokens)
-            response.data = {"message": "Sesión refrescada"}
+        # 3. Generar respuesta y actualizar cookies
+        response = Response({"message": "Sesión refrescada"}, status=status.HTTP_200_OK)
+        
+        from django.conf import settings
+        is_prod = not settings.DEBUG
+        cookie_secure = True if is_prod else request.is_secure()
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
+        
+        access_token = serializer.validated_data.get('access')
+        if access_token:
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=True,
+                secure=cookie_secure,
+                samesite=cookie_samesite,
+                max_age=3600*24
+            )
+        
+        new_refresh = serializer.validated_data.get('refresh')
+        if new_refresh:
+            response.set_cookie(
+                key='refresh_token',
+                value=new_refresh,
+                httponly=True,
+                secure=cookie_secure,
+                samesite=cookie_samesite,
+                max_age=3600*24*7
+            )
             
         return response
 
@@ -185,8 +177,21 @@ class LogoutView(APIView):
         return self.post(request)
 
     def post(self, request):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        try:
+            # 1. Intentar invalidar el refresh token en el servidor (Blacklist)
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception as e:
+            # Si el token ya expiró o es inválido, ignoramos el error y procedemos a borrar cookies
+            pass
+
         response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
-        # Limpiar cookies de autenticación y CSRF
+        
+        # 2. Limpiar cookies de autenticación y CSRF
         from django.conf import settings
         is_prod = not settings.DEBUG
         cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
@@ -194,4 +199,5 @@ class LogoutView(APIView):
         response.delete_cookie('access_token', samesite=cookie_samesite)
         response.delete_cookie('refresh_token', samesite=cookie_samesite)
         response.delete_cookie('csrftoken', samesite=cookie_samesite)
+        
         return response
