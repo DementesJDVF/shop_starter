@@ -38,15 +38,23 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Retrieves products for management dashboard.
-        Delegates logic to ProductService.
+        Orquesta el queryset según el rol:
+        - Admin/Superuser: Todo.
+        - Vendedor: Sus propios productos.
+        - Anónimo/Cliente: Catálogo público filtrado (Seguridad SRE).
         """
-        return ProductService.get_manageable_products(self.request.user)
+        user = self.request.user
+        vendor_id = self.request.query_params.get('vendor')
+        
+        if user.is_authenticated:
+            return ProductService.get_manageable_products(user, vendor_id=vendor_id)
+        
+        # FAIL SECURE: Si no está autenticado, solo catálogo público
+        return ProductService.get_public_catalog(vendor_id=vendor_id)
     
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated()]
-        # La lista privada de mis productos requiere estar autenticado
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
@@ -319,10 +327,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            from apps.users.permissions import IsAdmin
-            return [IsAdmin()]
-        return [IsAuthenticated()]
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        from apps.users.permissions import IsAdmin
+        return [IsAdmin()]
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):
