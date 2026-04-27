@@ -80,9 +80,11 @@ def nearby_vendors(request):
     # Fórmula de Haversine en SQL nativo
     query = """
         6371 * acos(
-            cos(radians(%s)) * cos(radians(latitude)) *
-            cos(radians(longitude) - radians(%s)) +
-            sin(radians(%s)) * sin(radians(latitude))
+            LEAST(GREATEST(
+                cos(radians(%s)) * cos(radians(latitude)) *
+                cos(radians(longitude) - radians(%s)) +
+                sin(radians(%s)) * sin(radians(latitude))
+            , -1), 1)
         )
     """
 
