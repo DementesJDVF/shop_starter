@@ -31,11 +31,12 @@ urlpatterns = [
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
     
+    path("list/", UserView.as_view(), name="read"),
+    
     # Soporte para borrado directo solicitado por el frontend
     path("<str:pk>/", AdminUserViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
 
     # Use str for UUID compatibility
     path("<str:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
     path("<str:user_id>/status/", ChangeUserStatusView.as_view(), name="change_user_status"),
-    path("list/", UserView.as_view(), name="read"),
 ]
