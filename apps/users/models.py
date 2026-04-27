@@ -67,3 +67,24 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} - {self.role}"
+
+class UserSession(models.Model):
+    """
+    RASTREADOR DE SESIONES ACTIVAS:
+    Permite el control de dispositivos y la invalidación de sesiones específicas.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+    session_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    user_agent = models.TextField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    last_activity = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "users_session"
+        ordering = ['-last_activity']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.session_id} ({'Activa' if self.is_active else 'Inactiva'})"
