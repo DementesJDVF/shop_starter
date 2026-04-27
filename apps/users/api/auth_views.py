@@ -139,36 +139,51 @@ class UserView(APIView):
 
 class LogoutView(APIView):
     """
-    VISTA DE LOGOUT (ORQUESTADOR):
-    Invalida la sesión actual o todas las sesiones según se solicite.
+    VISTA DE LOGOUT ROBUSTA E IDEMPOTENTE:
+    Garantiza el cierre de sesión sin errores 401, incluso si el access_token ha expirado.
+    Limpia cookies HttpOnly y busca invalidar la sesión en DB si hay un refresh_token válido.
     """
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
         all_devices = request.data.get('all_devices', False)
         refresh_token = request.COOKIES.get('refresh_token')
-        
-        if all_devices:
-            AuthService.logout_all_sessions(
-                user=request.user,
-                ip_address=get_client_ip_from_request(request),
-                user_agent=get_current_user_agent()
-            )
-        else:
-            AuthService.logout_user(
-                refresh_token_str=refresh_token,
-                user=request.user,
-                ip_address=get_client_ip_from_request(request),
-                user_agent=get_current_user_agent()
-            )
+        ip_address = get_client_ip_from_request(request)
+        user_agent = get_current_user_agent()
 
-        response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
-        
-        # Limpiar cookies
+        # 1. Flujo de invalidación (Fail-Secure)
+        try:
+            if all_devices and request.user.is_authenticated:
+                AuthService.logout_all_sessions(
+                    user=request.user,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+            else:
+                # AuthService.logout_user ahora es inteligente: identifica al usuario
+                # desde el token si request.user es anónimo (access_token expirado).
+                AuthService.logout_user(
+                    refresh_token_str=refresh_token,
+                    user=request.user if request.user.is_authenticated else None,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+        except Exception as e:
+            # Errores en la invalidación no deben detener el logout local
+            pass
+
+        # 2. Construcción de respuesta (Siempre 200 OK)
+        response = Response(
+            {"detail": "Logout successful", "message": "Sesión cerrada correctamente"}, 
+            status=status.HTTP_200_OK
+        )
+
+        # 3. Limpieza absoluta de Cookies (Idempotente)
         from django.conf import settings
         is_prod = not settings.DEBUG
         cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
         
+        # Eliminamos con los mismos parámetros que se crearon
         response.delete_cookie('access_token', samesite=cookie_samesite)
         response.delete_cookie('refresh_token', samesite=cookie_samesite)
         response.delete_cookie('csrftoken', samesite=cookie_samesite)

@@ -103,14 +103,27 @@ class AuditService:
                 user.reputation_score = max(Decimal('0.00'), user.reputation_score - Decimal('0.50'))
                 user.save(update_fields=['reputation_score'])
 
-        content_type = ContentType.objects.get_for_model(instance.__class__)
+        # --- IDENTIFICACIÓN DEL OBJETO ---
+        content_type = None
+        object_id = None
+        object_repr = "N/A"
+        
+        if instance:
+            from django.contrib.contenttypes.models import ContentType
+            content_type = ContentType.objects.get_for_model(instance.__class__)
+            object_id = str(instance.pk)
+            object_repr = str(instance)
+
+        # Si no hay usuario ni instancia, no hay nada útil que loggear
+        if not user and not instance and not new_data:
+            return
 
         AuditLog.objects.create(
             user=user,
             action_type=action_type,
             content_type=content_type,
-            object_id=str(instance.pk),
-            object_repr=str(instance),
+            object_id=object_id,
+            object_repr=object_repr,
             previous_data=previous_data,
             new_data=new_data,
             ip_address=ip_address,
