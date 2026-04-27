@@ -9,16 +9,22 @@ from .serializers import OrderSerializer
 from django.utils import timezone
 from datetime import timedelta
 
+import logging
+logger = logging.getLogger(__name__)
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    
+    # 🔴 SEGURIDAD CRÍTICA: Bloquear manipulación directa
+    # Solo permitimos GET (leer), POST (crear y acciones custom)
+    # Bloqueamos PUT, PATCH, DELETE para que el status no sea inyectable
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         user = self.request.user
-        # SRE: Limpieza automática de reservas expiradas al consultar (Timeout Real)
-        self._cleanup_expired_reservations()
-
+        
         qs = Order.objects.select_related('client', 'vendor', 'product')
         if user.role == 'ADMIN':
             return qs.order_by('-created_at')
@@ -26,49 +32,58 @@ class OrderViewSet(viewsets.ModelViewSet):
             return qs.filter(vendor=user).order_by('-created_at')
         return qs.filter(client=user).order_by('-created_at')
 
-    def _cleanup_expired_reservations(self):
-        """Lógica de SRE: Libera productos reservados hace más de 15 min."""
-        timeout = timezone.now() - timedelta(minutes=15)
-        expired_orders = Order.objects.filter(
-            status=Order.Status.RESERVED,
-            created_at__lt=timeout
-        )
-        for order in expired_orders:
-            order.status = Order.Status.CANCELLED
-            order.save()
-
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """Crea una orden y la pone en estado RESERVED automáticamente."""
+        """Crea una orden con IDEMPOTENCIA y la pone en estado RESERVED."""
+        # 1. IDEMPOTENCIA: Evitar doble click / doble orden del mismo producto
+        product_id = request.data.get('product')
+        if product_id:
+            recent_duplicate = Order.objects.filter(
+                client=request.user,
+                product_id=product_id,
+                status=Order.Status.RESERVED,
+                created_at__gte=timezone.now() - timedelta(minutes=1) # Ventana de 1 minuto
+            ).exists()
+            
+            if recent_duplicate:
+                return Response(
+                    {"error": "Ya tienes una reserva reciente para este producto. Por favor, revisa tus compras o espera un momento."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # El modelo Order.save() se encarga de la lógica atómica de stock y reserva
         order = serializer.save(
             client=self.request.user,
             status=Order.Status.RESERVED
         )
-        
+        logger.info(f"[AUDIT] Orden {order.id} creada por {request.user.username} para producto {product_id}.")
         return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='mark-as-paid')
     def mark_as_paid(self, request, pk=None):
-        """Botón del Vendedor: Confirma el pago y marca el producto como VENDIDO."""
-        order = self.get_object()
-        
-        if request.user.role != 'VENDEDOR' and not request.user.is_superuser:
-            return Response({"error": "Solo el vendedor puede confirmar el pago."}, status=status.HTTP_403_FORBIDDEN)
-            
-        if order.status != Order.Status.RESERVED:
-            return Response({"error": f"No se puede pagar una orden en estado {order.status}."}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Botón del Vendedor: Confirma el pago de forma idempotente."""
+        # select_for_update() asegura que si llegan dos clicks simultáneos, se bloquee la fila
         with transaction.atomic():
+            # IDEMPOTENCIA a nivel de DB
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            if request.user.role != 'VENDEDOR' and not request.user.is_superuser:
+                return Response({"error": "Solo el vendedor puede confirmar el pago."}, status=status.HTTP_403_FORBIDDEN)
+                
+            # Si ya está pagado, devolvemos 200 sin error para ser idempotentes (o 400 si preferimos estricto, pero 400 es mejor para evitar confusión UI)
+            if order.status == Order.Status.PAID:
+                return Response({"message": "La orden ya estaba pagada."}, status=status.HTTP_200_OK)
+                
+            if order.status != Order.Status.RESERVED:
+                return Response({"error": f"Transición inválida. No se puede pagar una orden en estado {order.status}."}, status=status.HTTP_400_BAD_REQUEST)
+            
             order.status = Order.Status.PAID
             order.save()
+            logger.info(f"[AUDIT] Pago confirmado para orden {order.id} por el vendedor {request.user.username}.")
             
-            # El modelo Order.save() ya marca el producto como SOLD si el stock es 0
-            return Response({"message": "Pago confirmado. Producto marcado como Vendido/Fuera de catálogo."})
-
+            return Response({"message": "Pago confirmado exitosamente."})
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancela la orden y libera el stock/producto."""

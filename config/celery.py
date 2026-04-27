@@ -23,4 +23,8 @@ app.conf.beat_schedule = {
         'task': 'apps.products.tasks.reap_zombie_ai_tasks',
         'schedule': crontab(minute='*/5'),
     },
+    'cleanup-expired-reservations-every-5-minutes': {
+        'task': 'apps.orders.tasks.cleanup_expired_reservations',
+        'schedule': crontab(minute='*/5'),
+    },
 }
