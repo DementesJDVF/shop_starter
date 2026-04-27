@@ -111,7 +111,7 @@ class PImages(BaseModel):
         db_column="products_product_id",
         related_name="images",)
     
-    url_image = models.ImageField(upload_to="products/images/")
+    url_image = models.TextField()
     is_main = models.BooleanField(default=False)
     
     # Flags para el motor de Inteligencia Artificial
