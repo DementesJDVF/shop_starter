@@ -7,12 +7,15 @@ def create_initial_admin(apps, schema_editor):
     password = "AdminShop2026*"
 
     if not User.objects.filter(email=email).exists():
-        User.objects.create_superuser(
+        user = User(
             email=email,
             username=username,
-            password=password,
-            full_name="Neythan Ayala Admin"
+            full_name="Neythan Ayala Admin",
+            is_staff=True,
+            is_superuser=True,
         )
+        user.set_password(password)
+        user.save()
         print(f"User {email} created successfully.")
     else:
         print(f"User {email} already exists.")
