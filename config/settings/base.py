@@ -3,6 +3,7 @@ import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 import os
+from corsheaders.defaults import default_headers
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -167,6 +168,9 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "authorization",
+]
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", 
     default=[

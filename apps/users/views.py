@@ -19,6 +19,10 @@ from apps.core.services.email_service import send_user_status_notification
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -50,6 +54,7 @@ class MeView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        logger.info("/api/auth/me/ resolved user_id=%s authenticated=%s", getattr(request.user, 'id', None), request.user.is_authenticated)
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
