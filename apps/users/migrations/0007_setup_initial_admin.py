@@ -1,4 +1,5 @@
 from django.db import migrations
+from django.contrib.auth.hashers import make_password
 
 def create_initial_admin(apps, schema_editor):
     User = apps.get_model("users", "User")
@@ -7,15 +8,15 @@ def create_initial_admin(apps, schema_editor):
     password = "AdminShop2026*"
 
     if not User.objects.filter(email=email).exists():
-        user = User(
+        User.objects.create(
             email=email,
             username=username,
             full_name="Neythan Ayala Admin",
+            password=make_password(password),  # ✅ FIX
             is_staff=True,
             is_superuser=True,
+            is_active=True,  # ⚠️ recomendable
         )
-        user.set_password(password)
-        user.save()
         print(f"User {email} created successfully.")
     else:
         print(f"User {email} already exists.")
@@ -34,3 +35,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(create_initial_admin, reverse_code=remove_initial_admin),
     ]
+    
