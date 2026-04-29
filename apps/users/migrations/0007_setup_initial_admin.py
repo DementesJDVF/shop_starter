@@ -12,10 +12,10 @@ def create_initial_admin(apps, schema_editor):
             email=email,
             username=username,
             full_name="Neythan Ayala Admin",
-            password=make_password(password),  # ✅ FIX
+            password=make_password(password),
             is_staff=True,
             is_superuser=True,
-            is_active=True,  # ⚠️ recomendable
+            is_active=True,
         )
         print(f"User {email} created successfully.")
     else:
@@ -35,4 +35,3 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(create_initial_admin, reverse_code=remove_initial_admin),
     ]
-    
