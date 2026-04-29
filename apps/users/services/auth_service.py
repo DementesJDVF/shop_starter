@@ -36,6 +36,8 @@ class AuthService:
         # --- INYECCIÓN DE SEGURIDAD ---
         refresh['jwt_key'] = str(user.jwt_key)
         refresh['session_id'] = str(session.session_id)
+        refresh.access_token['jwt_key'] = str(user.jwt_key)
+        refresh.access_token['session_id'] = str(session.session_id)
         
         # Auditoría
         AuditService.log_login(user, ip_address=ip_address, user_agent=user_agent)
