@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.application.services import AuditService
@@ -30,6 +31,9 @@ class UserService:
             document_type=validated_data.get("document_type"),
             document_number=validated_data.get("document_number"),
             birth_date=validated_data.get("birth_date"),
+            # Términos y Condiciones
+            acepto_terminos=validated_data.get("acepto_terminos", False),
+            fecha_aceptacion_terminos=timezone.now() if validated_data.get("acepto_terminos") else None,
         )
         AuditService.log_create(user=user, instance=user, ip_address=ip_address)
         return user

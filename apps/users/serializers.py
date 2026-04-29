@@ -17,13 +17,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES, required=False, default=UserRoles.CUSTOMER)
     is_human = serializers.BooleanField(required=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
+    acepto_terminos = serializers.BooleanField(write_only=True, required=True)
 
     class Meta:
         model = User
         fields = (
             "username", "email", "password", "password_confirm", "role",
             "full_name", "phone_number", "document_type", "document_number", "birth_date",
-            "is_human", "honeypot"
+            "is_human", "honeypot", "acepto_terminos"
         )
 
     def validate(self, attrs):
@@ -42,6 +43,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         if attrs.get("honeypot"):
             # Si el campo trampa tiene datos, es probablemente un bot.
             raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Bot detectado)."})
+        
+        if not attrs.get("acepto_terminos"):
+            raise serializers.ValidationError({"acepto_terminos": "Debes aceptar los términos y condiciones para registrarte."})
             
         if password != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})

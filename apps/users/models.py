@@ -27,6 +27,9 @@ class User(AbstractUser):
     document_number = models.CharField(max_length=50, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
 
+    # Términos y Condiciones
+    acepto_terminos = models.BooleanField(default=False)
+    fecha_aceptacion_terminos = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
