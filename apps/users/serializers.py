@@ -27,6 +27,18 @@ class RegisterSerializer(serializers.ModelSerializer):
             "is_human", "honeypot"
         )
 
+    def validate_email(self, value):
+        email = (value or "").strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return email
+
+    def validate_username(self, value):
+        username = (value or "").strip()
+        if username and User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return username
+
     def validate(self, attrs):
         # --- MEJORA DE USABILIDAD ---
         # Si el frontend envía 'nombre', lo guardamos automáticamente en el campo técnico 'full_name'.
