@@ -1,8 +1,7 @@
 from django.db import migrations
-from django.contrib.auth import get_user_model
 
 def create_initial_admin(apps, schema_editor):
-    User = get_user_model()
+    User = apps.get_model("users", "User")
     email = "neythanayala670@gmail.com"
     username = "neythan_admin"
     password = "AdminShop2026*"
@@ -19,7 +18,7 @@ def create_initial_admin(apps, schema_editor):
         print(f"User {email} already exists.")
 
 def remove_initial_admin(apps, schema_editor):
-    User = get_user_model()
+    User = apps.get_model("users", "User")
     email = "neythanayala670@gmail.com"
     User.objects.filter(email=email).delete()
 
