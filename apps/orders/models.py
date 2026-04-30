@@ -106,16 +106,12 @@ class Order(BaseModel):
                 if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
                     if product.stock <= 0:
                         product.status = Product.ProductStatus.SOLD
-                    product.reserved_at = None
-                    product.reserved_by = None
                     product.save()
 
                 # CANCELACIÓN (Liberar Stock)
                 elif self.status == self.Status.CANCELLED and old_order.status != self.Status.CANCELLED:
                     product.stock += self.quantity
                     product.status = Product.ProductStatus.AVAILABLE
-                    product.reserved_at = None
-                    product.reserved_by = None
                     product.save()
 
             super().save(*args, **kwargs)
