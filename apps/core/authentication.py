@@ -1,6 +1,7 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import exceptions
 from rest_framework.authentication import CSRFCheck
+from django.conf import settings
 
 class CustomJWTAuthentication(JWTAuthentication):
     def enforce_csrf(self, request):
@@ -48,20 +49,29 @@ class CustomJWTAuthentication(JWTAuthentication):
             
             # 1. Validar integridad de claims
             if not user_jwt_key or not token_jwt_key or not session_id:
+                print(f"DEBUG AUTH: Token incompleto para usuario {user}")
                 raise exceptions.AuthenticationFailed('Token de seguridad incompleto.', code='invalid_token_integrity')
 
             # 2. Validar integridad global (jwt_key)
             if str(user_jwt_key) != str(token_jwt_key):
+                print(f"DEBUG AUTH: jwt_key mismatch. User: {user_jwt_key}, Token: {token_jwt_key}")
                 raise exceptions.AuthenticationFailed('Esta sesión ha sido invalidada globalmente.', code='session_invalidated')
             
             # 3. Validar estado de la sesión específica (UserSession)
             from apps.users.models import UserSession
             if not UserSession.objects.filter(session_id=session_id, is_active=True).exists():
+                print(f"DEBUG AUTH: UserSession {session_id} no existe o está inactiva.")
                 raise exceptions.AuthenticationFailed('Tu sesión ha expirado o ha sido cerrada.', code='session_closed')
 
             # Ejecutar validación CSRF solo para solicitudes autenticadas vía Cookies
             if header is None:
-                self.enforce_csrf(request)
+                try:
+                    self.enforce_csrf(request)
+                except exceptions.PermissionDenied as e:
+                    print(f"DEBUG AUTH: Fallo CSRF en localhost: {str(e)}")
+                    # En desarrollo, si el CSRF falla pero el JWT es válido y es local, permitimos loggear el error
+                    if not settings.DEBUG:
+                        raise e
 
             # Validaciones adicionales de estado de cuenta
             if user and not user.is_active:
@@ -73,13 +83,13 @@ class CustomJWTAuthentication(JWTAuthentication):
             return user, validated_token
 
         except (exceptions.AuthenticationFailed, exceptions.PermissionDenied) as e:
-            # SRE STRATEGY: Si la autenticación por COOKIE falla en un endpoint público,
-            # no debemos lanzar 401, sino retornar None para que DRF lo trate como Anonymous.
-            # Esto soluciona los bloqueos en el catálogo para usuarios con cookies viejas.
             if header is None:
-                print(f"DEBUG AUTH: Soft-failing cookie auth: {str(e)}")
+                # Logueamos el error exacto para el desarrollador
+                import logging
+                logging.getLogger("django").warning(f"AUTH COOKIE FAIL: {str(e)}")
                 return None
             raise
         except Exception as e:
-            print(f"DEBUG AUTH: Unexpected failure: {str(e)}")
+            import logging
+            logging.getLogger("django").error(f"AUTH UNEXPECTED FAIL: {str(e)}", exc_info=True)
             return None

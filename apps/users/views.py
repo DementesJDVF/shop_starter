@@ -47,11 +47,16 @@ class RegisterView(generics.CreateAPIView):
 
 
 class MeView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"isAuthenticated": False, "user": None}, status=status.HTTP_200_OK)
+        
         serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        data = serializer.data
+        data["isAuthenticated"] = True
+        return Response(data)
 
 
 class AdminOnlyView(APIView):
@@ -104,6 +109,9 @@ class ChangeUserStatusView(APIView):
     permission_classes = [IsAdmin]
 
     def patch(self, request, user_id):
+        # DEBUG: Verificar quién está intentando esto
+        print(f"!!! INTENTO DE CAMBIO STATUS !!! User: {request.user.email if request.user.is_authenticated else 'Anonymous'} | Role: {getattr(request.user, 'role', 'N/A')} | Auth: {request.user.is_authenticated}")
+        
         VALID_STATUSES = [User.Status.ACTIVE, User.Status.INACTIVE, User.Status.PENDING, User.Status.BLOCKED]
         new_status = request.data.get('status')
         if new_status not in VALID_STATUSES:
