@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
         ),
         # Reemplazamos el AlterField estándar por uno con casting manual
         migrations.RunSQL(
-            sql='ALTER TABLE products_product ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, "0")::uuid);',
+            sql="ALTER TABLE products_product ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, '0')::uuid);",
             reverse_sql='ALTER TABLE products_product ALTER COLUMN id TYPE bigint USING (id::text::bigint);'
         ),
         # Luego le decimos a Django que el campo ahora es un UUIDField
