@@ -26,6 +26,28 @@ class ProductPagination(PageNumberPagination):
 
 
 
+
+
+class ProductListView(generics.ListAPIView):
+    """Listado de productos con filtro opcional por status."""
+    serializer_class = ReadProSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = ProductPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        vendor_id = self.request.query_params.get('vendor')
+        status_filter = self.request.query_params.get('status')
+
+        queryset = ProductService.get_manageable_products(user, vendor_id=vendor_id)
+        queryset = queryset.select_related('vendor', 'category').prefetch_related('images')
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset
+
+
 class ProductCreateView(generics.CreateAPIView):
     """Endpoint exclusivo de creación de productos."""
     serializer_class = CreProSerializer

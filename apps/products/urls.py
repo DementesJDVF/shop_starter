@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from apps.products.views import (
     ProductViewSet,
     ProductCreateView,
+    ProductListView,
     ProductCatalogView,
     ProductDetailPublicView,
     CategoryViewSet,
@@ -35,6 +36,9 @@ urlpatterns = [
         'patch': 'partial_update',
         'delete': 'destroy'
     }), name="category-admin-detail"),
+
+    # Endpoint explícito de listado (solo GET)
+    path("", ProductListView.as_view(), name="product-list"),
 
     # Endpoint explícito de creación (solo POST)
     path("create/", ProductCreateView.as_view(), name="product-create"),
