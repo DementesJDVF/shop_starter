@@ -11,7 +11,13 @@ def cast_product_id_to_uuid_for_postgres(apps, schema_editor):
 
     schema_editor.execute(
         "ALTER TABLE products_product "
-        "ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, '0')::uuid);"
+        "ALTER COLUMN id TYPE uuid USING ("
+        "regexp_replace("
+        "lpad(id::text, 32, '0'), "
+        "'(.{8})(.{4})(.{4})(.{4})(.{12})', "
+        "E'\\\\1-\\\\2-\\\\3-\\\\4-\\\\5'"
+        ")::uuid"
+        ");"
     )
 
 
