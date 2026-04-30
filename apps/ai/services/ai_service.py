@@ -10,8 +10,8 @@ GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY', 
 
 # Endpoint de Groq
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-# Modelo Vision de Groq (Llama 3.2 Vision - El más rápido y estable)
-GROQ_MODEL = "llama-3.2-11b-vision-preview"
+# Modelo Vision de Groq (Llama 4 Scout Vision - El más actual y estable en 2026)
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 def generate_product_description(image_file_path_or_url, is_url=False):
     """
@@ -83,11 +83,16 @@ def generate_product_description(image_file_path_or_url, is_url=False):
             description = result['choices'][0]['message']['content']
             return description.strip()
         else:
-            error_data = response.json() if response.status_code != 500 else {"error": {"message": "Internal Server Error"}}
-            error_msg = error_data.get('error', {}).get('message', 'Error desconocido')
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Error desconocido')
+            except:
+                error_msg = response.text
+            
             print(f"Error Groq API {response.status_code}: {error_msg}")
-            return f"Hubo un detalle con la IA ({response.status_code}). Intenta con otra imagen o espera un segundo."
+            return f"Hubo un detalle con la IA ({response.status_code}). {error_msg}"
 
     except Exception as e:
-        print(f"Excepción en AI Service: {str(e)}")
-        return "No pudimos procesar la imagen. Asegúrate de que sea un formato válido (JPG, PNG)."
+        import traceback
+        print(f"Excepción en AI Service:\n{traceback.format_exc()}")
+        return f"No pudimos procesar la imagen: {str(e)}"
