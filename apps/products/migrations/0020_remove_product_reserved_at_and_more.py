@@ -33,42 +33,46 @@ def normalize_product_ids_to_valid_uuid(apps, schema_editor):
     Product = apps.get_model('products', 'Product')
     product_table = Product._meta.db_table
 
-    id_mapping = {}
-    for product in Product._base_manager.all().only('id'):
-        old_id = str(product.id)
+    fk_targets = []
+    for model in apps.get_models():
+        for field in model._meta.get_fields():
+            remote = getattr(field, 'remote_field', None)
+            if remote and remote.model == Product:
+                fk_targets.append((model._meta.db_table, field.column))
+
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(f"SELECT id FROM {product_table}")
+        raw_ids = [str(row[0]) for row in cursor.fetchall()]
+
+        id_mapping = {}
+        for old_id in raw_ids:
+            try:
+                uuid.UUID(old_id)
+            except (ValueError, TypeError, AttributeError):
+                id_mapping[old_id] = str(uuid.uuid4())
+
+        if not id_mapping:
+            return
+
+        # Evita violaciones temporales de FK mientras se sincronizan tablas.
+        if schema_editor.connection.vendor == 'sqlite':
+            cursor.execute('PRAGMA foreign_keys = OFF;')
+
         try:
-            uuid.UUID(old_id)
-            continue
-        except (ValueError, TypeError, AttributeError):
-            new_id = str(uuid.uuid4())
-            id_mapping[old_id] = new_id
-
-    if not id_mapping:
-        return
-
-    # 1) Actualizar PKs en products_product
-    with schema_editor.connection.cursor() as cursor:
-        for old_id, new_id in id_mapping.items():
-            cursor.execute(
-                f"UPDATE {product_table} SET id = %s WHERE id = %s",
-                [new_id, old_id],
-            )
-
-    # 2) Actualizar cualquier FK hacia Product en el estado histórico
-    with schema_editor.connection.cursor() as cursor:
-        for model in apps.get_models():
-            for field in model._meta.get_fields():
-                remote = getattr(field, 'remote_field', None)
-                if not remote or remote.model != Product:
-                    continue
-
-                fk_table = model._meta.db_table
-                fk_column = field.column
-                for old_id, new_id in id_mapping.items():
+            for old_id, new_id in id_mapping.items():
+                for fk_table, fk_column in fk_targets:
                     cursor.execute(
                         f"UPDATE {fk_table} SET {fk_column} = %s WHERE {fk_column} = %s",
                         [new_id, old_id],
                     )
+
+                cursor.execute(
+                    f"UPDATE {product_table} SET id = %s WHERE id = %s",
+                    [new_id, old_id],
+                )
+        finally:
+            if schema_editor.connection.vendor == 'sqlite':
+                cursor.execute('PRAGMA foreign_keys = ON;')
 
 
 def normalize_product_ids_reverse_noop(apps, schema_editor):
