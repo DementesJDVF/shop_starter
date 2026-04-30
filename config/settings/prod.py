@@ -37,6 +37,9 @@ CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=[
         "https://*.up.railway.app",
+        "https://*.vercel.app",
+        "https://front-shop-starter.vercel.app",
+        "https://shopstarter.vercel.app",
         "https://shopstarter.online", 
         "http://shopstarter.online",
         "https://www.shopstarter.online",
@@ -50,6 +53,8 @@ CSRF_TRUSTED_ORIGINS = env.list(
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", 
     default=[
+        "https://*.vercel.app",
+        "https://front-shop-starter.vercel.app",
         "https://shopstarter.vercel.app", 
         "https://shopstarter.online",
         "http://shopstarter.online",
