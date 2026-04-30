@@ -4,6 +4,28 @@ import uuid
 from django.db import migrations, models
 
 
+def cast_product_id_to_uuid_for_postgres(apps, schema_editor):
+    """Apply explicit UUID cast only on PostgreSQL backends."""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+
+    schema_editor.execute(
+        "ALTER TABLE products_product "
+        "ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, '0')::uuid);"
+    )
+
+
+def cast_product_id_to_bigint_for_postgres(apps, schema_editor):
+    """Reverse explicit cast only on PostgreSQL backends."""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+
+    schema_editor.execute(
+        "ALTER TABLE products_product "
+        "ALTER COLUMN id TYPE bigint USING (id::text::bigint);"
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -19,10 +41,10 @@ class Migration(migrations.Migration):
             model_name='product',
             name='reserved_by',
         ),
-        # Reemplazamos el AlterField estándar por uno con casting manual
-        migrations.RunSQL(
-            sql='ALTER TABLE products_product ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, "0")::uuid);',
-            reverse_sql='ALTER TABLE products_product ALTER COLUMN id TYPE bigint USING (id::text::bigint);'
+        # En PostgreSQL forzamos un casteo explícito; en SQLite se omite.
+        migrations.RunPython(
+            code=cast_product_id_to_uuid_for_postgres,
+            reverse_code=cast_product_id_to_bigint_for_postgres,
         ),
         # Luego le decimos a Django que el campo ahora es un UUIDField
         migrations.AlterField(
