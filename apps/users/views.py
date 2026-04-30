@@ -1,4 +1,6 @@
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -49,6 +51,7 @@ class RegisterView(generics.CreateAPIView):
 class MeView(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request):
         if not request.user.is_authenticated:
             return Response({"isAuthenticated": False, "user": None}, status=status.HTTP_200_OK)
