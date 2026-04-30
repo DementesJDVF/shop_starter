@@ -24,6 +24,43 @@ class ProductPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
+
+
+class ProductCreateView(generics.CreateAPIView):
+    """Endpoint exclusivo de creación de productos."""
+    serializer_class = CreProSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if user.role == "ADMIN" or user.is_superuser:
+            vendor_id = request.data.get('vendor')
+            if vendor_id:
+                from apps.users.models import User
+                from rest_framework.exceptions import ValidationError
+                try:
+                    vendor = User.objects.get(id=vendor_id, role="VENDEDOR")
+                except User.DoesNotExist:
+                    raise ValidationError({"vendor": "El vendedor especificado no existe o no tiene rol VENDEDOR."})
+                serializer.save(vendor=vendor)
+            else:
+                serializer.save(vendor=user)
+        elif user.role == "VENDEDOR":
+            serializer.save(vendor=user)
+        else:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Solo los vendedores o administradores pueden crear productos.")
+
+        read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def get(self, request, *args, **kwargs):
+        return Response({"detail": 'Method "GET" not allowed.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     throttle_scope = None
 

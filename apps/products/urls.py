@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.products.views import (
     ProductViewSet,
+    ProductCreateView,
     ProductCatalogView,
     ProductDetailPublicView,
     CategoryViewSet,
@@ -14,7 +15,6 @@ router = DefaultRouter()
 
 # Registramos cada ViewSet con su propio prefijo
 router.register(r'products', ProductViewSet, basename='product')
-router.register(r'create', ProductViewSet, basename='product-create')  # Alias usado por el frontend
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
@@ -35,6 +35,9 @@ urlpatterns = [
         'patch': 'partial_update',
         'delete': 'destroy'
     }), name="category-admin-detail"),
+
+    # Endpoint explícito de creación (solo POST)
+    path("create/", ProductCreateView.as_view(), name="product-create"),
 
     # Rutas públicas específicas ANTES del router genérico
     path("catalog/", ProductCatalogView.as_view(), name="product-catalog-public"),
