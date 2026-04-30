@@ -11,7 +11,13 @@ def cast_product_id_to_uuid_for_postgres(apps, schema_editor):
 
     schema_editor.execute(
         "ALTER TABLE products_product "
-        "ALTER COLUMN id TYPE uuid USING (lpad(id::text, 32, '0')::uuid);"
+        "ALTER COLUMN id TYPE uuid USING ("
+        "regexp_replace("
+        "lpad(id::text, 32, '0'), "
+        "'(.{8})(.{4})(.{4})(.{4})(.{12})', "
+        "E'\\\\1-\\\\2-\\\\3-\\\\4-\\\\5'"
+        ")::uuid"
+        ");"
     )
 
 
@@ -24,7 +30,6 @@ def cast_product_id_to_bigint_for_postgres(apps, schema_editor):
         "ALTER TABLE products_product "
         "ALTER COLUMN id TYPE bigint USING (id::text::bigint);"
     )
-
 
 def normalize_product_ids_to_valid_uuid(apps, schema_editor):
     """
@@ -77,7 +82,6 @@ def normalize_product_ids_to_valid_uuid(apps, schema_editor):
 
 def normalize_product_ids_reverse_noop(apps, schema_editor):
     return
-
 
 class Migration(migrations.Migration):
 
