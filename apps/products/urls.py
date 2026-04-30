@@ -46,7 +46,7 @@ urlpatterns = [
     # Rutas públicas específicas ANTES del router genérico
     path("catalog/", ProductCatalogView.as_view(), name="product-catalog-public"),
     path("nearby/", nearby_products, name="product-nearby"),
-    path("<int:id>/", ProductDetailPublicView.as_view(), name="product-read-id"),
+    path("<uuid:id>/", ProductDetailPublicView.as_view(), name="product-read-id"),
 
     # Resto de rutas del router (CRUD privado)
     path("", include(router.urls)),

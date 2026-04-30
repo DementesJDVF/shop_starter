@@ -26,6 +26,55 @@ def cast_product_id_to_bigint_for_postgres(apps, schema_editor):
     )
 
 
+def normalize_product_ids_to_valid_uuid(apps, schema_editor):
+    """
+    Garantiza IDs UUID válidos en todos los motores y propaga el cambio a FKs.
+    """
+    Product = apps.get_model('products', 'Product')
+    product_table = Product._meta.db_table
+
+    id_mapping = {}
+    for product in Product._base_manager.all().only('id'):
+        old_id = str(product.id)
+        try:
+            uuid.UUID(old_id)
+            continue
+        except (ValueError, TypeError, AttributeError):
+            new_id = str(uuid.uuid4())
+            id_mapping[old_id] = new_id
+
+    if not id_mapping:
+        return
+
+    # 1) Actualizar PKs en products_product
+    with schema_editor.connection.cursor() as cursor:
+        for old_id, new_id in id_mapping.items():
+            cursor.execute(
+                f"UPDATE {product_table} SET id = %s WHERE id = %s",
+                [new_id, old_id],
+            )
+
+    # 2) Actualizar cualquier FK hacia Product en el estado histórico
+    with schema_editor.connection.cursor() as cursor:
+        for model in apps.get_models():
+            for field in model._meta.get_fields():
+                remote = getattr(field, 'remote_field', None)
+                if not remote or remote.model != Product:
+                    continue
+
+                fk_table = model._meta.db_table
+                fk_column = field.column
+                for old_id, new_id in id_mapping.items():
+                    cursor.execute(
+                        f"UPDATE {fk_table} SET {fk_column} = %s WHERE {fk_column} = %s",
+                        [new_id, old_id],
+                    )
+
+
+def normalize_product_ids_reverse_noop(apps, schema_editor):
+    return
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -51,6 +100,10 @@ class Migration(migrations.Migration):
             model_name='product',
             name='id',
             field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
+        ),
+        migrations.RunPython(
+            code=normalize_product_ids_to_valid_uuid,
+            reverse_code=normalize_product_ids_reverse_noop,
         ),
         migrations.AlterField(
             model_name='product',
