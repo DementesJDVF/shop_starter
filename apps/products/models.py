@@ -1,5 +1,5 @@
 """Models for product catalog."""
-# import uuid
+import uuid
 from django.db import models
 from apps.core.models import BaseModel
 from django.conf import settings
@@ -14,11 +14,10 @@ class Category(BaseModel):
         return self.name
 class Product(BaseModel):
     """Represents a product published by a vendor profile."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     class ProductStatus(models.TextChoices):
         PENDING = "PENDING", "Pending Approval"
         AVAILABLE = "AVAILABLE", "Available"
-        RESERVED = "RESERVED", "Reserved"
-        SOLD = "SOLD", "Sold"
         INACTIVE = "INACTIVE", "Inactive"
         REJECTED = "REJECTED", "Rejected"
 
@@ -50,15 +49,7 @@ class Product(BaseModel):
         default=ProductStatus.PENDING,
         db_index=True)
     
-    # Control de Reservas Reales (SRE)
-    reserved_at = models.DateTimeField(null=True, blank=True)
-    reserved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name="reserved_products"
-    )
+    # NO PONER SERVERVAS AQUÍ
     rejection_reason = models.TextField(null=True, blank=True)
     is_featured = models.BooleanField(default=False, db_index=True)
     ai_status = models.CharField(
@@ -151,4 +142,4 @@ class PImages(BaseModel):
     class Meta:
         db_table = "products_images"
     def __str__(self):
-        return f"Imagen de {self.product} - Estado: {self.moderation_status}"
+        return f"Imagen de {self.product} - Estado: {self.moderation_status}"
