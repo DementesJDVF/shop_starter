@@ -83,11 +83,20 @@ class CustomJWTAuthentication(JWTAuthentication):
             return user, validated_token
 
         except (exceptions.AuthenticationFailed, exceptions.PermissionDenied) as e:
+            # SRE: Loguear siempre el motivo en el servidor para depuración remota
+            import logging
+            logger = logging.getLogger("django")
+            
+            error_detail = str(e)
+            user_id = "Anonymous"
+            if hasattr(e, 'detail') and isinstance(e.detail, dict):
+                error_detail = e.detail.get('detail', error_detail)
+
             if header is None:
-                # Logueamos el error exacto para el desarrollador
-                import logging
-                logging.getLogger("django").warning(f"AUTH COOKIE FAIL: {str(e)}")
+                logger.warning(f"AUTH COOKIE FAIL: {error_detail} | Path: {request.path} | Method: {request.method}")
                 return None
+            
+            logger.error(f"AUTH HEADER FAIL: {error_detail} | Path: {request.path}")
             raise
         except Exception as e:
             import logging
