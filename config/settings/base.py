@@ -209,8 +209,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": env("DRF_THROTTLE_ANON", default="100/hour"),
-        "user": env("DRF_THROTTLE_USER", default="1000/hour"),
+        "anon": env("DRF_THROTTLE_ANON", default="10000/hour"),
+        "user": env("DRF_THROTTLE_USER", default="20000/hour"),
         "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
         "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
         "login_ip": "5/min",
