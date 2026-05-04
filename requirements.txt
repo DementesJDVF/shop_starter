@@ -1,4 +1,4 @@
-asgiref==3.11.0
+vscode_lsp_terminal_prompt_tracker= {}
 attrs==25.4.0
 coverage==7.13.4
 distlib==0.4.0
