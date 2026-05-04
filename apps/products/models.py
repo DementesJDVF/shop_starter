@@ -76,13 +76,6 @@ class Product(BaseModel):
                 self.ai_description = bleach.clean(self.ai_description, tags=allowed_tags, strip=True)
         except ImportError:
             pass
-
-        # 2. AUTO-GESTIÓN DE ESTADOS (Business Logic)
-        # Si un producto vendido recibe stock, vuelve a estar disponible.
-        # Si un producto disponible pierde stock, se marca como vendido.
-        if self.status == self.ProductStatus.AVAILABLE:
-            if self.stock <= 0:
-                self.status = self.ProductStatus.INACTIVE
             
         super().save(*args, **kwargs)
 
