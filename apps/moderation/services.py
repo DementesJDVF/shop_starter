@@ -27,20 +27,49 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 MODERATION_PROMPT = """
-Eres un sistema de moderación de contenido para una plataforma de comercio local colombiana.
-Analiza esta imagen y determina si es apropiada para publicarse como foto de producto.
+Eres un sistema de moderación de contenido para una plataforma de comercio colombiana.
+Tu responsabilidad: DETECTAR y RECHAZAR CUALQUIER MATERIAL SENSIBLE o INAPROPIADO.
 
-Responde ÚNICAMENTE con el siguiente formato JSON (sin markdown, sin explicación extra):
+ANALIZA esta imagen con MÁXIMA RIGUROSIDAD y responde con JSON (sin markdown):
+
 {
   "verdict": "APPROVED" | "REJECTED" | "FLAGGED",
-  "reason": "breve explicación en español",
-  "confidence": 0.0 a 1.0
+  "reason": "explicación en español",
+  "confidence": 0.0 a 1.0,
+  "category": "categoría del problema si aplica"
 }
 
-Criterios:
-- APPROVED: Imagen de producto normal, comida, ropa, objetos cotidianos, servicios, etc.
-- REJECTED: Contenido sexual explícito, desnudez, armas ilegales, drogas, violencia explícita, contenido con menores de edad.
-- FLAGGED: Imagen sospechosa o ambigua que requiere revisión humana (ej: imagen borrosa, no parece un producto, texto ofensivo, contenido parcialmente inapropiado).
+─────────────────────────────────────────────────────────────────
+
+CRITERIOS DE RECHAZO ESTRICTO (REJECTED):
+1. SEXUAL: Desnudez, semidesndez, contenido sexual explícito, actos sexuales.
+2. VIOLENCIA: Sangre, heridas abiertas, muerte, combates violentos.
+3. DROGAS & SUSTANCIAS: Marihuana, cocaína, heroína, cualquier droga, paraphernalia.
+4. ARMAS: Pistolas, revólveres, rifles, cuchillos, explosivos, armas blancas peligrosas.
+5. MENORES: Cualquier imagen que sexualice o ponga en riesgo a menores de edad.
+6. ALCOHOL/TABACO: Promoción de bebidas alcohólicas o tabaco (solo se rechaza si es promoción clara).
+7. ODIO: Símbolos nazis, contenido racista, homofóbico o discriminatorio.
+8. EXPLOTACIÓN: Tráfico de personas, esclavitud, abuso.
+
+CRITERIOS DE APROBACIÓN (APPROVED):
+- Comida, bebidas (sin promoción de alcohol)
+- Ropa, accesorios, calzado
+- Electrónica, muebles, decoración
+- Herramientas, servicios, artesanías
+- Plantas, flores, mascotas
+- Cualquier producto o servicio LEGÍTIMO
+
+CRITERIOS AMBIGUOS (FLAGGED - requiere revisión humana):
+- Imagen borrosa o de baja calidad (imposible confirmar contenido)
+- Borderline: casi sexual pero no explícito, o casi violento
+- Texto en imagen: ofensivo, ilegal o de mal gusto
+- Imposible determinar si es producto o no
+- Potencial engaño o estafa
+
+─────────────────────────────────────────────────────────────────
+⚠️  PRIORIDAD: MEJOR RECHAZAR UNO LEGÍTIMO QUE DEJAR PASAR UNO INAPROPIADO.
+Si tienes dudas → FLAGGED para revisión manual.
+Responde SOLO con el JSON, nada más.
 """
 
 # Palabras clave ilegales en texto de producto
@@ -204,7 +233,17 @@ def moderate_image(pimage_instance) -> str:
         return PImages.ModerationStatus.PENDING
 
 
-def _check_and_auto_approve_product(product):
+def _log_pending_notification(product, admin_emails, error):
+    """Log de notificaciones fallidas para que admins puedan revisarlas manualmente."""
+    notification_log = {
+        'product_id': str(product.id),
+        'product_name': product.name,
+        'admin_emails': admin_emails,
+        'error': error,
+        'timestamp': str(logger.handlers[0].formatter._fmt if logger.handlers else 'N/A')
+    }
+    logger.warning(f"Notificación pendiente registrada: {notification_log}")
+
     """Auto-aprueba el producto si TODAS sus imágenes están aprobadas."""
     from apps.products.models import PImages, Product
 
@@ -229,18 +268,168 @@ def _check_and_auto_approve_product(product):
 
 
 def _handle_rejected_product(product):
-    """Rechaza el producto si tiene alguna imagen con contenido inapropiado."""
-    from apps.products.models import Product
+    """
+    Envía TODO el producto a revisión cuando una imagen es rechazada.
+    Crea ProductReview para que admin revise el producto completo.
+    """
+    from apps.products.models import Product, PImages
+    from apps.moderation.models import RejectedImage, ProductReview
+    from django.contrib.auth import get_user_model
 
+    User = get_user_model()
+
+    # Cambiar estado del producto a REJECTED
     if product.status != Product.ProductStatus.REJECTED:
         Product.objects.filter(pk=product.pk).update(
             status=Product.ProductStatus.REJECTED,
-            rejection_reason="Una o más imágenes fueron rechazadas por nuestro sistema de moderación automática por contener contenido inapropiado."
+            rejection_reason="Una o más imágenes fueron rechazadas. El producto ha sido enviado a revisión manual."
         )
-        logger.warning(f"Producto '{product.name}' AUTO-RECHAZADO por Groq IA.")
+        logger.warning(f"Producto '{product.name}' AUTO-RECHAZADO por Groq IA - Enviado a revisión completa.")
+
+    # Obtener imágenes rechazadas
+    rejected_images = product.images.filter(moderation_status=PImages.ModerationStatus.REJECTED)
+
+    # Crear registros de RejectedImage
+    for image in rejected_images:
+        moderation_details = image.moderation_details or {}
         try:
-            from apps.core.services.email_service import send_product_status_notification
-            product.status = Product.ProductStatus.REJECTED
-            send_product_status_notification(product)
+            RejectedImage.objects.get_or_create(
+                image=image,
+                defaults={
+                    'product': product,
+                    'vendor': product.vendor,
+                    'ai_reason': moderation_details.get('reason', 'Contenido inapropiado detectado'),
+                    'ai_confidence': moderation_details.get('confidence', 0),
+                }
+            )
         except Exception as e:
-            logger.warning(f"No se pudo enviar email de rechazo: {e}")
+            logger.error(f"Error creando RejectedImage para {image.pk}: {e}")
+
+    # Crear ProductReview: Enviar TODO el producto a revisión
+    try:
+        product_review, created = ProductReview.objects.get_or_create(
+            product=product,
+            defaults={
+                'vendor': product.vendor,
+                'rejected_images_count': rejected_images.count(),
+                'review_status': ProductReview.ReviewStatus.PENDING,
+            }
+        )
+        if not created:
+            # Actualizar si ya existe
+            product_review.rejected_images_count = rejected_images.count()
+            product_review.review_status = ProductReview.ReviewStatus.PENDING
+            product_review.save()
+
+        logger.info(f"ProductReview creado para {product.name} (ID: {product_review.id})")
+    except Exception as e:
+        logger.error(f"Error creando ProductReview: {e}")
+
+    # Notificar a admins con detalles COMPLETOS del producto
+    try:
+        _notify_admins_full_product_review(product, rejected_images, product_review)
+    except Exception as e:
+        logger.warning(f"Error enviando notificación a admins: {e}")
+
+    # Notificar al vendedor
+    try:
+        from apps.core.services.email_service import send_product_status_notification
+        product.status = Product.ProductStatus.REJECTED
+        send_product_status_notification(product)
+    except Exception as e:
+        logger.warning(f"No se pudo enviar email de rechazo: {e}")
+
+
+def _notify_admins_full_product_review(product, rejected_images, product_review):
+    """
+    Notifica a TODOS los admins sobre PRODUCTO COMPLETO que necesita revisión.
+    Incluye: Nombre, Descripción, Categoría, Precio, Stock, TODAS las imágenes.
+    """
+    from django.contrib.auth import get_user_model
+    from django.core.mail import send_mass_mail
+    from django.template.loader import render_to_string
+    from django.conf import settings
+
+    User = get_user_model()
+
+    # Obtener admins
+    admins = User.objects.filter(is_staff=True, is_active=True)
+    if not admins.exists():
+        logger.warning("No hay admins configurados para notificar")
+        return
+
+    admin_emails = [admin.email for admin in admins if admin.email]
+    if not admin_emails:
+        logger.warning("No hay emails de admin configurados")
+        return
+
+    # Preparar datos COMPLETOS del producto
+    all_images = product.images.all()
+    rejected_images_list = []
+    approved_images_list = []
+
+    for image in all_images:
+        img_data = {
+            'image_url': str(image.url_image),
+            'is_main': image.is_main,
+            'moderation_status': image.moderation_status,
+        }
+
+        if image.moderation_status == 'REJECTED':
+            details = image.moderation_details or {}
+            img_data.update({
+                'reason': details.get('reason', 'Contenido inapropiado'),
+                'confidence': f"{details.get('confidence', 0):.1%}",
+                'is_rejected': True,
+            })
+            rejected_images_list.append(img_data)
+        else:
+            approved_images_list.append(img_data)
+
+    context = {
+        # INFORMACIÓN COMPLETA DEL PRODUCTO
+        'product_id': str(product.id),
+        'product_name': product.name,
+        'product_description': product.description,
+        'product_category': product.category.name if product.category else 'Sin categoría',
+        'product_price': f"${product.price:,.0f}",
+        'product_stock': product.stock,
+        'product_status': product.status,
+
+        # INFORMACIÓN DEL VENDEDOR
+        'vendor_name': product.vendor.get_full_name() or product.vendor.username,
+        'vendor_email': product.vendor.email,
+        'vendor_phone': getattr(product.vendor, 'phone', 'No disponible'),
+        'vendor_username': product.vendor.username,
+
+        # IMÁGENES COMPLETAS
+        'rejected_images': rejected_images_list,
+        'approved_images': approved_images_list,
+        'rejected_images_count': len(rejected_images_list),
+        'approved_images_count': len(approved_images_list),
+        'total_images': len(all_images),
+
+        # ENLACES
+        'product_review_id': str(product_review.id),
+        'admin_review_url': f"{settings.FRONTEND_URL}/admin/moderation/product-reviews/{product_review.id}",
+        'product_detail_url': f"{settings.FRONTEND_URL}/admin/products/{product.id}",
+    }
+
+    try:
+        subject = f"🚨 REVISIÓN COMPLETA DE PRODUCTO: {product.name} ({rejected_images_list.__len__()} imágenes rechazadas)"
+        html_message = render_to_string('moderation/admin_full_product_review_email.html', context)
+
+        send_mass_mail(
+            tuple((
+                subject,
+                '',  # plain text
+                html_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email]
+            ) for email in admin_emails),
+            fail_silently=True,
+        )
+        logger.info(f"Notificación de revisión completa enviada a {len(admin_emails)} admins")
+    except Exception as e:
+        logger.error(f"Error enviando emails a admins: {e}")
+        _log_pending_notification(product, admin_emails, str(e))

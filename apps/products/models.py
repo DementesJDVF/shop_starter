@@ -80,11 +80,9 @@ class Product(BaseModel):
         # 2. AUTO-GESTIÓN DE ESTADOS (Business Logic)
         # Si un producto vendido recibe stock, vuelve a estar disponible.
         # Si un producto disponible pierde stock, se marca como vendido.
-        if self.status in [self.ProductStatus.AVAILABLE, self.ProductStatus.SOLD]:
-            if self.stock > 0:
-                self.status = self.ProductStatus.AVAILABLE
-            else:
-                self.status = self.ProductStatus.SOLD
+        if self.status == self.ProductStatus.AVAILABLE:
+            if self.stock <= 0:
+                self.status = self.ProductStatus.INACTIVE
             
         super().save(*args, **kwargs)
 

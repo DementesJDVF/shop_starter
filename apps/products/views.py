@@ -37,19 +37,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
 
     def get_queryset(self):
-        """
-        Orquesta el queryset según el rol:
-        - Admin/Superuser: Todo.
-        - Vendedor: Sus propios productos.
-        - Anónimo/Cliente: Catálogo público filtrado (Seguridad SRE).
-        """
         user = self.request.user
         vendor_id = self.request.query_params.get('vendor')
         
         if user.is_authenticated:
             return ProductService.get_manageable_products(user, vendor_id=vendor_id)
         
-        # FAIL SECURE: Si no está autenticado, solo catálogo público
         return ProductService.get_public_catalog(vendor_id=vendor_id)
     
     def get_permissions(self):
@@ -61,7 +54,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import PermissionDenied, ValidationError
         user = self.request.user
         
-        # Si es ADMIN o SUPERUSER, puede especificar el vendor
         if user.role == "ADMIN" or user.is_superuser:
             vendor_id = self.request.data.get('vendor')
             if vendor_id:
@@ -72,11 +64,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                 except User.DoesNotExist:
                     raise ValidationError({"vendor": "El vendedor especificado no existe o no tiene rol VENDEDOR."})
             else:
-                # Si no especifica, se le asigna a sí mismo (asumiendo que puede ser admin y tener productos)
                 serializer.save(vendor=user)
             return
 
-        # Si es VENDEDOR, se auto-asigna
         if user.role == "VENDEDOR":
             serializer.save(vendor=user)
         else:
@@ -84,35 +74,26 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         from rest_framework.exceptions import PermissionDenied
-        # Obtener el usuario actual
         user = self.request.user
         
-        # Obtener la instancia antigua para comparar el cambio de estado
         old_instance = self.get_object()
         old_status = old_instance.status
         new_status = serializer.validated_data.get('status', old_status)
         
-        # Seguridad: Solo los Administradores pueden aprobar (PENDIENTE -> DISPONIBLE) o rechazar (PENDIENTE -> RECHAZADO)
         if old_status == "PENDING" and new_status in [Product.ProductStatus.AVAILABLE, "REJECTED"]:
             if user.role != 'ADMIN' and not user.is_superuser:
                 raise PermissionDenied("Solo los administradores pueden aprobar o rechazar productos.")
         
-        # Seguridad adicional: Evitar que los vendedores se auto-aprueben productos
         if user.role == 'VENDEDOR' and old_status != new_status:
-             # Un vendedor solo puede desactivar sus productos, no activarlos si están pendientes o rechazados
              if new_status == Product.ProductStatus.AVAILABLE and old_status in ['PENDING', 'REJECTED']:
                  raise PermissionDenied("No tienes permiso para auto-aprobar productos.")
 
-        # Guardamos los cambios en la base de datos
         instance = serializer.save()
         
-        # Si el estado del producto cambió, notificamos al vendedor
         if old_status != instance.status:
-            # 1. Notificación vía Correo Electrónico
             if instance.status in ["AVAILABLE", "REJECTED"]:
                 send_product_status_notification(instance)
             
-            # 2. Notificación dentro de la Aplicación (Notification model)
             status_label = "Aprobado" if instance.status == "AVAILABLE" else "Rechazado"
             reason_text = f"\nMotivo: {instance.rejection_reason}" if instance.status == "REJECTED" and instance.rejection_reason else ""
             
@@ -124,30 +105,33 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
 
     def create(self, request, *args, **kwargs):
-        # Usamos el serializador de creación pero respondemos con el de lectura
+        import traceback
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+        except Exception as e:
+            logger.error(f"ERROR COMPLETO EN CREATE:\n{traceback.format_exc()}")
+            return Response(
+                {"debug_error": str(e), "trace": traceback.format_exc()},
+                status=500
+            )
         
-        # Respondemos con el objeto completo para que el front se actualice bien
         read_serializer = ReadProSerializer(serializer.instance, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        """Soft Delete: En lugar de borrar físicamente, cambiamos el estado a INACTIVE y activamos is_deleted."""
+        """Soft Delete: cambia el estado a INACTIVE y activa is_deleted."""
         instance = self.get_object()
         
-        # Opcional: Solo dueño o admin
         if request.user.role != 'ADMIN' and not request.user.is_superuser:
             if instance.vendor != request.user:
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("No tienes permisos para borrar este producto.")
 
-        # Realizar Soft Delete (Doble Capa de Seguridad)
         instance.status = Product.ProductStatus.INACTIVE
-        instance.delete() # Esto llama al delete() del BaseModel (is_deleted = True)
+        instance.delete()
         
-        import logging
         logging.getLogger(__name__).info(f"[AUDIT] Producto {instance.id} archivado (Soft Delete) por {request.user.username}.")
         
         return Response({"message": "Producto archivado (desactivado) exitosamente."}, status=status.HTTP_200_OK)
@@ -157,7 +141,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         """Restaura un producto archivado (Soft Delete -> Active)."""
         instance = Product.all_objects.get(pk=pk)
         
-        # Seguridad: Solo dueño o admin
         if request.user.role != 'ADMIN' and not request.user.is_superuser:
             if instance.vendor != request.user:
                 from rest_framework.exceptions import PermissionDenied
@@ -172,7 +155,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         product = self.get_object()
         
-        # Seguridad: Solo el dueño vendedor o un ADMIN (o superuser) pueden generarlo
         if (request.user.role not in ['VENDEDOR', 'ADMIN'] and not request.user.is_superuser) or (request.user.role == 'VENDEDOR' and product.vendor != request.user):
             raise PermissionDenied("No tienes permisos para generar una descripción IA para este producto.")
             
@@ -186,18 +168,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not main_image or not main_image.url_image:
             return Response({"error": "No hay imágenes disponibles para analizar."}, status=status.HTTP_400_BAD_REQUEST)
             
-        # Procesamiento ASÍNCRONO vía Celery (Evita bloquear el servidor)
         from apps.products.tasks import generate_ai_description_task
         source_url = main_image.url_image.url if hasattr(main_image.url_image, 'url') else main_image.url_image
         
         try:
-            # Aseguramos URL absoluta para imágenes locales (media)
             if not source_url.startswith('http'):
                 from django.conf import settings
                 backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
                 source_url = f"{backend_url}{'' if source_url.startswith('/') else '/'}{source_url}"
             
-            # Lanzamos la tarea a Celery y devolvemos estado inicial
             task = generate_ai_description_task.delay(product.id, source_url, is_url=True)
             
             product.ai_status = Product.AIStatus.PROCESSING
@@ -215,7 +194,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             logger.error(f"[SRE] Error en generación directa de IA: {str(e)}")
             return Response({"error": f"Error en el motor de IA: {str(e)}"}, status=500)
 
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
+    # ✅ CORREGIDO: suggest_description ahora es su propio método @action
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def suggest_description(self, request):
         """
         Sugiere una descripción basada en una imagen (URL o archivo).
@@ -223,7 +203,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         image_url = request.data.get('image_url')
         image_file = request.FILES.get('image_file')
-        
+
         # 1. Validación de entrada
         source = image_file if image_file else image_url
         is_url = bool(image_url and not image_file)
@@ -232,12 +212,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({"error": "Se requiere una imagen (URL o archivo)."}, status=400)
 
         try:
-            from apps.ai.services.ai_service import generate_product_description
-            
-            # 2. Procesamiento DIRECTO (Sin conversiones Base64 innecesarias)
-            # El motor de IA (Pillow) puede leer el archivo directamente de request.FILES
             suggestion = generate_product_description(source, is_url=is_url)
-            
+
             return Response({
                 "status": "DONE",
                 "result": suggestion,
@@ -247,6 +223,110 @@ class ProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"[SRE] Error crítico en sugerencia IA síncrona: {str(e)}")
             return Response({"error": f"Error en el motor de IA: {str(e)}"}, status=500)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def review_full_product(self, request):
+        """
+        Admin REVISA COMPLETAMENTE un producto rechazado.
+        Decide si fue falso positivo o legítimamente inapropiado.
+        """
+        from rest_framework.exceptions import PermissionDenied
+        from apps.moderation.models import ProductReview, RejectedImage
+        from apps.products.models import PImages
+        from django.utils import timezone
+
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            raise PermissionDenied("Solo los administradores pueden revisar productos.")
+
+        product_review_id = request.data.get('product_review_id')
+        decision = request.data.get('decision')  # 'APPROVED_PRODUCT' | 'REJECTED_PRODUCT' | 'APPROVED_IMAGES'
+        notes = request.data.get('notes', '')
+
+        if not product_review_id or not decision:
+            return Response(
+                {'error': 'product_review_id y decision son requeridos'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if decision not in ['APPROVED_PRODUCT', 'REJECTED_PRODUCT', 'APPROVED_IMAGES']:
+            return Response(
+                {'error': 'decision debe ser: APPROVED_PRODUCT, REJECTED_PRODUCT o APPROVED_IMAGES'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            product_review = ProductReview.objects.get(id=product_review_id)
+
+            if product_review.review_status != ProductReview.ReviewStatus.PENDING:
+                return Response(
+                    {'error': 'Este producto ya fue revisado'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            product = product_review.product
+            logger.info(f"Admin {request.user.username} revisa producto completo: {product.name} - Decisión: {decision}")
+
+            if decision == 'APPROVED_PRODUCT':
+                PImages.objects.filter(product=product).update(
+                    moderation_status=PImages.ModerationStatus.APPROVED
+                )
+                Product.objects.filter(pk=product.pk).update(
+                    status=Product.ProductStatus.AVAILABLE,
+                    rejection_reason=""
+                )
+                RejectedImage.objects.filter(product=product).update(
+                    review_status=RejectedImage.ReviewStatus.APPROVED
+                )
+                product_review.review_status = ProductReview.ReviewStatus.APPROVED_PRODUCT
+
+            elif decision == 'REJECTED_PRODUCT':
+                Product.objects.filter(pk=product.pk).update(
+                    status=Product.ProductStatus.REJECTED,
+                    rejection_reason=notes or "Producto rechazado tras revisión manual: contenido inapropiado"
+                )
+                RejectedImage.objects.filter(product=product).update(
+                    review_status=RejectedImage.ReviewStatus.CONFIRMED_REJECTED
+                )
+                product_review.review_status = ProductReview.ReviewStatus.REJECTED_PRODUCT
+
+            elif decision == 'APPROVED_IMAGES':
+                PImages.objects.filter(product=product).update(
+                    moderation_status=PImages.ModerationStatus.APPROVED
+                )
+                Product.objects.filter(pk=product.pk).update(
+                    status=Product.ProductStatus.AVAILABLE,
+                    rejection_reason=""
+                )
+                RejectedImage.objects.filter(product=product).update(
+                    review_status=RejectedImage.ReviewStatus.APPROVED
+                )
+                product_review.review_status = ProductReview.ReviewStatus.APPROVED_IMAGES
+
+            product_review.reviewed_by = request.user
+            product_review.reviewed_at = timezone.now()
+            product_review.admin_notes = notes
+            product_review.save()
+
+            try:
+                product.refresh_from_db()
+                send_product_status_notification(product)
+            except Exception as e:
+                logger.warning(f"Error enviando email de decisión: {e}")
+
+            from apps.moderation.serializers import ProductReviewDetailSerializer
+            return Response(
+                ProductReviewDetailSerializer(product_review).data,
+                status=status.HTTP_200_OK
+            )
+
+        except ProductReview.DoesNotExist:
+            return Response(
+                {'error': 'ProductReview no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error revisando producto: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'], url_path='tasks/(?P<task_id>[^/.]+)')
     def get_task_status(self, request, task_id=None):
@@ -274,21 +354,131 @@ class ProductViewSet(viewsets.ModelViewSet):
             elif state == 'STARTED':
                 return Response({"status": "PROCESSING"})
             
-            # PENDING o estados desconocidos
             return Response({"status": "PENDING"})
             
         except Exception as e:
             logger.error(f"[SRE] Error al consultar tarea {task_id}: {str(e)}")
             return Response({"error": "No se pudo consultar el estado de la tarea."}, status=500)
 
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def approve_rejected_image(self, request):
+        """
+        Admin aprueba una imagen rechazada (falso positivo).
+        Si todas las imágenes aprueban → Producto pasa a AVAILABLE.
+        """
+        from rest_framework.exceptions import PermissionDenied
+        from apps.moderation.models import RejectedImage
+        from apps.products.models import PImages
+        from django.utils import timezone
+
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            raise PermissionDenied("Solo los administradores pueden revisar imágenes.")
+
+        image_id = request.data.get('image_id')
+        notes = request.data.get('notes', '')
+
+        if not image_id:
+            return Response({'error': 'image_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rejected = RejectedImage.objects.get(id=image_id)
+
+            if rejected.review_status != RejectedImage.ReviewStatus.PENDING:
+                return Response(
+                    {'error': 'Solo se pueden revisar imágenes pendientes'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            rejected.review_status = RejectedImage.ReviewStatus.APPROVED
+            rejected.reviewed_by = request.user
+            rejected.reviewed_at = timezone.now()
+            rejected.admin_notes = notes
+            rejected.save()
+
+            PImages.objects.filter(pk=rejected.image.pk).update(
+                moderation_status=PImages.ModerationStatus.APPROVED
+            )
+
+            product = rejected.product
+            all_approved = all(
+                img.moderation_status == PImages.ModerationStatus.APPROVED
+                for img in product.images.all()
+            )
+
+            if all_approved and product.status == Product.ProductStatus.REJECTED:
+                Product.objects.filter(pk=product.pk).update(
+                    status=Product.ProductStatus.AVAILABLE,
+                    rejection_reason=""
+                )
+                try:
+                    product.refresh_from_db()
+                    send_product_status_notification(product)
+                except Exception as e:
+                    logger.warning(f"Error enviando email de aprobación: {e}")
+
+            from apps.moderation.serializers import RejectedImageDetailSerializer
+            return Response(
+                RejectedImageDetailSerializer(rejected).data,
+                status=status.HTTP_200_OK
+            )
+
+        except RejectedImage.DoesNotExist:
+            return Response({'error': 'Imagen rechazada no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error aprobando imagen: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def confirm_rejected_image(self, request):
+        """
+        Admin confirma el rechazo de una imagen (contenido definitivamente inapropiado).
+        """
+        from rest_framework.exceptions import PermissionDenied
+        from apps.moderation.models import RejectedImage
+        from django.utils import timezone
+
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            raise PermissionDenied("Solo los administradores pueden revisar imágenes.")
+
+        image_id = request.data.get('image_id')
+        notes = request.data.get('notes', '')
+
+        if not image_id:
+            return Response({'error': 'image_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rejected = RejectedImage.objects.get(id=image_id)
+
+            if rejected.review_status != RejectedImage.ReviewStatus.PENDING:
+                return Response(
+                    {'error': 'Solo se pueden revisar imágenes pendientes'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            rejected.review_status = RejectedImage.ReviewStatus.CONFIRMED_REJECTED
+            rejected.reviewed_by = request.user
+            rejected.reviewed_at = timezone.now()
+            rejected.admin_notes = notes
+            rejected.save()
+
+            from apps.moderation.serializers import RejectedImageDetailSerializer
+            return Response(
+                RejectedImageDetailSerializer(rejected).data,
+                status=status.HTTP_200_OK
+            )
+
+        except RejectedImage.DoesNotExist:
+            return Response({'error': 'Imagen rechazada no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error confirmando rechazo: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ProductCatalogView(generics.ListAPIView):
     """
     Public endpoint for listing active products from active vendors.
-    Supports filtering by vendor via query parameter.
     """
     serializer_class = ReadProSerializer
-
     permission_classes = [AllowAny]
     pagination_class = ProductPagination
     filterset_fields = ['category']
@@ -298,11 +488,11 @@ class ProductCatalogView(generics.ListAPIView):
         vendor_id = self.request.query_params.get('vendor')
         user = self.request.user
         
-        # Si un ADMIN o el VENDEDOR dueño está viendo el catálogo (ej. inspección), mostrar todo.
         if user.is_authenticated and (user.role == 'ADMIN' or user.is_superuser):
              return ProductService.get_manageable_products(user, vendor_id=vendor_id)
              
         return ProductService.get_public_catalog(vendor_id=vendor_id)
+
 
 class ProductDetailPublicView(generics.RetrieveAPIView):
     """
@@ -314,12 +504,11 @@ class ProductDetailPublicView(generics.RetrieveAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        # The service returns a single product or None, but RetrieveAPIView 
-        # expects a queryset. So we filter using the service logic.
         return Product.objects.filter(
             status=Product.ProductStatus.AVAILABLE,
             vendor__status='ACTIVE'
         )
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -331,29 +520,27 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         from apps.users.permissions import IsAdmin
         return [IsAdmin()]
-    # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
-    # puedes sobrescribir esta función:
+
     def perform_create(self, serializer):
-        # Aquí podrías, por ejemplo, validar algo antes de guardar
         serializer.save()
+
 
 class CategoryViewGet(viewsets.ReadOnlyModelViewSet):
     """
     Vista simple para ver la lista de categorías y el detalle de cada una.
     """
-    # Usamos objects para mostrar solo categorías activas y no eliminadas
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     authentication_classes = []
     permission_classes = [AllowAny]
-    # Especificamos que busque por el campo 'id'
     lookup_field = 'id'
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @throttle_classes([ScopedRateThrottle])
 def nearby_products(request):
-    request.throttle_scope = 'anon' # Limitamos por IP para evitar abuso de cálculos geométricos
+    request.throttle_scope = 'anon'
     from apps.geo.models import Location
     from apps.geo.utils import haversine
     
@@ -377,7 +564,6 @@ def nearby_products(request):
         )
     """
 
-    # 1 & 2. Filtramos locaciones en SQL puro limitando el dataset en disco
     locations = Location.objects.select_related("user").filter(
         user__status='ACTIVE',
         user__role='VENDEDOR',
@@ -387,26 +573,23 @@ def nearby_products(request):
     ).filter(distance__lte=radius)
 
     nearby_user_ids = []
-    user_distances = {} # userId -> distance
+    user_distances = {}
 
     for loc in locations:
         nearby_user_ids.append(loc.user.id)
         user_distances[loc.user.id] = round(loc.distance, 2)
 
-    # 3. Obtenemos productos de esos vendedores (solo los disponibles)
     products = Product.objects.filter(
         vendor__in=nearby_user_ids,
         status=Product.ProductStatus.AVAILABLE
     ).select_related('category', 'vendor').prefetch_related('images')
 
-    # 4. Serializamos y añadimos la distancia
     data = []
     for product in products:
         prod_data = ReadProSerializer(product, context={'request': request}).data
         prod_data['distance'] = user_distances.get(product.vendor.id)
         data.append(prod_data)
 
-    # Opcional: ordenar por distancia
     data.sort(key=lambda x: x['distance'] if x['distance'] is not None else 999)
 
     return Response(data)

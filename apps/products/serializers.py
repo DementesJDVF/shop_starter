@@ -22,26 +22,29 @@ class PImageWriteSerializer(serializers.Serializer):
     def validate(self, data):
         raw = data.get('url_image', '')
 
-        # Si llega como Base64 (data:image/jpeg;base64,...)
         if raw.startswith('data:'):
             try:
                 import cloudinary.uploader
                 header, encoded = raw.split(';base64,', 1)
                 file_data = base64.b64decode(encoded)
                 
-                # Subida directa a Cloudinary para evitar fallos de configuración de storage
                 upload_result = cloudinary.uploader.upload(
                     file_data,
                     folder="products/images/",
                     resource_type="auto"
                 )
-                
-                # Guardamos la URL COMPLETA para que sea infalible al leer
                 data['url_image'] = upload_result['secure_url']
+            
+            # ✅ REEMPLAZA el except actual por este:
             except Exception as e:
+                import traceback
                 import logging
-                logging.getLogger(__name__).error(f"Error subiendo a Cloudinary: {e}")
-                raise serializers.ValidationError({"url_image": f"Error al subir imagen a la nube: {str(e)}"})
+                logging.getLogger(__name__).error(
+                    f"[CLOUDINARY ERROR]\n{traceback.format_exc()}"
+                )
+                raise serializers.ValidationError({
+                    "url_image": f"Error detallado: {str(e)}"
+                })
         
         # Si llega como URL externa
         elif raw.startswith(('http://', 'https://')):
@@ -93,11 +96,15 @@ class PImageReadSerializer(serializers.ModelSerializer):
             return str(obj.url_image) if obj.url_image else None
 
 
+# En CreProSerializer, agrega validaciones explícitas de tipo:
 class CreProSerializer(serializers.ModelSerializer):
-    """Serializer para CREAR/EDITAR productos (el vendedor envía datos)."""
     images = PImageWriteSerializer(many=True, required=False)
     vendor = serializers.PrimaryKeyRelatedField(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+
+    # ✅ Forzar tipos correctos explícitamente
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    stock = serializers.IntegerField()
 
     class Meta:
         model = Product
@@ -106,12 +113,19 @@ class CreProSerializer(serializers.ModelSerializer):
             'name', 'description', 'ai_description', 'price', 'stock',
             'status', 'rejection_reason', 'is_featured', 'images', 'is_deleted'
         ]
-        read_only_fields = ['vendor'] # 'status' is no longer read_only globally; we will handle permissions in the view.
+        read_only_fields = ['vendor']
 
+    # En serializers.py, en el método create de CreProSerializer:
     @transaction.atomic
     def create(self, validated_data):
         images_data = validated_data.pop('images', [])
-        product = Product.objects.create(**validated_data)
+        
+        # ✅ Forzar UUID explícito para evitar datatype mismatch en SQLite
+        import uuid
+        product = Product.objects.create(
+            id=uuid.uuid4(),
+            **validated_data
+        )
         for img_data in images_data:
             PImages.objects.create(product=product, **img_data)
         return product
