@@ -10,12 +10,13 @@ GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY', 
 
 # Endpoint de Groq
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-# Modelo Vision de Groq (Llama 3.2 Vision - El más rápido y estable)
-GROQ_MODEL = "llama-3.2-11b-vision-preview"
+
+# Modelo Vision de Groq
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 def generate_product_description(image_file_path_or_url, is_url=False):
     """
-    Toma una imagen, la redimensiona y usa Groq (Llama 3.2 Vision) 
+    Toma una imagen, la redimensiona y usa Groq (Llama 4 Scout Vision)
     para generar una descripción técnica y llamativa en español.
     """
     if not GROQ_API_KEY:
@@ -31,17 +32,16 @@ def generate_product_description(image_file_path_or_url, is_url=False):
             if hasattr(image_file_path_or_url, 'seek'):
                 image_file_path_or_url.seek(0)
 
-        # 2. Procesar imagen (Redimensionar para ahorrar tokens y evitar errores 400)
-        # Si la imagen ya es pequeña (optimización de frontend), saltamos el procesamiento pesado
+        # 2. Redimensionar si es necesario
         if img.width > 800 or img.height > 800:
             max_size = (800, 800)
             img.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        # Convertir a RGB si es necesario (ej: PNG transparente a JPEG)
+
+        # Convertir a RGB si es necesario (PNG transparente → JPEG)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-            
-        # 3. Guardar en memoria como JPEG comprimido (Calidad 60 para máxima velocidad)
+
+        # 3. Guardar en memoria como JPEG comprimido
         buffer = io.BytesIO()
         img.save(buffer, format="JPEG", quality=60)
         base64_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
@@ -51,7 +51,6 @@ def generate_product_description(image_file_path_or_url, is_url=False):
             "Authorization": f"Bearer {GROQ_API_KEY}",
             "Content-Type": "application/json"
         }
-
         payload = {
             "model": GROQ_MODEL,
             "messages": [
@@ -77,17 +76,22 @@ def generate_product_description(image_file_path_or_url, is_url=False):
 
         # 5. Llamar a Groq
         response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
-        
+
         if response.status_code == 200:
             result = response.json()
             description = result['choices'][0]['message']['content']
             return description.strip()
         else:
-            error_data = response.json() if response.status_code != 500 else {"error": {"message": "Internal Server Error"}}
-            error_msg = error_data.get('error', {}).get('message', 'Error desconocido')
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Error desconocido')
+            except Exception:
+                error_msg = response.text
+
             print(f"Error Groq API {response.status_code}: {error_msg}")
-            return f"Hubo un detalle con la IA ({response.status_code}). Intenta con otra imagen o espera un segundo."
+            return f"Hubo un detalle con la IA ({response.status_code}). {error_msg}"
 
     except Exception as e:
-        print(f"Excepción en AI Service: {str(e)}")
-        return "No pudimos procesar la imagen. Asegúrate de que sea un formato válido (JPG, PNG)."
+        import traceback
+        print(f"Excepción en AI Service:\n{traceback.format_exc()}")
+        return f"No pudimos procesar la imagen: {str(e)}"
