@@ -7,13 +7,14 @@ from apps.products.views import (
     CategoryViewSet,
     CategoryViewGet,
     nearby_products,
+    ProductDetailView
 )
 
 # Creamos un ÚNICO router para toda la aplicación de productos
 router = DefaultRouter()
 
 # Registramos cada ViewSet con su propio prefijo
-router.register(r'products', ProductViewSet, basename='product')
+router.register(r'products', ProductDetailView, basename='product')
 router.register(r'create', ProductViewSet, basename='product-create')  # Alias usado por el frontend
 router.register(r'categories', CategoryViewSet, basename='category')
 

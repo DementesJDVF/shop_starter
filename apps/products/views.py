@@ -19,6 +19,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class ProductDetailView(viewsets.ReadOnlyModelViewSet):
+    """
+    Un ViewSet automático para ver la lista de productos
+    y el detalle de cada uno por ID.
+    """
+    queryset = Product.objects.filter(status="AVAILABLE")
+    serializer_class = ReadProSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'id' # Esto asegura que busque por UUID
+
 class ProductPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
