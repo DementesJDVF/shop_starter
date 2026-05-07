@@ -4,7 +4,7 @@ from channels.layers import get_channel_layer
 
 async def simulate():
     channel_layer = get_channel_layer()
-    lat, lng = 2.44, -76.61  # tu zona
+    lat, lng = 2.44, -76.61  # your zone
 
     while True:
         lat += random.uniform(-0.0003, 0.0003)
