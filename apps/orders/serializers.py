@@ -25,6 +25,14 @@ class OrderSerializer(serializers.ModelSerializer):
         quantity = data.get('quantity')
         user = self.context['request'].user
         
+        # Validar existencia de datos
+        if not quantity or quantity <= 0:
+            raise serializers.ValidationError({"quantity": "Cantidad no válida."})
+
+        # Validar Stock
+        if quantity > product.stock:
+            raise serializers.ValidationError({"quantity": "Stock insuficiente."})
+        
         # Bloqueo Anti-Fraude
         if product.vendor == user:
             raise serializers.ValidationError({"product": "No puedes comprar tus propios productos."})
