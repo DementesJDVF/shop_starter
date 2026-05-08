@@ -38,38 +38,35 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """Crea una orden con IDEMPOTENCIA y la pone en estado RESERVED."""
-        # 1. IDEMPOTENCIA: Evitar doble click / doble orden del mismo producto
+        # 1. Obtener producto y validar existencia
         product_id = request.data.get('product')
-        if product_id:
-            recent_duplicate = Order.objects.filter(
-                client=request.user,
-                product_id=product_id,
-                status=Order.Status.RESERVED,
-                created_at__gte=timezone.now() - timedelta(minutes=1) # Ventana de 1 minuto
-            ).exists()
-            
-            if recent_duplicate:
-                return Response(
-                    {"error": "Ya tienes una reserva reciente para este producto. Por favor, revisa tus compras o espera un momento."},
-                    status=status.HTTP_409_CONFLICT
-                )
+        try:
+            product_obj = Product.objects.get(id=product_id)
+        except (Product.DoesNotExist, ValidationError):
+            return Response({"error": "Producto no encontrado."}, status=404)
 
+        # 2. Idempotencia (Evitar duplicados en 1 min)
+        if Order.objects.filter(
+            client=request.user, 
+            product=product_obj, 
+            status=Order.Status.RESERVED,
+            created_at__gte=timezone.now() - timedelta(minutes=1)
+        ).exists():
+            return Response({"error": "Ya tienes una reserva reciente."}, status=409)
+
+        # 3. Validar con el Serializer
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        try:
-            order = serializer.save(
-                client=self.request.user,
-                status=Order.Status.RESERVED
-            )
-            logger.info(f"[AUDIT] Orden {order.id} creada por {request.user.username} para producto {product_id}.")
-            return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
-        except DjangoValidationError as e:
-            return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"[SRE] Error inesperado al crear orden: {str(e)}")
-            return Response({"error": "No se pudo procesar la reserva en este momento."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 4. Guardar inyectando los datos del producto
+        order = serializer.save(
+            client=request.user,
+            vendor=product_obj.vendor, # Lo sacamos del objeto que ya buscamos
+            unit_price=product_obj.price,
+            status=Order.Status.RESERVED
+        )
+
+        return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='mark-as-paid')
     def mark_as_paid(self, request, pk=None):

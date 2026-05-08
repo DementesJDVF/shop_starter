@@ -20,6 +20,8 @@ class Product(BaseModel):
         AVAILABLE = "AVAILABLE", "Available"
         INACTIVE = "INACTIVE", "Inactive"
         REJECTED = "REJECTED", "Rejected"
+        RESERVED = 'RESERVED', 'Reserved'
+        SOLD = 'SOLD', 'Sold'
 
     class AIStatus(models.TextChoices):
         NONE = "NONE", "Ninguno"

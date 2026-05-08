@@ -7,6 +7,7 @@ from apps.orders.models import Order
 class OrderSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
     client = serializers.PrimaryKeyRelatedField(read_only=True)
+    vendor = serializers.PrimaryKeyRelatedField(source='product.vendor', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
     client_name = serializers.CharField(source='client.username', read_only=True)
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
@@ -24,7 +25,7 @@ class OrderSerializer(serializers.ModelSerializer):
         product = data.get('product')
         quantity = data.get('quantity')
         user = self.context['request'].user
-        
+
         # Validar existencia de datos
         if not quantity or quantity <= 0:
             raise serializers.ValidationError({"quantity": "Cantidad no válida."})
