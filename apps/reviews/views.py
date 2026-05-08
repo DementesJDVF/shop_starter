@@ -36,7 +36,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         if vendor_id:
             try:
                 uuid.UUID(str(vendor_id))
-                avg_rating = queryset.aggregate(Avg('rating'))['rating__avg'] or 0
+                avg_rating = queryset.aggregate(Avg('rate'))['rate__avg'] or 0
                 total_reviews = queryset.count()
                 
                 # Serializamos los resultados (puedes usar paginación si quieres, pero aquí es simple)
