@@ -90,7 +90,7 @@ class Order(BaseModel):
                 self.expires_at = timezone.now() + timezone.timedelta(minutes=15)
                 self.status = self.Status.RESERVED
                 
-                product.stock -= self.quantity
+                # > product.stock -= self.quantity
                 
                 # El estado del producto solo cambia a SOLD si el stock llega a 0
                 if product.stock <= 0:
