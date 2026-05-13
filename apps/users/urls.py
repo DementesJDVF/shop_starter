@@ -17,10 +17,12 @@ from .views import (
     MeView,
     RegisterView,
     VendorOnlyView,
+    MyProfileView,
+    MyProfilePictureView,
 )
 
 urlpatterns = [
-    path('', include(router.urls)), # Incluimos las rutas del router (admin/users/)
+    path('', include(router.urls)),
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
@@ -31,13 +33,15 @@ urlpatterns = [
     path("admin/test/", AdminOnlyView.as_view(), name="admin_test"),
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
-    
+
+    # 🆕 Mi perfil y foto de perfil
+    path("me/profile/", MyProfileView.as_view(), name="my_profile"),
+    path("me/profile-picture/", MyProfilePictureView.as_view(), name="my_profile_picture"),
+
     path("list/", UserView.as_view(), name="read"),
-    
-    # Soporte para borrado directo solicitado por el frontend
+
     path("<str:pk>/", AdminUserViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
 
-    # Use str for UUID compatibility
     path("<str:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
     path("<str:user_id>/status/", ChangeUserStatusView.as_view(), name="change_user_status"),
 ]
