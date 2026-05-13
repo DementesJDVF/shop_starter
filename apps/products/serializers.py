@@ -104,7 +104,7 @@ class CreProSerializer(serializers.ModelSerializer):
 
     # ✅ Forzar tipos correctos explícitamente
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    stock = serializers.IntegerField()
+    stock = serializers.BooleanField()
 
     class Meta:
         model = Product
@@ -129,6 +129,10 @@ class CreProSerializer(serializers.ModelSerializer):
         for img_data in images_data:
             PImages.objects.create(product=product, **img_data)
         return product
+
+    def validate_stock(self, value):
+        """Convierte el booleano del frontend a entero para la base de datos."""
+        return 1 if value else 0
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -161,6 +165,11 @@ class ReadProSerializer(serializers.ModelSerializer):
             'status', 'rejection_reason', 'is_featured', 'images', 'created_at',
             'distance', 'latitude', 'longitude', 'is_deleted'
         ]
+    def to_representation(self, instance):
+        """Asegura que stock se devuelva como booleano."""
+        data = super().to_representation(instance)
+        data['stock'] = bool(instance.stock > 0)
+        return data
 
     def get_distance(self, obj):
         request = self.context.get('request')
