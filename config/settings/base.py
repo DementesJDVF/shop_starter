@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.audit",
     "apps.chat",
+    "apps.terms",
 
     # Third Party
     "drf_spectacular",
@@ -337,6 +338,17 @@ ANYMAIL = {
 
 FRONTEND_URL = env("FRONTEND_URL", default="https://shopstarter.online")
 BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
+
+SHOPSTARTER_TERMS_VERSION = env("SHOPSTARTER_TERMS_VERSION", default="1.0")
+SHOPSTARTER_TERMS_CONTENT = {
+    "v1": """ShopStarter - Términos y Condiciones de Privacidad
+
+1. Uso de la plataforma: El usuario se compromete a utilizar ShopStarter únicamente para fines lícitos.
+2. Responsabilidades: ShopStarter no se hace responsable por el contenido publicado por vendedores terceros.
+3. Privacidad: Los datos personales son tratados conforme a la política de privacidad vigente.
+4. Aceptación: Al registrarse o iniciar sesión, el usuario acepta estos términos en su versión actual.
+""",
+}
 
 # CELERY Y REDIS
 _redis_logger = logging.getLogger(__name__) if 'logging' in locals() else None
