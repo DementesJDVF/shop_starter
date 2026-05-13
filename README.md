@@ -94,6 +94,12 @@ ejecutar las migraciones.
 python3 manage.py migrate
 ```
 
+### Cargar términos y condiciones oficiales
+
+``` bash
+python manage.py loaddata apps/terms/fixtures/terms_v1.json
+```
+
 ------------------------------------------------------------------------
 
 ## 7. Ejecutar el servidor de desarrollo
