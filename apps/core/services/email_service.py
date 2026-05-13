@@ -1,12 +1,14 @@
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 def send_product_status_notification(product):
     """
     Envía un correo electrónico al vendedor informando sobre el cambio de estado de su producto.
     """
     vendor_email = product.vendor.email
-    status_label = "APROBADO" if product.status == "ACTIVE" else "RECHAZADO"
+    status_label = "APROBADO" if product.status == "AVAILABLE" else "RECHAZADO"
     
     subject = f"Actualización de tu producto: {product.name}"
     
@@ -37,31 +39,65 @@ def send_product_status_notification(product):
 
 def send_user_status_notification(user):
     """
-    Envía un correo al usuario informando si su cuenta fue APROBADA (ACTIVE) o RECHAZADA.
+    Envía un correo profesional al usuario informando sobre el estado de su cuenta.
     """
-    status_label = "ACTIVADA" if user.status == "ACTIVE" else "RECHAZADA/BLOQUEADA"
+    is_active = user.status == "ACTIVE"
+    status_label = "CUENTA ACTIVADA" if is_active else "CUENTA RESTRINGIDA"
+    bg_color = "#10b981" if is_active else "#ef4444"
     
-    subject = f"Actualización de tu cuenta en ShopStarter"
-    message = f"""
-    Hola {user.username},
+    custom_message = (
+        "¡Buenas noticias! Tu cuenta ha sido verificada. Ya puedes iniciar sesión, "
+        "gestionar tus productos y realizar compras en nuestra plataforma."
+        if is_active else 
+        "Tu cuenta ha sido bloqueada o está bajo revisión por incumplir nuestras políticas de seguridad."
+    )
+
+    context = {
+        'username': user.username,
+        'status_label': status_label,
+        'bg_color': bg_color,
+        'custom_message': custom_message
+    }
     
-    Te informamos que el estado de tu cuenta ha sido actualizado a: {status_label}.
-    
-    Si el estado es ACTIVADA, ya puedes iniciar sesión y empezar a vender o comprar.
-    Si el estado es RECHAZADA, por favor contacta con soporte para más información.
-    
-    ¡Gracias por ser parte de ShopStarter!
-    """
-    
+    html_content = render_to_string('emails/user_status.html', context)
+    text_content = strip_tags(html_content)
+
     try:
         send_mail(
-            subject,
-            message,
+            f"Actualización de Seguridad: {status_label}",
+            text_content,
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
+            html_message=html_content,
             fail_silently=False,
         )
         return True
     except Exception as e:
         print(f"Error enviando correo de usuario: {e}")
+        return False
+
+def send_password_reset_email(user, reset_url):
+    """
+    Envía un correo premium para restablecer la contraseña.
+    """
+    context = {
+        'username': user.username,
+        'reset_url': reset_url
+    }
+    
+    html_content = render_to_string('emails/password_reset.html', context)
+    text_content = strip_tags(html_content)
+    
+    try:
+        send_mail(
+            "Restablecer tu contraseña en ShopStarter",
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_content,
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Error enviando correo de recuperación: {e}")
         return False

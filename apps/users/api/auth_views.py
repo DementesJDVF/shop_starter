@@ -1,65 +1,191 @@
 from rest_framework import permissions, status
-from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 
-from rest_framework.viewsets import ModelViewSet
-from apps.users.models import User
+from apps.users.serializers import LoginSerializer, UserSerializer
+from apps.users.services.auth_service import AuthService
+from apps.core.middleware import get_client_ip_from_request, get_current_user_agent
+from apps.users.throttles import LoginIPRateThrottle, LoginUserRateThrottle
 
-from apps.core.middleware import get_client_ip_from_request
-from apps.users.application.services import UserService
-from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerAll
-from apps.users.throttles import LoginRateThrottle
-from apps.users.models import User
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginView(APIView):
+    """
+    VISTA DE LOGIN (ORQUESTADOR):
+    Se encarga de recibir la petición, delegar la lógica al AuthService y 
+    configurar las cookies seguras en la respuesta.
+    """
     serializer_class = LoginSerializer
-    authentication_classes = []
     permission_classes = (permissions.AllowAny,)
-    throttle_classes = (LoginRateThrottle,)
-    serializer_class = LoginSerializer
-
-    def get_serializer(self, *args, **kwargs):
-        return self.serializer_class(*args, **kwargs)
-
-    def get_throttles(self):
-        if self.request.method == "POST":
-            return super().get_throttles()
-        return []
-
-    def get(self, request):
-        saved_logins = request.session.get("saved_logins", [])[:10]
-        return Response(
-            saved_logins,
-            status=status.HTTP_200_OK,
-        )
+    throttle_classes = (LoginIPRateThrottle, LoginUserRateThrottle)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
-        saved_logins = request.session.get("saved_logins", [])
-        login_entry = {"email": user.email}
+        try:
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.validated_data["user"]
 
-        saved_logins = [entry for entry in saved_logins if entry != login_entry]
-        saved_logins.insert(0, login_entry)
-        request.session["saved_logins"] = saved_logins[:10]
+            # Delegar al servicio (Lógica de Negocio + Auditoría)
+            refresh = AuthService.login_user(
+                user=user,
+                ip_address=get_client_ip_from_request(request),
+                user_agent=get_current_user_agent()
+            )
 
-        refresh = UserService.login_user(
-            user=user,
-            ip_address=get_client_ip_from_request(request),)
-        return Response(
-            {
+            response = Response({
                 "message": "Login exitoso",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
-                "user": UserSerializer(user).data,
-            },
-            status=status.HTTP_200_OK,
+                "user": UserSerializer(user).data
+            }, status=status.HTTP_200_OK)
+            
+            self._set_auth_cookies(response, refresh, request)
+            return response
+            
+        except Exception as e:
+            # Auditoría de fallo de login
+            email = request.data.get('email', 'unknown')
+            AuthService.log_failed_login(
+                email=email,
+                ip_address=get_client_ip_from_request(request),
+                user_agent=get_current_user_agent(),
+                reason=str(e)
+            )
+            raise e
+
+    def _set_auth_cookies(self, response, refresh, request):
+        from django.conf import settings
+        is_prod = not settings.DEBUG
+        cookie_secure = True if is_prod else request.is_secure()
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
+
+        response.set_cookie(
+            key='access_token',
+            value=str(refresh.access_token),
+            httponly=True,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
+            max_age=3600 # 1 hora (Acortado para seguridad)
         )
-class UserView(APIView):
+        response.set_cookie(
+            key='refresh_token',
+            value=str(refresh),
+            httponly=True,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
+            max_age=3600*24*7 # 7 días
+        )
+
+class CustomTokenRefreshView(APIView):
+    """
+    VISTA DE REFRESCO (ORQUESTADOR):
+    Permite obtener un nuevo Access Token usando el Refresh Token de la cookie.
+    """
     permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        
+        # Delegar al servicio
+        refresh = AuthService.refresh_session(
+            refresh_token_str=refresh_token,
+            ip_address=get_client_ip_from_request(request),
+            user_agent=get_current_user_agent()
+        )
+
+        response = Response({"message": "Sesión refrescada"}, status=status.HTTP_200_OK)
+        
+        # Actualizar cookies (Rotación de tokens)
+        self._set_auth_cookies(response, refresh, request)
+        return response
+
+    def _set_auth_cookies(self, response, refresh, request):
+        from django.conf import settings
+        is_prod = not settings.DEBUG
+        cookie_secure = True if is_prod else request.is_secure()
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
+        
+        response.set_cookie(
+            key='access_token', value=str(refresh.access_token),
+            httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=3600
+        )
+        # Si SimpleJWT está configurado para rotar, habrá un nuevo refresh token
+        response.set_cookie(
+            key='refresh_token', value=str(refresh),
+            httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=3600*24*7
+        )
+
+class CSRFTokenView(APIView):
+    """
+    VISTA CSRF:
+    Provee el token CSRF necesario para el frontend en peticiones seguras.
+    """
+    permission_classes = [permissions.AllowAny]
     def get(self, request):
+        from django.middleware.csrf import get_token
+        return Response({"csrfToken": get_token(request)})
+
+class UserView(APIView):
+    """
+    VISTA DE USUARIOS:
+    Permite obtener la lista de usuarios (protegida para administradores).
+    """
+    permission_classes = [permissions.IsAdminUser]
+    def get(self, request):
+        from apps.users.models import User
+        from apps.users.serializers import UserSerializer
         users = User.objects.all()
-        return Response(
-            UserSerializerAll(users, many=True) .data,
-            status=status.HTTP_200_OK)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+class LogoutView(APIView):
+    """
+    VISTA DE LOGOUT ROBUSTA E IDEMPOTENTE:
+    Garantiza el cierre de sesión sin errores 401, incluso si el access_token ha expirado.
+    Limpia cookies HttpOnly y busca invalidar la sesión en DB si hay un refresh_token válido.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        all_devices = request.data.get('all_devices', False)
+        refresh_token = request.COOKIES.get('refresh_token')
+        ip_address = get_client_ip_from_request(request)
+        user_agent = get_current_user_agent()
+
+        # 1. Flujo de invalidación (Fail-Secure)
+        try:
+            if all_devices and request.user.is_authenticated:
+                AuthService.logout_all_sessions(
+                    user=request.user,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+            else:
+                # AuthService.logout_user ahora es inteligente: identifica al usuario
+                # desde el token si request.user es anónimo (access_token expirado).
+                AuthService.logout_user(
+                    refresh_token_str=refresh_token,
+                    user=request.user if request.user.is_authenticated else None,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+        except Exception as e:
+            # Errores en la invalidación no deben detener el logout local
+            pass
+
+        # 2. Construcción de respuesta (Siempre 200 OK)
+        response = Response(
+            {"detail": "Logout successful", "message": "Sesión cerrada correctamente"}, 
+            status=status.HTTP_200_OK
+        )
+
+        # 3. Limpieza absoluta de Cookies (Idempotente)
+        from django.conf import settings
+        is_prod = not settings.DEBUG
+        cookie_samesite = 'None' if is_prod or request.is_secure() else 'Lax'
+        
+        # Eliminamos con los mismos parámetros que se crearon
+        response.delete_cookie('access_token', samesite=cookie_samesite)
+        response.delete_cookie('refresh_token', samesite=cookie_samesite)
+        response.delete_cookie('csrftoken', samesite=cookie_samesite)
+        
+        return response

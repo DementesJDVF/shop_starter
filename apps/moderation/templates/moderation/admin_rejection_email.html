@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .alert {
+            background-color: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .product-info {
+            background-color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .value {
+            color: #6b7280;
+        }
+        .images-section {
+            margin: 25px 0;
+        }
+        .image-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            background-color: #f9fafb;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .reason-box {
+            background-color: #fef2f2;
+            border-left: 3px solid #dc2626;
+            padding: 10px 12px;
+            border-radius: 3px;
+            font-size: 13px;
+            color: #7f1d1d;
+            margin-bottom: 8px;
+        }
+        .confidence {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 0 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #b91c1c;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .footer {
+            background-color: #f3f4f6;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+        .warning-icon {
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span class="warning-icon">⚠️</span> Imágenes Rechazadas</h1>
+        </div>
+
+        <div class="content">
+            <div class="alert">
+                <strong>Sistema de Moderación Automática IA</strong>
+                <p style="margin: 8px 0 0 0; font-size: 13px;">
+                    El sistema de IA (Groq Llama Scout) ha detectado y rechazado {{ images_count }} imagen(es)
+                    por contener material sensible o inapropiado.
+                </p>
+            </div>
+
+            <h2 style="color: #374151; font-size: 16px; margin-bottom: 15px;">Información del Producto</h2>
+            <div class="product-info">
+                <div class="info-row">
+                    <span class="label">Producto:</span>
+                    <span class="value">{{ product_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">ID Producto:</span>
+                    <span class="value">#{{ product_id }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Categoría:</span>
+                    <span class="value">{{ category }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Vendedor:</span>
+                    <span class="value">{{ vendor_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Email Vendedor:</span>
+                    <span class="value">{{ vendor_email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Imágenes Rechazadas:</span>
+                    <span class="value" style="color: #dc2626; font-weight: 600;">{{ images_count }}</span>
+                </div>
+            </div>
+
+            <div class="images-section">
+                <h2 style="color: #374151; font-size: 16px; margin-bottom: 15px;">Detalles de Imágenes Rechazadas</h2>
+
+                {% for image in image_details %}
+                <div class="image-card">
+                    {% if image.image_url %}
+                    <img src="{{ image.image_url }}" alt="Imagen rechazada" class="image-preview">
+                    {% else %}
+                    <div style="background-color: #e5e7eb; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+                        <span style="color: #6b7280;">No disponible</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="reason-box">
+                        <strong>Razón del rechazo:</strong><br>
+                        {{ image.reason }}
+                    </div>
+                    <div class="confidence">
+                        <strong>Confianza de la IA:</strong> {{ image.confidence }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="action-buttons">
+                <a href="{{ admin_review_url }}" class="btn btn-primary">Revisar en Panel de Admin</a>
+                <a href="mailto:{{ vendor_email }}" class="btn btn-secondary">Contactar Vendedor</a>
+            </div>
+
+            <div style="background-color: #fffbeb; border-left: 4px solid #fbbf24; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 13px; color: #92400e;">
+                    <strong>Próximos pasos:</strong>
+                    <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                        <li>Revisar las imágenes en el panel de administración</li>
+                        <li>Confirmar el rechazo o aprobar si fue un falso positivo</li>
+                        <li>Notificar al vendedor con más detalles si es necesario</li>
+                    </ul>
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Este es un correo automático del sistema de moderación. Por favor no responda directamente a este correo.</p>
+            <p>Sistema de Moderación Automática • © ShopStarter</p>
+        </div>
+    </div>
+</body>
+</html>

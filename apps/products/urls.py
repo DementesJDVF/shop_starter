@@ -2,21 +2,29 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.products.views import (
     ProductViewSet,
-    ProductViewGet,
+    ProductCatalogView,
+    ProductDetailPublicView,
     CategoryViewSet,
     CategoryViewGet,
     nearby_products,
+    ProductDetailView
 )
 
 # Creamos un ÚNICO router para toda la aplicación de productos
 router = DefaultRouter()
 
 # Registramos cada ViewSet con su propio prefijo
-router.register(r'products', ProductViewSet, basename='product')
+router.register(r'products', ProductDetailView, basename='product')
 router.register(r'create', ProductViewSet, basename='product-create')  # Alias usado por el frontend
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
+    # Ruta para generación de descripción IA (vendedores)
+    path("<int:pk>/generate_ai_description/", ProductViewSet.as_view({"post": "generate_ai_description"}), name="product-ai-gen"),
+    path("suggest_description/", ProductViewSet.as_view({"post": "suggest_description"}), name="product-suggest-desc"),
+    path("tasks/<str:task_id>/", ProductViewSet.as_view({"get": "get_task_status"}), name="product-task-status"),
+
+
     # Ruta pública de categorías (para vendedores y clientes)
     path("get-categories/", CategoryViewGet.as_view({'get': 'list'}), name="category-list-public"),
 
@@ -29,11 +37,11 @@ urlpatterns = [
         'delete': 'destroy'
     }), name="category-admin-detail"),
 
-    # Resto de rutas del router
-    path("", include(router.urls)),
-    path("<int:id>/", ProductViewGet.as_view({"get": "retrieve"}), name="product-read-id"),
-
-    # Ruta pública para el catálogo de clientes (solo productos ACTIVE)
-    path("catalog/", ProductViewGet.as_view({"get": "list"}), name="product-catalog-public"),
+    # Rutas públicas específicas ANTES del router genérico
+    path("catalog/", ProductCatalogView.as_view(), name="product-catalog-public"),
     path("nearby/", nearby_products, name="product-nearby"),
+    path("<int:id>/", ProductDetailPublicView.as_view(), name="product-read-id"),
+
+    # Resto de rutas del router (CRUD privado)
+    path("", include(router.urls)),
 ]

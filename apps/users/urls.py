@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from rest_framework.routers import DefaultRouter
@@ -7,9 +7,8 @@ from apps.users.views import AdminUserViewSet
 router = DefaultRouter()
 router.register(r'admin/users', AdminUserViewSet, basename='admin-users')
 
-
-from .api.auth_views import LoginView
-from .api.auth_views import LoginView, UserView
+from .api.auth_views import LoginView, UserView, LogoutView, CustomTokenRefreshView
+from .api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
 from .views import (
     AdminOnlyView,
     ChangeUserRoleView,
@@ -21,15 +20,24 @@ from .views import (
 )
 
 urlpatterns = [
+    path('', include(router.urls)), # Incluimos las rutas del router (admin/users/)
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
-    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("auth/logout/", LogoutView.as_view(), name="logout"),
+    path("auth/password-reset/", RequestPasswordResetView.as_view(), name="password_reset_request"),
+    path("auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password_reset_confirm"),
+    path("auth/token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("admin/test/", AdminOnlyView.as_view(), name="admin_test"),
     path("vendor/test/", VendorOnlyView.as_view(), name="vendor_test"),
     path("customer/test/", CustomerOnlyView.as_view(), name="customer_test"),
+    
+    path("list/", UserView.as_view(), name="read"),
+    
+    # Soporte para borrado directo solicitado por el frontend
+    path("<str:pk>/", AdminUserViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
+
     # Use str for UUID compatibility
     path("<str:user_id>/role/", ChangeUserRoleView.as_view(), name="change_user_role"),
     path("<str:user_id>/status/", ChangeUserStatusView.as_view(), name="change_user_status"),
-    path("list/", UserView.as_view(), name="read"),
 ]

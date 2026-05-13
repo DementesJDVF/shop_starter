@@ -14,6 +14,7 @@ from apps.users.models import User
         "DEFAULT_THROTTLE_CLASSES": [
             "rest_framework.throttling.AnonRateThrottle",
             "rest_framework.throttling.UserRateThrottle",
+            "rest_framework.throttling.ScopedRateThrottle",
         ],
         "DEFAULT_THROTTLE_RATES": {
             "anon": "100/hour",
@@ -29,9 +30,15 @@ class AuthHardeningTests(APITestCase):
         payload = {
             "username": "vendedor",
             "email": "vendedor@example.com",
-            "password": "password123",
-            "password_confirm": "password123",
+            "password": "Password123!",
+            "password_confirm": "Password123!",
             "role": "VENDEDOR",
+            "is_human": True,
+            "full_name": "Vendedor Test",
+            "phone_number": "1234567890",
+            "document_type": "CC",
+            "document_number": "12345678",
+            "birth_date": "1990-01-01"
         }
 
         response = self.client.post(url, payload, format="json")
@@ -44,9 +51,10 @@ class AuthHardeningTests(APITestCase):
         payload = {
             "username": "adminwannabe",
             "email": "adminwannabe@example.com",
-            "password": "password123",
-            "password_confirm": "password123",
+            "password": "Password123!",
+            "password_confirm": "Password123!",
             "role": "ADMIN",
+            "is_human": True
         }
 
         response = self.client.post(url, payload, format="json")
@@ -57,7 +65,7 @@ class AuthHardeningTests(APITestCase):
         User.objects.create_user(
             username="normal",
             email="normal@example.com",
-            password="password123",
+            password="Password123!",
             role="CLIENTE",
         )
         url = reverse("login")

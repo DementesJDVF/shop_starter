@@ -1,4 +1,6 @@
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,8 +25,10 @@ from rest_framework.exceptions import PermissionDenied
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
+    authentication_classes = []  # IMPORTANTE: No validar tokens en registro para evitar errores con sesiones expiradas
     permission_classes = (permissions.AllowAny,)
     throttle_classes = (RegisterRateThrottle,)
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -45,11 +49,17 @@ class RegisterView(generics.CreateAPIView):
 
 
 class MeView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"isAuthenticated": False, "user": None}, status=status.HTTP_200_OK)
+        
         serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        data = serializer.data
+        data["isAuthenticated"] = True
+        return Response(data)
 
 
 class AdminOnlyView(APIView):
@@ -102,6 +112,9 @@ class ChangeUserStatusView(APIView):
     permission_classes = [IsAdmin]
 
     def patch(self, request, user_id):
+        # DEBUG: Verificar quién está intentando esto
+        print(f"!!! INTENTO DE CAMBIO STATUS !!! User: {request.user.email if request.user.is_authenticated else 'Anonymous'} | Role: {getattr(request.user, 'role', 'N/A')} | Auth: {request.user.is_authenticated}")
+        
         VALID_STATUSES = [User.Status.ACTIVE, User.Status.INACTIVE, User.Status.PENDING, User.Status.BLOCKED]
         new_status = request.data.get('status')
         if new_status not in VALID_STATUSES:
@@ -110,11 +123,20 @@ class ChangeUserStatusView(APIView):
         target_user = get_object_or_404(User, id=user_id)
         old_status = target_user.status
         target_user.status = new_status
+        
+        # Sincronizar is_active con el status para permitir/bloquear el login
+        if new_status == User.Status.ACTIVE:
+            target_user.is_active = True
+        elif new_status in [User.Status.BLOCKED, User.Status.INACTIVE]:
+            target_user.is_active = False
+            
         target_user.save()
 
-        # Notificar si el estado cambió a ACTIVE o BLOCKED
+        # Notificar si el estado cambió a ACTIVE o BLOCKED usando Celery Backend
         if old_status != new_status and new_status in [User.Status.ACTIVE, User.Status.BLOCKED]:
-            send_user_status_notification(target_user)
+            from apps.users.tasks import send_user_status_notification_task
+            send_user_status_notification_task.delay(target_user.id)
+
 
         return Response(
             {

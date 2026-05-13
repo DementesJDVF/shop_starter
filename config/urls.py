@@ -10,15 +10,19 @@ from drf_spectacular.views import (
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
-    TokenRefreshView,
 )
+
+from apps.users.api.auth_views import LoginView, CustomTokenRefreshView, CSRFTokenView, LogoutView
+from apps.users.views import RegisterView, MeView
+from apps.users.api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
+
 urlpatterns = [
     # admin
     path("admin/", admin.site.urls),
 
     # JWT
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh_global"),
+    path("api/token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh_global"),
 
     # Apps
     path("api/users/", include("apps.users.urls")),
@@ -28,7 +32,21 @@ urlpatterns = [
     path("api/audit/", include("apps.audit.urls")),
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
-    path("api/vendors/<uuid:vendor_id>/reviews/", include("apps.reviews.vendor_urls")),  # ADD THIS
+  
+    path("api/chat/", include("apps.chat.urls")),
+  
+    path("api/auth/login/", LoginView.as_view(), name="login-alias"),
+    path("api/auth/register/", RegisterView.as_view(), name="register-alias"),
+    path("api/auth/me/", MeView.as_view(), name="me-alias"),
+    path("api/auth/token/refresh/", CustomTokenRefreshView.as_view(), name="token-refresh-alias"),
+    path("api/auth/password-reset/", RequestPasswordResetView.as_view(), name="password-reset-alias"),
+    path("api/auth/password-reset-confirm/", ConfirmPasswordResetView.as_view(), name="password-reset-confirm-alias"),
+    path("api/auth/csrf/", CSRFTokenView.as_view(), name="csrf-token"),
+    path("api/auth/logout/", LogoutView.as_view(), name="logout-alias"),
+
+    # Alias para corregir llamadas antiguas del frontend a /api/vendors/
+    path("api/vendors/", include("apps.reviews.urls")),
+
     # =========================================================================
     # 📚 PORTAL INTERACTIVO PARA PROGRAMADORES FRONTEND (DX)
     # =========================================================================

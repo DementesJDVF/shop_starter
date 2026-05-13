@@ -1,68 +1,120 @@
 import uuid
 from django.conf import settings
 from django.db import models
-
 from apps.core.models import BaseModel
 from apps.products.models import Product
-from apps.geo.models import Location
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.db import transaction
+from django.utils import timezone
+
 class Order(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
     class Status(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        CONFIRMED = "CONFIRMED", "Confirmed"
-        COMPLETED = "COMPLETED", "Completed"
-        CANCELLED = "CANCELLED", "Cancelled"
+        PENDING = "PENDING", "Pendiente"
+        RESERVED = "RESERVED", "Reservado"
+        PAID = "PAID", "Pagado"
+        CANCELLED = "CANCELLED", "Cancelado"
+
     client = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="orders_as_client",
         null=True,
-        blank=True
-    )
+        blank=True)
+    
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="orders_as_vendor",
         null=True,
-        blank=True
-    )
+        blank=True,
+        editable=False)
+    
     product = models.ForeignKey(
         Product, 
-        on_delete=models.CASCADE, 
-        related_name="orders", # Mejorado: un producto tiene muchas "orders"
+        on_delete=models.PROTECT, 
+        related_name="orders", 
         null=True)
-    location = models.ForeignKey(
-        Location, 
-        on_delete=models.CASCADE, 
-        related_name="orders_at_location",
-        null=True)
+    
     status = models.CharField(
         max_length=20, 
         choices=Status.choices, 
         default=Status.PENDING)
-    quantity = models.PositiveIntegerField(default=1,validators=[MinValueValidator(1)]) # Antes era 'stock'
-    shipping = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Antes era 'price'
+    
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, editable=False)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False) # Editable=False porque es automático
-    description = models.CharField(max_length=255, blank=True, null=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    payment_notified = models.BooleanField(default=False) # 🔥 Flag para que el vendedor sepa que el cliente ya reportó el pago
+    expires_at = models.DateTimeField(null=True, blank=True) # 🔥 Límite para pagar antes de liberar stock
+
     class Meta:
         db_table = "orders_order"
+
     def clean(self):
-        """Validación: No pedir más de lo que hay en inventario"""
-        if self.quantity > self.product.stock:
-            raise ValidationError(
-                f"No puedes pedir {self.quantity} unidades. Solo quedan {self.product.stock} en stock.")
+        """Validaciones de integridad antes de guardar."""
+        if not self.product:
+            raise ValidationError("La orden debe tener un producto.")
+        
+        # Al crear, validar que haya stock físico
+        if self._state.adding and self.quantity > self.product.stock:
+             raise ValidationError(f"Stock insuficiente. Disponible: {self.product.stock}")
+
     def save(self, *args, **kwargs):
-        # 1. Congelar el precio si es la primera vez que se guarda
-        if self._state.adding:
-        # Aquí 'congelamos' el precio del momento de la compra
+        is_new = self._state.adding
+        
+        # 1. Congelar datos económicos
+        if is_new and self.product:
+            # BLOQUEO DE SEGURIDAD: Solo se pueden comprar productos aprobados y disponibles
+            if self.product.status != Product.ProductStatus.AVAILABLE:
+                raise ValidationError(f"Este producto no está disponible para la venta (Estado: {self.product.status}).")
+            
             self.unit_price = self.product.price
-        # 2. Calcular total usando el precio congelado
-        self.total = (self.unit_price * self.quantity) + self.shipping
-        # 3. Validar todo
-        self.full_clean()
-        super().save(*args, **kwargs)
+            self.vendor = self.product.vendor
+        
+        if self.unit_price:
+            self.total = self.unit_price * self.quantity
+
+        # 2. Lógica Transaccional de Estados (Consistencia Global)
+        with transaction.atomic():
+            # Bloquear el producto para evitar Race Conditions (SELECT FOR UPDATE)
+            product = Product.objects.select_for_update().get(pk=self.product.pk)
+
+            if is_new:
+                # Al crear una orden, nace como RESERVADA
+                if product.stock < self.quantity:
+                    raise ValidationError("Stock insuficiente para procesar la reserva.")
+                
+                # Configurar expiración (15 minutos para pagar)
+                self.expires_at = timezone.now() + timezone.timedelta(minutes=15)
+                self.status = self.Status.RESERVED
+                
+                product.stock -= self.quantity
+                
+                # El estado del producto solo cambia a SOLD si el stock llega a 0
+                if product.stock <= 0:
+                    product.status = Product.ProductStatus.SOLD
+                
+                product.save()
+            else:
+                # Si la orden ya existe, evaluamos cambios de estado (Pago/Cancelación)
+                # BLOQUEO DE FILA: Asegurar que nadie más toque la orden mientras evaluamos el cambio
+                old_order = Order.objects.select_for_update().get(pk=self.pk)
+                
+                # De Pendiente a PAGADO
+                if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
+                    if product.stock <= 0:
+                        product.status = Product.ProductStatus.SOLD
+                    product.save()
+
+                # CANCELACIÓN (Liberar Stock)
+                elif self.status == self.Status.CANCELLED and old_order.status != self.Status.CANCELLED:
+                    product.stock += self.quantity
+                    product.status = Product.ProductStatus.AVAILABLE
+                    product.save()
+
+            super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Pedido {self.id} - {self.product.name}"
+        return f"Pedido {self.id} - {self.product.name} ({self.status})"

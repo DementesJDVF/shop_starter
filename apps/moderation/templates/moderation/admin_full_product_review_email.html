@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .alert {
+            background-color: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .product-info {
+            background-color: #f9fafb;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #e5e7eb;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .value {
+            color: #6b7280;
+            word-break: break-word;
+            max-width: 50%;
+            text-align: right;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .images-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .image-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+            background-color: #f9fafb;
+        }
+        .image-preview {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background-color: #e5e7eb;
+        }
+        .image-info {
+            padding: 12px;
+        }
+        .image-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        .image-status.rejected {
+            background-color: #fee2e2;
+            color: #7f1d1d;
+        }
+        .image-status.approved {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .image-status.main {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .rejection-reason {
+            font-size: 12px;
+            background-color: #fef2f2;
+            border-left: 2px solid #dc2626;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 2px;
+            color: #7f1d1d;
+        }
+        .confidence-badge {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        .vendor-card {
+            background-color: #eff6ff;
+            border-left: 4px solid #0284c7;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 0 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #b91c1c;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background-color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #dc2626;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        .footer {
+            background-color: #f3f4f6;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span>🚨</span> REVISIÓN COMPLETA DE PRODUCTO</h1>
+        </div>
+
+        <div class="content">
+            <div class="alert">
+                <strong>Acción Requerida</strong>
+                <p style="margin: 8px 0 0 0; font-size: 13px;">
+                    Un producto ha sido rechazado por el sistema de moderación IA.
+                    Se requiere tu revisión del producto <strong>completo</strong> antes de permitir su publicación.
+                </p>
+            </div>
+
+            <!-- ESTADÍSTICAS RÁPIDAS -->
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number">{{ total_images }}</div>
+                    <div class="stat-label">Total de Imágenes</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" style="color: #dc2626;">{{ rejected_images_count }}</div>
+                    <div class="stat-label">Imágenes Rechazadas</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" style="color: #16a34a;">{{ approved_images_count }}</div>
+                    <div class="stat-label">Imágenes Aprobadas</div>
+                </div>
+            </div>
+
+            <!-- INFORMACIÓN DEL PRODUCTO -->
+            <div class="section-title">📦 Información del Producto</div>
+            <div class="product-info">
+                <div class="info-row">
+                    <span class="label">Nombre:</span>
+                    <span class="value"><strong>{{ product_name }}</strong></span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Categoría:</span>
+                    <span class="value">{{ product_category }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Precio:</span>
+                    <span class="value">{{ product_price }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Stock Disponible:</span>
+                    <span class="value">{{ product_stock }} unidades</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Estado:</span>
+                    <span class="value"><span style="color: #dc2626; font-weight: 600;">RECHAZADO</span></span>
+                </div>
+            </div>
+
+            <!-- DESCRIPCIÓN -->
+            <div class="section-title">📝 Descripción del Producto</div>
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <p style="margin: 0; line-height: 1.6; color: #374151;">{{ product_description }}</p>
+            </div>
+
+            <!-- INFORMACIÓN DEL VENDEDOR -->
+            <div class="section-title">👤 Información del Vendedor</div>
+            <div class="vendor-card">
+                <div style="margin: 8px 0;"><strong>{{ vendor_name }}</strong></div>
+                <div style="font-size: 12px; margin: 5px 0;">
+                    📧 {{ vendor_email }}<br>
+                    📱 {{ vendor_phone }}<br>
+                    👤 @{{ vendor_username }}
+                </div>
+            </div>
+
+            <!-- IMÁGENES RECHAZADAS -->
+            {% if rejected_images %}
+            <div class="section-title">❌ Imágenes Rechazadas (Requieren Revisión)</div>
+            <div class="images-grid">
+                {% for image in rejected_images %}
+                <div class="image-card">
+                    {% if image.image_url %}
+                    <img src="{{ image.image_url }}" alt="Imagen rechazada" class="image-preview">
+                    {% else %}
+                    <div style="height: 180px; display: flex; align-items: center; justify-content: center; background-color: #e5e7eb;">
+                        <span style="color: #6b7280;">No disponible</span>
+                    </div>
+                    {% endif %}
+                    <div class="image-info">
+                        <div class="image-status rejected">❌ RECHAZADA</div>
+                        {% if image.is_main %}<div class="image-status main">⭐ IMAGEN PRINCIPAL</div>{% endif %}
+                        <div class="rejection-reason">
+                            <strong>Razón:</strong><br>{{ image.reason }}
+                        </div>
+                        <div class="confidence-badge">
+                            🎯 Confianza de IA: {{ image.confidence }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- IMÁGENES APROBADAS -->
+            {% if approved_images %}
+            <div class="section-title">✅ Imágenes Aprobadas</div>
+            <div class="images-grid">
+                {% for image in approved_images %}
+                <div class="image-card">
+                    <img src="{{ image.image_url }}" alt="Imagen aprobada" class="image-preview" style="opacity: 0.8;">
+                    <div class="image-info">
+                        <div class="image-status approved">✅ APROBADA</div>
+                        {% if image.is_main %}<div class="image-status main">⭐ IMAGEN PRINCIPAL</div>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- DECISIONES -->
+            <div class="section-title">🔍 Tu Decisión Como Admin</div>
+            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px; margin: 15px 0;">
+                <p style="margin: 0; font-size: 13px; color: #92400e;">
+                    <strong>Opciones disponibles:</strong>
+                    <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                        <li>Revisar el contenido del producto completo (nombre, descripción, imágenes)</li>
+                        <li>Aprobar si fue un falso positivo de la IA</li>
+                        <li>Rechazar si confirmas que es contenido inapropiado</li>
+                        <li>Agregar notas sobre tu decisión</li>
+                    </ul>
+                </p>
+            </div>
+
+            <div class="action-buttons">
+                <a href="{{ product_review_url }}" class="btn btn-primary">Revisar y Decidir en Panel de Admin</a>
+                <a href="{{ product_detail_url }}" class="btn btn-secondary">Ver Detalles Completos</a>
+            </div>
+
+            <div style="background-color: #eff6ff; border-left: 4px solid #0284c7; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                    <strong>💡 Recomendación:</strong> Revisa cuidadosamente el nombre, descripción e imágenes del producto.
+                    Si el contenido es legítimo, puedes aprobar. Si confirmas que es inapropiado, rechaza el producto.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Este es un correo automático del sistema de moderación. Por favor no responda directamente a este correo.</p>
+            <p>Sistema de Moderación Automática • © ShopStarter</p>
+            <p>ID de Revisión: {{ product_review_id }}</p>
+        </div>
+    </div>
+</body>
+</html>

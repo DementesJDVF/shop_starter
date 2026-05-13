@@ -1,123 +1,147 @@
-from rest_framework import viewsets, status, serializers
+from rest_framework import viewsets, status
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from decimal import Decimal
 from .models import Order
 from apps.products.models import Product
-
 from .serializers import OrderSerializer
+from django.utils import timezone
+from datetime import timedelta
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+import logging
+logger = logging.getLogger(__name__)
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'user'
+    
+    # 🔴 SEGURIDAD CRÍTICA: Bloquear manipulación directa
+    # Solo permitimos GET (leer), POST (crear y acciones custom)
+    # Bloqueamos PUT, PATCH, DELETE para que el status no sea inyectable
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated:
-            return Order.objects.none()
+        
+        qs = Order.objects.select_related('client', 'vendor', 'product')
+        if user.role == 'ADMIN':
+            return qs.order_by('-created_at')
         if user.role == 'VENDEDOR':
-            return Order.objects.filter(vendor=user)
-        return Order.objects.filter(client=user)
+            return qs.filter(vendor=user).order_by('-created_at')
+        return qs.filter(client=user).order_by('-created_at')
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        # Tomamos el primer item para simplificar la lógica de reserva 1-a-1 solicitada
-        product_id = request.data.get('product_id')
-        if not product_id:
-            return Response({"error": "Debe proporcionar un product_id."}, status=status.HTTP_400_BAD_REQUEST)
+        """Crea una orden con IDEMPOTENCIA y la pone en estado RESERVED."""
+        # 1. IDEMPOTENCIA: Evitar doble click / doble orden del mismo producto
+        product_id = request.data.get('product')
+        if product_id:
+            recent_duplicate = Order.objects.filter(
+                client=request.user,
+                product_id=product_id,
+                status=Order.Status.RESERVED,
+                created_at__gte=timezone.now() - timedelta(minutes=1) # Ventana de 1 minuto
+            ).exists()
+            
+            if recent_duplicate:
+                return Response(
+                    {"error": "Ya tienes una reserva reciente para este producto. Por favor, revisa tus compras o espera un momento."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
         try:
-            product = Product.objects.select_for_update().get(id=product_id)
-        except Product.DoesNotExist:
-            return Response({"error": "Producto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            order = serializer.save(
+                client=self.request.user
+            )
+            logger.info(f"[AUDIT] Orden {order.id} creada por {request.user.username} para producto {product_id}.")
+            return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
+        except DjangoValidationError as e:
+            return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"[SRE] Error inesperado al crear orden: {str(e)}")
+            return Response({"error": "No se pudo procesar la reserva en este momento."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if product.status != Product.ProductStatus.ACTIVE:
-            return Response({"error": "El producto no está disponible para reserva."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Crear el pedido
-        order = Order.objects.create(
-            client=self.request.user,
-            vendor=product.vendor,
-            total=product.price,
-            product=product,
-            quantity=1,
-            unit_price=product.price
-        )
-
-        # Cambiar estado del producto a RESERVADO
-        product.status = Product.ProductStatus.RESERVED
-        product.save()
-
-        serializer = self.get_serializer(order)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+    @action(detail=True, methods=['post'], url_path='mark-as-paid')
+    def mark_as_paid(self, request, pk=None):
+        """Botón del Vendedor: Confirma el pago de forma idempotente y SEGURA."""
+        # select_for_update() asegura que si llegan dos clicks simultáneos, se bloquee la fila
+        with transaction.atomic():
+            # IDEMPOTENCIA a nivel de DB
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            # 🔴 SEGURIDAD: Solo el Vendedor DUEÑO del producto puede confirmar
+            if order.vendor != request.user and not request.user.is_superuser:
+                return Response({"error": "No tienes permiso para confirmar pagos de esta orden (No eres el vendedor)."}, status=status.HTTP_403_FORBIDDEN)
+                
+            # Si ya está pagado, devolvemos 200 sin error para ser idempotentes
+            if order.status == Order.Status.PAID:
+                return Response({"message": "La orden ya estaba pagada."}, status=status.HTTP_200_OK)
+                
+            if order.status != Order.Status.RESERVED:
+                return Response({"error": f"Transición inválida. No se puede pagar una orden en estado {order.status}."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                order.status = Order.Status.PAID
+                order.save()
+                logger.info(f"[AUDIT] Pago confirmado para orden {order.id} por el vendedor {request.user.username}.")
+                return Response({"message": "Pago confirmado exitosamente."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+    @action(detail=True, methods=['post'], url_path='notify-payment')
+    def mark_as_paid_client(self, request, pk=None):
+        """Botón del Cliente: Notifica que ya pagó."""
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            if order.client != request.user:
+                return Response({"error": "Solo el comprador puede notificar el pago."}, status=status.HTTP_403_FORBIDDEN)
+            
+            if order.status != Order.Status.RESERVED:
+                return Response({"error": "Solo se pueden pagar órdenes reservadas."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Aquí podríamos cambiar a un estado intermedio 'PAYMENT_SENT' si existiera,
+            # pero el usuario pide que sea 'ya pago'. Para simplificar y no cambiar el modelo
+            # (que es complejo), vamos a dejarlo en RESERVED pero añadir un flag o nota?
+            # En realidad, el usuario dijo "el cliente tiene una opcion de ya pago".
+            # Vamos a marcarlo como PAID y que el vendedor lo valide.
+            try:
+                order.payment_notified = True
+                order.save()
+                logger.info(f"[AUDIT] Cliente {request.user.username} notifica pago para orden {order.id}.")
+                return Response({"message": "Notificación de pago enviada al vendedor."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)
     @action(detail=True, methods=['post'])
-    @transaction.atomic
     def cancel(self, request, pk=None):
-        order = self.get_object()
-        if order.status != Order.Status.PENDING:
-            return Response({"error": "Solo se pueden cancelar reservas pendientes."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        order.status = Order.Status.CANCELLED
-        order.save()
+        """Cancela la orden y libera el stock/producto de forma transaccional."""
+        with transaction.atomic():
+            # Bloqueo de fila para evitar que alguien pague mientras cancelamos
+            order = Order.objects.select_for_update().get(pk=pk)
+            
+            # Solo el dueño o el vendedor pueden cancelar
+            if order.client != request.user and order.vendor != request.user and request.user.role != 'ADMIN' and not request.user.is_superuser:
+                 return Response({"error": "No tienes permiso para cancelar esta orden."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Penalización si el vendedor marca que el cliente no vino ('cancel' desde el panel del vendedor)
-        if request.user.role == 'VENDEDOR' and order.vendor == request.user:
-            client = order.client
-            client.reputation_score = max(Decimal('0.0'), client.reputation_score - Decimal('1.0'))
-            client.save()
+            if order.status == Order.Status.PAID:
+                return Response({"error": "No se puede cancelar una orden ya pagada."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if order.status == Order.Status.CANCELLED:
+                return Response({"message": "La orden ya está cancelada."}, status=status.HTTP_200_OK)
 
-        # Liberar el producto
-        if order.product:
-            product = order.product
-            product.status = Product.ProductStatus.ACTIVE
-            product.save()
-
-        return Response({"status": "Reserva cancelada, producto liberado y penalización aplicada si corresponde."})
-
-    @action(detail=True, methods=['post'])
-    @transaction.atomic
-    def complete(self, request, pk=None):
-        order = self.get_object()
-        if order.status != Order.Status.PENDING:
-            return Response({"error": "Solo se pueden completar reservas pendientes."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        order.status = Order.Status.COMPLETED
-        order.save()
-
-        # Recompensa por completar la transacción exitosamente
-        client = order.client
-        vendor = order.vendor
-        client.reputation_score = min(Decimal('5.0'), client.reputation_score + Decimal('0.1'))
-        vendor.reputation_score = min(Decimal('5.0'), vendor.reputation_score + Decimal('0.1'))
-        client.save()
-        vendor.save()
-
-        return Response({"status": "Venta completada y reputación actualizada."})
-
-    @action(detail=True, methods=['post'])
-    @transaction.atomic
-    def report_vendor(self, request, pk=None):
-        order = self.get_object()
-        if order.status != Order.Status.PENDING:
-            return Response({"error": "Solo se pueden reportar reservas pendientes."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # El cliente reporta que el vendedor vendió el producto a otro
-        order.status = Order.Status.CANCELLED
-        order.save()
-
-        # Penalización fuerte al vendedor
-        vendor = order.vendor
-        vendor.reputation_score = max(Decimal('0.0'), vendor.reputation_score - Decimal('1.5'))
-        vendor.save()
-
-        # Liberar el producto (aunque supuestamente ya lo vendió, lo ponemos en ACTIVE para que el sistema sea consistente o el vendedor lo borre)
-        if order.product:
-            product = order.product
-            product.status = Product.ProductStatus.ACTIVE
-            product.save()
-
-        return Response({"status": "Reporte enviado. Se ha llamado la atención al vendedor y se ha reducido su reputación."})
+            try:
+                order.status = Order.Status.CANCELLED
+                order.save()
+                logger.info(f"[AUDIT] Orden {order.id} cancelada por {request.user.username}. Stock liberado.")
+                return Response({"message": "Orden cancelada. El producto ha sido liberado."})
+            except DjangoValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, 'message') else e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -4,6 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.shortcuts import get_list_or_404, get_object_or_404
 from django.db.models import Q 
+from django.db.models.expressions import RawSQL
 
 from apps.geo.models import Location
 from apps.geo.serializers import LocationSerializer
@@ -13,24 +14,83 @@ from apps.geo.serializers import NearbyVendorSerializer
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        
+        # El Administrador ve TODO.
+        if user.is_authenticated and (user.role == 'ADMIN' or user.is_superuser):
+            return qs
+            
+        # Para el público y otros usuarios: Solo lo ACTIVO.
+        # EXCEPCIÓN: El dueño de la ubicación siempre debe poder ver la suya (para editarla o ver estado).
+        if user.is_authenticated:
+            return qs.filter(Q(is_active=True) | Q(user=user))
+            
+        return qs.filter(is_active=True)
+    
+    def get_permissions(self):
+        from apps.users.permissions import IsVendor, IsAdmin, IsVendorOrAdmin
+        
+        # El Administrador solo puede monitorear (list/retrieve). 
+        # No puede tener ubicación propia (create/update).
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsVendor()]
+            
+        if self.action in ['list', 'retrieve']:
+            # Permitir acceso público para el mapa de vendedores
+            return [AllowAny()]
+            
+        if self.action == 'my_location':
+            return [IsVendor()]
+
+        return [AllowAny()]
+
     # Si necesitas lógica extra al añadir (ej. asignar el usuario actual),
     # puedes sobrescribir esta función:
     def perform_create(self, serializer):
-        # El método update_or_create es perfecto para relaciones OneToOne
-        user = serializer.validated_data.pop('user', None) or self.request.user
-        location, created = Location.objects.update_or_create(
-            user=user,
-            defaults=serializer.validated_data)
-        # Sincronizamos el objeto con el serializador
-        serializer.instance = location
+        # Usamos el serializador para guardar, pasando el usuario de la petición.
+        # El método create del serializador se encargará de manejar imágenes y update_or_create.
+        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_location(self, request):
-        """Devuelve la ubicación del vendedor autenticado."""
-        location = get_object_or_404(Location, user=request.user)
+        """Devuelve la ubicación del vendedor autenticado como lista para evitar errores 404 y que React pueda iterarlo."""
+        location = Location.objects.filter(user=request.user).first()
+        if not location:
+            return Response([])
+            
         serializer = self.get_serializer(location)
+        return Response([serializer.data])
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def all_locations(self, request):
+        """
+        Vista de Águila exclusiva para el Administrador.
+        Devuelve todas las ubicaciones registradas sin filtros.
+        """
+        from apps.users.permissions import IsAdmin
+        if not IsAdmin().has_permission(request, self):
+            return Response({"error": "No tienes permisos para ver todas las ubicaciones."}, status=403)
+            
+        locations = Location.objects.filter(is_active=True)
+        serializer = self.get_serializer(locations, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def toggle_visibility(self, request):
+        """Permite al vendedor encender/apagar su presencia en el mapa."""
+        location = Location.objects.filter(user=request.user).first()
+        if not location:
+            return Response({"error": "No tienes ubicación registrada."}, status=404)
+        
+        location.is_active = not location.is_active
+        location.save()
+        return Response({
+            "is_active": location.is_active,
+            "message": f"Ubicación {'encendida' if location.is_active else 'apagada'} exitosamente."
+        })
         
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -46,33 +106,47 @@ def nearby_vendors(request):
     except:
         return Response([], status=400)
 
+    # Fórmula de Haversine en SQL nativo
+    query = """
+        6371 * acos(
+            LEAST(GREATEST(
+                cos(radians(%s)) * cos(radians(latitude)) *
+                cos(radians(longitude) - radians(%s)) +
+                sin(radians(%s)) * sin(radians(latitude))
+            , -1), 1)
+        )
+    """
+
+    from django.db.models import Exists, OuterRef
+    from apps.products.models import Product
+
+    # Subquery para verificar si el vendedor tiene productos disponibles con stock
+    available_products = Product.objects.filter(
+        vendor=OuterRef('user'),
+        status=Product.ProductStatus.AVAILABLE,
+        stock__gt=0
+    )
+
     qs = Location.objects.select_related(
         "user"
     ).filter(
         latitude__isnull=False,
         longitude__isnull=False,
-        # Filtramos para que traiga solo locaciones de cuentas "Activas"
-        user__status='ACTIVE'
-    )
+        user__status='ACTIVE',
+        is_active=True
+    ).annotate(
+        distance=RawSQL(query, (lat, lng, lat)),
+        has_stock=Exists(available_products)
+    ).filter(
+        distance__lte=radius,
+        has_stock=True # Solo vendedores con productos reales
+    ).order_by('distance')
 
-    results = []
-
+    data = []
     for loc in qs:
-        dist = haversine(lat, lng, float(loc.latitude), float(loc.longitude))
-        if dist <= radius:
-            results.append({
-                "instance": loc,
-                "distance": round(dist, 2),
-            })
-
-    results.sort(key=lambda x: x["distance"])
-
-    data = [
-        NearbyVendorSerializer(
-            r["instance"],
-            context={"request": request}
-        ).data | {"distance": r["distance"]}
-        for r in results
-    ]
+        # La distancia ya viene calculada en la propiedad por el annotate
+        loc.distance = round(loc.distance, 2)
+        serializer = NearbyVendorSerializer(loc, context={"request": request})
+        data.append(serializer.data)
 
     return Response(data)
