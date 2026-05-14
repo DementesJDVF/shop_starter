@@ -212,8 +212,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env("DRF_THROTTLE_ANON", default="10000/hour"),
         "user": env("DRF_THROTTLE_USER", default="20000/hour"),
-        "login": env("DRF_THROTTLE_LOGIN", default="10/min"),
-        "register": env("DRF_THROTTLE_REGISTER", default="5/hour"),
+        "login": env("DRF_THROTTLE_LOGIN", default="20/min"),
+        "register": env("DRF_THROTTLE_REGISTER", default="50/hour"),
         "login_ip": "5/min",
         "login_user": "5/min",
         "ia_limit": "10/hour",
