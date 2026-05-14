@@ -57,9 +57,9 @@ class Order(BaseModel):
         if not self.product:
             raise ValidationError("La orden debe tener un producto.")
         
-        # Al crear, validar que haya stock físico
-        if self._state.adding and self.quantity > self.product.stock:
-             raise ValidationError(f"Stock insuficiente. Disponible: {self.product.stock}")
+        # Validar que el producto esté disponible (stock como booleano gestionado por el vendedor)
+        if self._state.adding and not self.product.stock:
+            raise ValidationError("Este producto no tiene disponibilidad en este momento.")
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
@@ -67,7 +67,7 @@ class Order(BaseModel):
         # 1. Congelar datos económicos
         if is_new and self.product:
             # BLOQUEO DE SEGURIDAD: Solo se pueden comprar productos aprobados y disponibles
-            if self.product.status != Product.ProductStatus.AVAILABLE:
+            if self.product.status not in [Product.ProductStatus.AVAILABLE, Product.ProductStatus.RESERVED, Product.ProductStatus.SOLD]:
                 raise ValidationError(f"Este producto no está disponible para la venta (Estado: {self.product.status}).")
             
             self.unit_price = self.product.price
@@ -82,35 +82,30 @@ class Order(BaseModel):
             product = Product.objects.select_for_update().get(pk=self.product.pk)
 
             if is_new:
-                # Al crear una orden, nace como RESERVADA
-                if product.stock < self.quantity:
-                    raise ValidationError("Stock insuficiente para procesar la reserva.")
+                # Al crear una orden, nace como RESERVADA.
+                # El stock NO se decrementa: es gestionado exclusivamente por el vendedor
+                # desde Gestión de Productos.
+                if not product.stock:
+                    raise ValidationError("Este producto no tiene disponibilidad en este momento.")
                 
                 # Configurar expiración (15 minutos para pagar)
                 self.expires_at = timezone.now() + timezone.timedelta(minutes=15)
                 self.status = self.Status.RESERVED
                 
-                product.stock -= self.quantity
-                
-                # El estado del producto solo cambia a SOLD si el stock llega a 0
-                if product.stock <= 0:
-                    product.status = Product.ProductStatus.SOLD
-                
+                # Marcar el producto como RESERVADO
+                product.status = Product.ProductStatus.RESERVED
                 product.save()
             else:
                 # Si la orden ya existe, evaluamos cambios de estado (Pago/Cancelación)
-                # BLOQUEO DE FILA: Asegurar que nadie más toque la orden mientras evaluamos el cambio
                 old_order = Order.objects.select_for_update().get(pk=self.pk)
                 
-                # De Pendiente a PAGADO
+                # De RESERVADO a PAGADO: marcar el producto como SOLD
                 if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
-                    if product.stock <= 0:
-                        product.status = Product.ProductStatus.SOLD
+                    product.status = Product.ProductStatus.SOLD
                     product.save()
 
-                # CANCELACIÓN (Liberar Stock)
+                # CANCELACIÓN: restaurar disponibilidad del producto sin tocar el stock
                 elif self.status == self.Status.CANCELLED and old_order.status != self.Status.CANCELLED:
-                    product.stock += self.quantity
                     product.status = Product.ProductStatus.AVAILABLE
                     product.save()
 
