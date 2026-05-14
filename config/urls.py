@@ -33,6 +33,7 @@ urlpatterns = [
     path("api/geo/", include("apps.geo.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/chat/", include("apps.chat.urls")),
+    path("api/terms/", include("apps.terms.urls")),
     path("api/auth/login/", LoginView.as_view(), name="login-alias"),
     path("api/auth/register/", RegisterView.as_view(), name="register-alias"),
     path("api/auth/me/", MeView.as_view(), name="me-alias"),

@@ -43,6 +43,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=UserRoles.CHOICES, default=UserRoles.CLIENTE)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     reputation_score = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
+    terms_accepted = models.BooleanField(default=False)
     
     # Datos de contacto y perfil (Encriptados)
     full_name = EncryptedCharField(max_length=512, blank=True, null=True)
