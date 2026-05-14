@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 def cleanup_expired_reservations(self):
     """
     SRE: Limpia reservas de órdenes que han expirado (más de 15 minutos).
-    Al cancelar la orden, el modelo de Order devuelve automáticamente el stock al producto.
+    Al cancelar, el producto vuelve a AVAILABLE. El stock NO se modifica
+    (es gestionado exclusivamente por el vendedor desde Gestión de Productos).
     """
     from apps.orders.models import Order
     from django.db import transaction
