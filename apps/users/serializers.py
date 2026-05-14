@@ -18,13 +18,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     is_human = serializers.BooleanField(required=False, default=True)
     honeypot = serializers.CharField(required=False, allow_blank=True)
     birth_date = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-
+    terms_accepted = serializers.BooleanField(default=False)
     class Meta:
         model = User
         fields = (
             "username", "email", "password", "password_confirm", "role",
             "full_name", "phone_number", "document_type", "document_number", "birth_date",
-            "is_human", "honeypot"
+            "is_human", "honeypot", "terms_accepted"
         )
 
     def validate_email(self, value):
