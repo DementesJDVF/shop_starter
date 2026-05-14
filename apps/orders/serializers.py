@@ -30,16 +30,12 @@ class OrderSerializer(serializers.ModelSerializer):
         if not quantity or quantity <= 0:
             raise serializers.ValidationError({"quantity": "Cantidad no válida."})
 
-        # Validar Stock
-        if quantity > product.stock:
-            raise serializers.ValidationError({"quantity": "Stock insuficiente."})
+        # Validar que el producto tenga disponibilidad (stock gestionado solo por el vendedor)
+        if not product.stock:
+            raise serializers.ValidationError({"product": "Este producto no está disponible en este momento."})
         
         # Bloqueo Anti-Fraude
         if product.vendor == user:
             raise serializers.ValidationError({"product": "No puedes comprar tus propios productos."})
 
-        if quantity > product.stock:
-            raise serializers.ValidationError({
-                "quantity": f"No puedes pedir {quantity} unidades. Solo quedan {product.stock} en stock."
-            })
-        return data
+        return data

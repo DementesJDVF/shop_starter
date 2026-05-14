@@ -24,7 +24,7 @@ class ProductDetailView(viewsets.ReadOnlyModelViewSet):
     Un ViewSet automático para ver la lista de productos
     y el detalle de cada uno por ID.
     """
-    queryset = Product.objects.filter(status="AVAILABLE")
+    queryset = Product.objects.filter(status__in=["AVAILABLE", "RESERVED", "SOLD"])
     serializer_class = ReadProSerializer
     permission_classes = [AllowAny]
     lookup_field = 'id' # Esto asegura que busque por UUID
@@ -54,7 +54,26 @@ class ProductViewSet(viewsets.ModelViewSet):
             return ProductService.get_manageable_products(user, vendor_id=vendor_id)
         
         return ProductService.get_public_catalog(vendor_id=vendor_id)
-    
+
+    def get_object(self):
+        import uuid
+        from rest_framework.generics import get_object_or_404
+
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+
+        try:
+            lookup_value = uuid.UUID(str(lookup_value))
+        except (ValueError, TypeError):
+            pass
+
+        filter_kwargs = {self.lookup_field: lookup_value}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
@@ -158,6 +177,35 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         instance.restore()
         return Response({"message": "Producto restaurado exitosamente."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], url_path='toggle-stock', permission_classes=[IsAuthenticated])
+    def toggle_stock(self, request, pk=None):
+        """
+        Cambia la disponibilidad (stock) de un producto entre 1 (disponible) y 0 (no disponible).
+        Solo el dueño del producto o un administrador pueden usarlo.
+        """
+        from rest_framework.exceptions import PermissionDenied
+
+        instance = self.get_object()
+
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            if instance.vendor != request.user:
+                raise PermissionDenied("No tienes permisos para modificar la disponibilidad de este producto.")
+
+        # Alternar: si tiene stock lo quitamos, si no tiene lo ponemos
+        instance.stock = 0 if instance.stock > 0 else 1
+        instance.save(update_fields=['stock'])
+
+        logger.info(
+            f"[AUDIT] Stock de producto '{instance.name}' ({instance.id}) "
+            f"cambiado a {instance.stock} por {request.user.username}."
+        )
+
+        return Response({
+            "id": str(instance.id),
+            "stock": bool(instance.stock > 0),
+            "message": "Disponibilidad actualizada correctamente."
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[ScopedRateThrottle], throttle_scope='ia_limit')
     def generate_ai_description(self, request, pk=None):
@@ -515,9 +563,31 @@ class ProductDetailPublicView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Product.objects.filter(
-            status=Product.ProductStatus.AVAILABLE,
+            status__in=[
+                Product.ProductStatus.AVAILABLE,
+                Product.ProductStatus.RESERVED,
+                Product.ProductStatus.SOLD,
+            ],
             vendor__status='ACTIVE'
         )
+
+    def get_object(self):
+        import uuid
+        from rest_framework.generics import get_object_or_404
+        
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        try:
+            lookup_value = uuid.UUID(str(lookup_value))
+        except (ValueError, TypeError):
+            pass
+            
+        filter_kwargs = {self.lookup_field: lookup_value}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -591,7 +661,8 @@ def nearby_products(request):
 
     products = Product.objects.filter(
         vendor__in=nearby_user_ids,
-        status=Product.ProductStatus.AVAILABLE
+        status__in=[Product.ProductStatus.AVAILABLE, Product.ProductStatus.RESERVED, Product.ProductStatus.SOLD],
+        stock__gt=0
     ).select_related('category', 'vendor').prefetch_related('images')
 
     data = []

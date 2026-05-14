@@ -13,10 +13,15 @@ class ProductService:
     def get_public_catalog(vendor_id: str = None) -> QuerySet[Product]:
         """
         Retrieves the public product catalog.
-        Only shows AVAILABLE products with stock > 0 from ACTIVE vendors.
+        Shows products with stock > 0 (managed exclusively by the vendor).
+        Products may be AVAILABLE or RESERVED; stock is not decremented on purchase.
         """
         queryset = Product.objects.filter(
-            status=Product.ProductStatus.AVAILABLE,
+            status__in=[
+                Product.ProductStatus.AVAILABLE,
+                Product.ProductStatus.RESERVED,
+                Product.ProductStatus.SOLD,
+            ],
             stock__gt=0,
             vendor__status='ACTIVE',
             vendor__role=UserRoles.VENDEDOR,
@@ -36,7 +41,7 @@ class ProductService:
     @staticmethod
     def get_public_product_detail(product_id: str) -> Product:
         """
-        Retrieves a single public product detail if it is available.
+        Retrieves a single public product detail if it is available or reserved.
         """
         try:
             uuid.UUID(str(product_id))
@@ -45,7 +50,11 @@ class ProductService:
 
         return Product.objects.filter(
             id=product_id,
-            status=Product.ProductStatus.AVAILABLE,
+            status__in=[
+                Product.ProductStatus.AVAILABLE,
+                Product.ProductStatus.RESERVED,
+                Product.ProductStatus.SOLD,
+            ],
             stock__gt=0,
             vendor__status='ACTIVE',
             vendor__locations__is_active=True
