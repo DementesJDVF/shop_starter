@@ -101,7 +101,7 @@ class Order(BaseModel):
                 
                 # De RESERVADO a PAGADO: marcar el producto como SOLD
                 if self.status == self.Status.PAID and old_order.status != self.Status.PAID:
-                    product.status = Product.ProductStatus.SOLD
+                    product.status = Product.ProductStatus.AVAILABLE
                     product.save()
 
                 # CANCELACIÓN: restaurar disponibilidad del producto sin tocar el stock

@@ -1,5 +1,6 @@
 # Entornos virtuales
 venv/
+envs/
 env/
 ENV/
 
