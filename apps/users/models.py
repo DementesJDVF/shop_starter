@@ -22,6 +22,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        # Forzamos los términos aceptados para el createsuperuser
+        extra_fields.setdefault("terms_accepted", True)
         # AQUÍ ESTÁ LA MAGIA: Forzamos el rol de ADMIN de tus constantes
         extra_fields.setdefault("role", UserRoles.ADMIN)
         if extra_fields.get("is_staff") is not True:
@@ -43,6 +45,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=UserRoles.CHOICES, default=UserRoles.CLIENTE)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     reputation_score = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
+    terms_accepted = models.BooleanField(default=False)
     
     # Datos de contacto y perfil (Encriptados)
     full_name = EncryptedCharField(max_length=512, blank=True, null=True)
@@ -88,3 +91,29 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.session_id} ({'Activa' if self.is_active else 'Inactiva'})"
+
+
+# ============================================================
+# Foto de perfil del usuario
+# ============================================================
+class ProfilePicture(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile_picture',
+        db_column='user_id',
+    )
+    image_url = models.TextField()
+    public_id = models.CharField(max_length=255, blank=True, null=True)
+    mime_type = models.CharField(max_length=50, blank=True, null=True)
+    file_size = models.IntegerField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "users_profile_picture"
+
+    def __str__(self):
+        return f"Foto de {self.user.email}"

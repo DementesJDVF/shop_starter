@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework import serializers
 
 from .constants import UserRoles
-from .models import User
+from .models import User, ProfilePicture
 
 
 class UserAdminSerializer(serializers.ModelSerializer):
@@ -40,13 +40,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return username
 
     def validate(self, attrs):
-        # --- MEJORA DE USABILIDAD ---
-        # Si el frontend envía 'nombre', lo guardamos automáticamente en el campo técnico 'full_name'.
         if "nombre" in self.initial_data and not attrs.get("full_name"):
             attrs["full_name"] = self.initial_data["nombre"]
 
-        # --- GENERACIÓN DE IDENTIDAD ---
-        # Si no hay un nombre de usuario, creamos uno amigable usando el email y un número aleatorio.
         if not attrs.get("username") and attrs.get("email"):
             import random
             email = attrs["email"].lower().strip()
@@ -54,8 +50,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             base_user = email.split("@")[0]
             attrs["username"] = f"{base_user}_{random.randint(100, 999)}"
 
-        # --- BLINDAJE DE CONTRASEÑAS (Fortaleza) ---
-        # No permitimos contraseñas débiles. Obligamos a usar mayúsculas, números y símbolos.
         import re
         password = attrs.get("password", "")
         if not re.search(r'[A-Z]', password):
@@ -65,13 +59,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         if not re.search(r'[@#$%^&+=!¡¿?*]', password):
             raise serializers.ValidationError({"password": "La contraseña debe contener al menos un carácter especial (@, $, !, %, *, #, ?, &)."})
 
-        # --- VALIDACIÓN DE HUMANIDAD (Captcha) ---
         if not attrs.get("is_human"):
             raise serializers.ValidationError({"is_human": "Debes marcar la casilla 'No soy un robot' (is_human: true)."})
-            
-        # --- LA TRAMPA: HONEYPOT ---
-        # Este campo es invisible para humanos pero los bots lo llenan automáticamente.
-        # Si tiene datos, registramos el ataque sospechoso para el dashboard admin.
+
         if attrs.get("honeypot"):
             from apps.audit.application.services import AuditService
             from apps.users.models import User
@@ -84,7 +74,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             )
             raise serializers.ValidationError({"error": "Detección de actividad sospechosa (Honeypot)."})
 
-            
         if attrs.get("password_confirm") and password != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden"})
 
@@ -94,7 +83,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         if role not in UserRoles.SELF_ASSIGNABLE:
             raise serializers.ValidationError({"role": "No es posible autoprovisionar este rol"})
 
-        # Validación condicional para Vendedores
         if role == UserRoles.VENDOR:
             required_vendor_fields = [
                 "full_name", "phone_number", "document_type", "document_number", "birth_date"
@@ -102,14 +90,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             for field in required_vendor_fields:
                 if not attrs.get(field):
                     raise serializers.ValidationError({field: "Este campo es obligatorio para vendedores."})
-            
-            # Intentar convertir el texto de birth_date a una fecha real para el modelo
+
             from django.utils.dateparse import parse_date
             import datetime
             date_str = attrs.get("birth_date")
             if date_str:
                 parsed_date = None
-                # Intentar varios formatos conocidos
                 for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'):
                     try:
                         parsed_date = datetime.datetime.strptime(date_str, fmt).date()
@@ -120,7 +106,6 @@ class RegisterSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"birth_date": "Formato de fecha inválido. Usa AAAA-MM-DD o DD/MM/AAAA."})
                 attrs["birth_date"] = parsed_date
         else:
-            # Para clientes, simplemente ignoramos el birth_date o lo ponemos en None
             attrs["birth_date"] = None
 
         attrs.pop("is_human", None)
@@ -164,20 +149,89 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "username", "role", "status", "is_active", "reputation_score"]
         read_only_fields = fields
+
+
 class UserSerializerAll(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "username", "role", "status"]
-    # Sobrescribimos el constructor para marcar todo como read_only dinámicamente
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].read_only = True
+
+
 class ChangeUserRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=UserRoles.CHOICES)
+
+
+# ============================================================
+# NUEVO: Foto de perfil
+# ============================================================
+class ProfilePictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfilePicture
+        fields = ["id", "image_url", "public_id", "mime_type", "file_size", "is_active", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+# ============================================================
+# NUEVO: Perfil completo del usuario (Mi Perfil)
+# Devuelve campos editables según rol.
+# ============================================================
+class MyProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+    editable_fields = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "username", "email", "role", "status", "is_active",
+            "reputation_score",
+            "full_name", "phone_number", "document_type", "document_number", "birth_date",
+            "created_at", "updated_at",
+            "profile_picture", "editable_fields",
+        ]
+        read_only_fields = ["id", "role", "status", "is_active", "reputation_score", "created_at", "updated_at"]
+
+    def get_profile_picture(self, obj):
+        pic = getattr(obj, 'profile_picture', None)
+        if pic and pic.is_active:
+            return ProfilePictureSerializer(pic).data
+        return None
+
+    def get_editable_fields(self, obj):
+        # Campos que cada rol puede modificar (coinciden con los del registro)
+        common = ["username", "email", "full_name", "phone_number"]
+        if obj.role == UserRoles.VENDOR:
+            return common + ["document_type", "document_number", "birth_date"]
+        if obj.role == UserRoles.ADMIN:
+            return common + ["document_type", "document_number", "birth_date"]
+        # CLIENTE
+        return common
+
+    def validate_email(self, value):
+        value = (value or "").strip().lower()
+        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return value
+
+    def validate_username(self, value):
+        value = (value or "").strip()
+        if value and User.objects.filter(username__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return value
+
+    def update(self, instance, validated_data):
+        # Solo permitir actualizar los campos declarados como editables
+        allowed = set(self.get_editable_fields(instance))
+        for field, value in validated_data.items():
+            if field in allowed:
+                setattr(instance, field, value)
+        instance.save()
+        return instance

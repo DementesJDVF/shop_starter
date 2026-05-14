@@ -167,12 +167,30 @@ CREATE TABLE moderation_flag (
 
 CREATE INDEX idx_flag_product ON moderation_flag(product_id);
 
+
+-- ============================================================
+-- USER PROFILE PICTURES   ⬅️ NUEVA TABLA
+-- Foto de perfil personalizada por usuario.
+-- Tabla independiente: no modifica users_user ni ninguna otra.
+-- ============================================================
+CREATE TABLE users_profile_picture (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE NOT NULL REFERENCES users_user(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    public_id VARCHAR(255),
+    mime_type VARCHAR(50),
+    file_size INTEGER,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_profile_picture_user ON users_profile_picture(user_id);
+CREATE INDEX idx_profile_picture_active ON users_profile_picture(is_active);
+
+
 SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns
 WHERE table_catalog = 'shopstarter' 
   AND table_name = 'users_user'
 ORDER BY ordinal_position;
-
--- ============================================================
--- END OF SCRIPT
--- ============================================================
