@@ -22,6 +22,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        # Forzamos los términos aceptados para el createsuperuser
+        extra_fields.setdefault("terms_accepted", True)
         # AQUÍ ESTÁ LA MAGIA: Forzamos el rol de ADMIN de tus constantes
         extra_fields.setdefault("role", UserRoles.ADMIN)
         if extra_fields.get("is_staff") is not True:

@@ -11,6 +11,7 @@ class UserAdmin(BaseUserAdmin):
         "username",
         "role",
         "status",
+        "terms_accepted",
         "is_staff",
         "is_active",
         "created_at",
@@ -24,13 +25,13 @@ class UserAdmin(BaseUserAdmin):
     
     # Organización de los formularios de edición
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Información de Perfil", {"fields": ("role", "status")}),
+        ("Información de Perfil", {"fields": ("role", "status", "terms_accepted")}),
         ("Datos de Verificación (Vendedores)", {"fields": ("phone_number", "document_type", "document_number", "birth_date")}),
     )
     
     # Organización para el formulario de creación de usuario
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ("Información de Perfil", {"fields": ("role", "status")}),
+        ("Información de Perfil", {"fields": ("role", "status", "terms_accepted")}),
     )
     
     actions = ["activate_users", "block_users"]
