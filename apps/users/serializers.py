@@ -154,8 +154,6 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "username", "role", "status", "is_active", "reputation_score"]
         read_only_fields = fields
-
-
 class UserSerializerAll(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -235,3 +233,8 @@ class MyProfileSerializer(serializers.ModelSerializer):
                 setattr(instance, field, value)
         instance.save()
         return instance
+class UserSerializerForUsers(MyProfileSerializer):
+    class Meta(MyProfileSerializer.Meta):
+        # Solo dejamos lo que queremos que otros vean
+        fields = ["id", "username", "reputation_score", "profile_picture", "created_at"]
+        read_only_fields = fields

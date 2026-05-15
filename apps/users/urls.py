@@ -7,7 +7,7 @@ from apps.users.views import AdminUserViewSet
 router = DefaultRouter()
 router.register(r'admin/users', AdminUserViewSet, basename='admin-users')
 
-from .api.auth_views import LoginView, UserView, LogoutView, CustomTokenRefreshView
+from .api.auth_views import LoginView, UserView, LogoutView, CustomTokenRefreshView, UserViewForUsers
 from .api.password_reset_views import RequestPasswordResetView, ConfirmPasswordResetView
 from .views import (
     AdminOnlyView,
@@ -39,6 +39,7 @@ urlpatterns = [
     path("me/profile-picture/", MyProfilePictureView.as_view(), name="my_profile_picture"),
 
     path("list/", UserView.as_view(), name="read"),
+    path("listusers/", UserViewForUsers.as_view(), name="read"),
 
     path("<str:pk>/", AdminUserViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
 

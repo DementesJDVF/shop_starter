@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from apps.users.serializers import LoginSerializer, UserSerializer
+from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerForUsers
 from apps.users.services.auth_service import AuthService
 from apps.core.middleware import get_client_ip_from_request, get_current_user_agent
 from apps.users.throttles import LoginIPRateThrottle, LoginUserRateThrottle
@@ -135,6 +135,20 @@ class UserView(APIView):
         from apps.users.serializers import UserSerializer
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+class UserViewForUsers(APIView):
+    """
+    VISTA DE USUARIOS:
+    Permite obtener la lista de usuarios (protegida para administradores).
+    """
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        from apps.users.models import User
+        users = User.objects.filter(
+            status=User.Status.ACTIVE
+        ).select_related('profile_picture')
+        serializer = UserSerializerForUsers(users, many=True)
         return Response(serializer.data)
 
 class LogoutView(APIView):
