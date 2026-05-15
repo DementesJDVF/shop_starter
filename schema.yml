@@ -2977,60 +2977,68 @@ components:
       - LOGOUT
       - REFRESH
       - UNKNOWN
-      type: string
-      description: |-
-        * `CREATE` - Create
-        * `UPDATE` - Update
-        * `DELETE` - Delete
-        * `SOFT_DELETE` - Soft Delete
-        * `RESTORE` - Restore
-        * `STATUS_CHANGE` - Status Change
-        * `ROLE_CHANGE` - Role Change
-        * `LOGIN` - Login
-        * `LOGOUT` - Logout
-        * `REFRESH` - Refresh
-        * `UNKNOWN` - Unknown
-    AuditLog:
+    CouponTypeEnum:
+      enum:
+      - PERCENTAGE
+      - FIXED_AMOUNT
+      - BUY_ONE_GET_ONE
+      - FREE_SHIPPING
+      - FLASH_SALE
+    CouponStatusEnum:
+      enum:
+      - ACTIVE
+      - EXPIRED
+      - DISABLED
+      - DRAFT
+    CouponWithProducts:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
-          readOnly: true
-        user:
-          type: string
-          format: uuid
-          readOnly: true
-          nullable: true
-        action_type:
-          allOf:
-          - $ref: '#/components/schemas/ActionTypeEnum'
-          readOnly: true
-        source:
-          allOf:
-          - $ref: '#/components/schemas/SourceEnum'
-          readOnly: true
-        content_type:
           type: integer
+          format: int64
           readOnly: true
-          nullable: true
-        object_id:
+        code:
           type: string
+          maxLength: 50
+          description: 'Código de cupón. Entre 1 y 50 caracteres. Alfanuméricos, guiones
+            bajos.'
+          example: SUMMER25
+          minLength: 1
+          pattern: '^[A-Za-z0-9_]+$'
+        discount_type:
+          $ref: '#/components/schemas/CouponTypeEnum'
+        discount_value:
+          type: number
+          description: 'Valor del descuento. Si es PERCENTAGE, debe ser entre 1 y 100.
+            Si es FIXED_AMOUNT, debe ser positivo.'
+          format: double
+          minimum: 1
+          maximum: 100
+        min_order_amount:
+          type: number
+          description: 'Monto mínimo de compra para aplicar el cupón. Mínimo 0.'
+          format: double
+          minimum: 0
+        max_uses:
+          type: integer
+          description: 'Máximo de usos del cupón. 0 para uso ilimitado.'
+          format: int64
+          minimum: 0
+        used_count:
+          type: integer
+          description: 'Número de veces que se ha usado el cupón.'
+          format: int64
           readOnly: true
-          nullable: true
-        object_repr:
+        status:
+          $ref: '#/components/schemas/CouponStatusEnum'
+        valid_from:
           type: string
-          readOnly: true
-        previous_data:
-          readOnly: true
-          nullable: true
-        new_data:
-          readOnly: true
-          nullable: true
-        ip_address:
+          description: 'Fecha de inicio de validez del cupón. Formato ISO 8601.'
+          format: date-time
+        valid_to:
           type: string
-          readOnly: true
-          nullable: true
+          description: 'Fecha de fin de validez del cupón. Formato ISO 8601.'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -3040,18 +3048,90 @@ components:
           format: date-time
           readOnly: true
       required:
-      - action_type
-      - content_type
-      - created_at
-      - id
-      - ip_address
-      - new_data
-      - object_id
-      - object_repr
-      - previous_data
-      - source
-      - updated_at
-      - user
+      - code
+      - discount_type
+      - discount_value
+      - min_order_amount
+    CreateCoupon:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: 'Código de cupón. Entre 1 y 50 caracteres. Alfanuméricos, guiones
+            bajos.'
+          example: SUMMER25
+          minLength: 1
+          pattern: '^[A-Za-z0-9_]+$'
+        discount_type:
+          $ref: '#/components/schemas/CouponTypeEnum'
+        discount_value:
+          type: number
+          description: 'Valor del descuento. Si es PERCENTAGE, debe ser entre 1 y 100.
+            Si es FIXED_AMOUNT, debe ser positivo.'
+          format: double
+          minimum: 1
+          maximum: 100
+        min_order_amount:
+          type: number
+          description: 'Monto mínimo de compra para aplicar el cupón. Mínimo 0.'
+          format: double
+          minimum: 0
+        max_uses:
+          type: integer
+          description: 'Máximo de usos del cupón. 0 para uso ilimitado.'
+          format: int64
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/CouponStatusEnum'
+        valid_from:
+          type: string
+          description: 'Fecha de inicio de validez del cupón. Formato ISO 8601.'
+          format: date-time
+        valid_to:
+          type: string
+          description: 'Fecha de fin de validez del cupón. Formato ISO 8601.'
+          format: date-time
+      required:
+      - code
+      - discount_type
+      - discount_value
+      - min_order_amount
+    PatchedCoupon:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: 'Código de cupón. Entre 1 y 50 caracteres. Alfanuméricos, guiones
+            bajos.'
+          example: SUMMER25
+          minLength: 1
+          pattern: '^[A-Za-z0-9_]+$'
+        discount_type:
+          $ref: '#/components/schemas/CouponTypeEnum'
+        discount_value:
+          type: number
+          description: 'Valor del descuento. Si es PERCENTAGE, debe ser entre 1 y 100.
+            Si es FIXED_AMOUNT, debe ser positivo.'
+          format: double
+          minimum: 1
+          maximum: 100
+        min_order_amount:
+          type: number
+          description: 'Monto mínimo de compra para aplicar el cupón. Mínimo 0.'
+          format: double
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/CouponStatusEnum'
+        valid_from:
+          type: string
+          description: 'Fecha de inicio de validez del cupón. Formato ISO 8601.'
+          format: date-time
+        valid_to:
+          type: string
+          description: 'Fecha de fin de validez del cupón. Formato ISO 8601.'
+          format: date-time
     Category:
       type: object
       properties:
@@ -3070,12 +3150,20 @@ components:
           maxLength: 20
         is_active:
           type: boolean
+          default: true
+        is_deleted:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
       - id
       - name
     CrePro:
       type: object
-      description: Serializer para CREAR/EDITAR productos (el vendedor envía datos).
+      description: Serializer para CREAR/EDITAR productos (el vendedor envia datos).
       properties:
         id:
           type: string
@@ -3085,11 +3173,15 @@ components:
           type: string
           format: uuid
           readOnly: true
-        category:
-          type: integer
-          nullable: true
-        category_name:
-          type: string
+        categories:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        category_names:
+          type: array
+          items:
+            type: string
           readOnly: true
         name:
           type: string
@@ -3119,225 +3211,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PImageWrite'
+          readOnly: true
         is_deleted:
           type: boolean
       required:
-      - category_name
+      - categories
       - description
       - id
       - name
       - price
       - vendor
-    Image:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        url_image:
-          type: string
-          format: uri
-        is_main:
-          type: boolean
-      required:
-      - id
-      - url_image
-    Location:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        user:
-          type: string
-          format: uuid
-        user_name:
-          type: string
-          readOnly: true
-        user_email:
-          type: string
-          format: email
-          readOnly: true
-        user_status:
-          type: string
-          readOnly: true
-        latitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,18})?$
-        longitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,18})?$
-        description:
-          type: string
-          nullable: true
-          maxLength: 255
-        images:
-          type: array
-          items:
-            $ref: '#/components/schemas/Image'
-        products:
-          type: string
-          readOnly: true
-        is_active:
-          type: boolean
-      required:
-      - id
-      - latitude
-      - longitude
-      - products
-      - user_email
-      - user_name
-      - user_status
-    Login:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          writeOnly: true
-      required:
-      - email
-      - password
-    ModerationStatusEnum:
-      enum:
-      - PENDING
-      - APPROVED
-      - REJECTED
-      - FLAGGED
-      type: string
-      description: |-
-        * `PENDING` - Pendiente
-        * `APPROVED` - Aprobado
-        * `REJECTED` - Rechazado
-        * `FLAGGED` - Marcado para revisión
-    Notification:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        title:
-          type: string
-          maxLength: 255
-        message:
-          type: string
-        is_read:
-          type: boolean
-        type:
-          type: string
-          nullable: true
-          maxLength: 50
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - created_at
-      - id
-      - message
-      - title
-    Order:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        client:
-          type: string
-          format: uuid
-          readOnly: true
-        client_name:
-          type: string
-          readOnly: true
-        vendor:
-          type: string
-          format: uuid
-          readOnly: true
-          nullable: true
-        vendor_name:
-          type: string
-          readOnly: true
-        status:
-          $ref: '#/components/schemas/OrderStatusEnum'
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        product:
-          type: string
-          format: uuid
-        product_name:
-          type: string
-          readOnly: true
-        quantity:
-          type: integer
-          maximum: 9223372036854775807
-          minimum: 1
-          format: int64
-        unit_price:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-          nullable: true
-        total:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        payment_notified:
-          type: boolean
-      required:
-      - client
-      - client_name
-      - created_at
-      - id
-      - product
-      - product_name
-      - total
-      - unit_price
-      - vendor
-      - vendor_name
-    OrderStatusEnum:
-      enum:
-      - PENDING
-      - RESERVED
-      - PAID
-      - CANCELLED
-      type: string
-      description: |-
-        * `PENDING` - Pendiente
-        * `RESERVED` - Reservado
-        * `PAID` - Pagado
-        * `CANCELLED` - Cancelado
-    PImageRead:
-      type: object
-      description: Para leer imágenes — devuelve la URL completa.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        url_image:
-          type: string
-          readOnly: true
-        is_main:
-          type: boolean
-        moderation_status:
-          $ref: '#/components/schemas/ModerationStatusEnum'
-      required:
-      - id
-      - url_image
     PImageWrite:
       type: object
-      description: Acepta una imagen como string Base64 o URL.
       properties:
         url_image:
           type: string
@@ -3346,73 +3231,36 @@ components:
           default: false
       required:
       - url_image
-    PaginatedAuditLogList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuditLog'
-    PaginatedReadProList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/ReadPro'
-    PatchedCategory:
+    PImageRead:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        name:
+        url_image:
           type: string
-          maxLength: 120
-        description:
-          type: string
-          nullable: true
-        emoji:
-          type: string
-          nullable: true
-          maxLength: 20
-        is_active:
+          readOnly: true
+        is_main:
           type: boolean
+          readOnly: true
+        moderation_status:
+          $ref: '#/components/schemas/PImageReadModerationStatusEnum'
+        moderation_details:
+          type: object
+          nullable: true
+      required:
+      - id
+      - url_image
+      - moderation_status
+    PImageReadModerationStatusEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      - FLAGGED
     PatchedCrePro:
       type: object
-      description: Serializer para CREAR/EDITAR productos (el vendedor envía datos).
+      description: Serializer para CREAR/EDITAR productos (el vendedor envia datos).
       properties:
         id:
           type: string
@@ -3422,11 +3270,15 @@ components:
           type: string
           format: uuid
           readOnly: true
-        category:
-          type: integer
-          nullable: true
-        category_name:
-          type: string
+        categories:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        category_names:
+          type: array
+          items:
+            type: string
           readOnly: true
         name:
           type: string
@@ -3456,111 +3308,63 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PImageWrite'
+          readOnly: true
         is_deleted:
           type: boolean
-    PatchedLocation:
+      required:
+      - categories
+      - description
+      - id
+      - name
+      - price
+      - vendor
+    Status308Enum:
+      enum:
+      - PENDING
+      - AVAILABLE
+      - INACTIVE
+      - REJECTED
+      - RESERVED
+      - SOLD
+    ReadBasicUser:
       type: object
       properties:
         id:
           type: string
           format: uuid
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+    ReadLocation:
+      type: object
+      properties:
+        id:
+          type: integer
           readOnly: true
         user:
           type: string
           format: uuid
-        user_name:
-          type: string
-          readOnly: true
-        user_email:
-          type: string
-          format: email
-          readOnly: true
-        user_status:
-          type: string
-          readOnly: true
         latitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,18})?$
+          type: number
+          format: double
         longitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,18})?$
-        description:
-          type: string
-          nullable: true
-          maxLength: 255
-        images:
-          type: array
-          items:
-            $ref: '#/components/schemas/Image'
-        products:
-          type: string
-          readOnly: true
+          type: number
+          format: double
         is_active:
           type: boolean
-    PatchedNotification:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        title:
-          type: string
-          maxLength: 255
-        message:
-          type: string
-        is_read:
-          type: boolean
-        type:
-          type: string
-          nullable: true
-          maxLength: 50
-        created_at:
+        date_created:
           type: string
           format: date-time
-          readOnly: true
-    PatchedReview:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        client:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          readOnly: true
-        rating:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,1}(?:\.\d{0,1})?$
-        review_text:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedUserAdmin:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        role:
-          $ref: '#/components/schemas/RoleEnum'
-        is_active:
-          type: boolean
-          title: Active
-          description: Designates whether this user should be treated as active. Unselect
-            this instead of deleting accounts.
+      required:
+      - id
+      - user
+      - latitude
+      - longitude
+      - is_active
     ReadPro:
       type: object
       description: Serializer para LEER productos (el cliente ve la lista/detalle).
@@ -3575,11 +3379,15 @@ components:
         vendor_name:
           type: string
           readOnly: true
-        category:
-          type: integer
-          nullable: true
-        category_name:
-          type: string
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+          readOnly: true
+        category_names:
+          type: array
+          items:
+            type: string
           readOnly: true
         name:
           type: string
@@ -3626,7 +3434,7 @@ components:
         is_deleted:
           type: boolean
       required:
-      - category_name
+      - categories
       - created_at
       - description
       - distance
@@ -3638,159 +3446,4 @@ components:
       - price
       - vendor
       - vendor_name
-    Register:
-      type: object
-      properties:
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        password:
-          type: string
-          writeOnly: true
-          minLength: 8
-        password_confirm:
-          type: string
-          writeOnly: true
-          minLength: 8
-        role:
-          allOf:
-          - $ref: '#/components/schemas/RoleEnum'
-          default: CLIENTE
-        full_name:
-          type: string
-          nullable: true
-          maxLength: 512
-        phone_number:
-          type: string
-          nullable: true
-          maxLength: 255
-        document_type:
-          type: string
-          nullable: true
-          maxLength: 20
-        document_number:
-          type: string
-          nullable: true
-          maxLength: 255
-        birth_date:
-          type: string
-          nullable: true
-        is_human:
-          type: boolean
-          default: true
-        honeypot:
-          type: string
-      required:
-      - email
-      - password
-      - username
-    Review:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        client:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          readOnly: true
-        rating:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,1}(?:\.\d{0,1})?$
-        review_text:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - client
-      - created_at
-      - id
-      - rating
-      - review_text
-    RoleEnum:
-      enum:
-      - ADMIN
-      - VENDEDOR
-      - CLIENTE
-      type: string
-      description: |-
-        * `ADMIN` - Administrador
-        * `VENDEDOR` - Vendedor
-        * `CLIENTE` - Cliente
-    SourceEnum:
-      enum:
-      - API
-      - ADMIN
-      - SYSTEM
-      - BACKGROUND
-      type: string
-      description: |-
-        * `API` - Api
-        * `ADMIN` - Admin
-        * `SYSTEM` - System
-        * `BACKGROUND` - Background
-    Status308Enum:
-      enum:
-      - PENDING
-      - AVAILABLE
-      - INACTIVE
-      - REJECTED
-      type: string
-      description: |-
-        * `PENDING` - Pending Approval
-        * `AVAILABLE` - Available
-        * `INACTIVE` - Inactive
-        * `REJECTED` - Rejected
-    TokenObtainPair:
-      type: object
-      properties:
-        email:
-          type: string
-          writeOnly: true
-        password:
-          type: string
-          writeOnly: true
-        access:
-          type: string
-          readOnly: true
-        refresh:
-          type: string
-          readOnly: true
-      required:
-      - access
-      - email
-      - password
-      - refresh
-    UserAdmin:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        role:
-          $ref: '#/components/schemas/RoleEnum'
-        is_active:
-          type: boolean
-          title: Active
-          description: Designates whether this user should be treated as active. Unselect
-            this instead of deleting accounts.
-      required:
-      - email
-      - id
+
