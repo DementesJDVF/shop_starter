@@ -140,13 +140,16 @@ class UserView(APIView):
 class UserViewForUsers(APIView):
     """
     VISTA DE USUARIOS:
-    Permite obtener la lista de usuarios (protegida para administradores).
+    Permite obtener la lista de usuarios.
     """
     permission_classes = [permissions.AllowAny]
     def get(self, request):
         from apps.users.models import User
+        from apps.users.constants import UserRoles
         users = User.objects.filter(
             status=User.Status.ACTIVE
+        ).exclude(
+            role=UserRoles.ADMIN
         ).select_related('profile_picture')
         serializer = UserSerializerForUsers(users, many=True)
         return Response(serializer.data)
