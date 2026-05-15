@@ -391,7 +391,7 @@ def _notify_admins_full_product_review(product, rejected_images, product_review)
         'product_id': str(product.id),
         'product_name': product.name,
         'product_description': product.description,
-        'product_category': product.category.name if product.category else 'Sin categoría',
+        'product_category': ', '.join([c.name for c in product.categories.all()]) if product.categories.exists() else 'Sin categoría',
         'product_price': f"${product.price:,.0f}",
         'product_stock': product.stock,
         'product_status': product.status,

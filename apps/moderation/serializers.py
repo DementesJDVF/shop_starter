@@ -56,7 +56,7 @@ class RejectedImageDetailSerializer(serializers.ModelSerializer):
         return {
             'id': obj.product.id,
             'name': obj.product.name,
-            'category': obj.product.category.name if obj.product.category else None,
+            'category': ', '.join([c.name for c in obj.product.categories.all()]) if obj.product.categories.exists() else None,
             'price': str(obj.product.price),
             'status': obj.product.status,
             'description': obj.product.description[:200],  # primeros 200 chars
@@ -135,7 +135,7 @@ class ProductReviewDetailSerializer(serializers.ModelSerializer):
             'id': str(product.id),
             'name': product.name,
             'description': product.description,
-            'category': product.category.name if product.category else None,
+            'category': ', '.join([c.name for c in product.categories.all()]) if product.categories.exists() else None,
             'price': str(product.price),
             'stock': product.stock,
             'status': product.status,
