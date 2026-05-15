@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.shortcuts import get_object_or_404
 
 from apps.users.serializers import LoginSerializer, UserSerializer, UserSerializerForUsers
 from apps.users.services.auth_service import AuthService
@@ -143,15 +144,18 @@ class UserViewForUsers(APIView):
     Permite obtener la lista de usuarios.
     """
     permission_classes = [permissions.AllowAny]
-    def get(self, request):
-        from apps.users.models import User
-        from apps.users.constants import UserRoles
-        users = User.objects.filter(
+    def get(self, request, pk): # Añadimos 'pk' aquí
+        from apps.users.models import User, UserRoles
+        # Buscamos el usuario que cumpla todas las condiciones
+        user = get_object_or_404(
+            User.objects.select_related('profile_picture'), 
+            pk=pk, 
             status=User.Status.ACTIVE
-        ).exclude(
-            role=UserRoles.ADMIN
-        ).select_related('profile_picture')
-        serializer = UserSerializerForUsers(users, many=True)
+        )
+        # Verificación extra: si es ADMIN, prohibimos ver el detalle
+        if user.role == UserRoles.ADMIN:
+            return Response({"error": "No se permite ver perfiles administrativos."}, status=403)
+        serializer = UserSerializerForUsers(user) # Quitamos el many=True
         return Response(serializer.data)
 
 class LogoutView(APIView):

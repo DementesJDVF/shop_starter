@@ -39,7 +39,7 @@ urlpatterns = [
     path("me/profile-picture/", MyProfilePictureView.as_view(), name="my_profile_picture"),
 
     path("list/", UserView.as_view(), name="read"),
-    path("listusers/", UserViewForUsers.as_view(), name="read"),
+    path("listusers/<uuid:pk>/", UserViewForUsers.as_view(), name="user-detail"),
 
     path("<str:pk>/", AdminUserViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
 
