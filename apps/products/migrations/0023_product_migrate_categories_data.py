@@ -1,35 +1,20 @@
-from django.db import migrations, models
+from django.db import migrations
 
 
 def forwards_copy_categories(apps, schema_editor):
     """
-    Migra los datos de la antigua relación ForeignKey (category) a la nueva
-    ManyToManyField (categories).
+    Migrar los datos de la antigua relación ForeignKey (category) a la nueva
+    ManyToManyField (categories). Funciona con cualquier backend de base de datos.
     """
     Product = apps.get_model('products', 'Product')
     
-    # Intentamos obtener la conexión directamente para usar SQL crudo
-    from django.db import connection
-    cursor = connection.cursor()
-    
-    # Verificamos si la columna existe en la tabla (aunque Django crea que no)
-    cursor.execute("PRAGMA table_info(products_product)")
-    columns = [col[1] for col in cursor.fetchall()]
-    
-    if 'category_id' not in columns:
-        print("AVISO: La columna 'category_id' ya no existe en la base de datos. No se pueden migrar los datos.")
-        return
-
-    # Si existe, migramos usando SQL para evitar el FieldError del ORM
-    cursor.execute("SELECT id, category_id FROM products_product WHERE category_id IS NOT NULL")
-    rows = cursor.fetchall()
-    
-    for product_id, cat_id in rows:
+    # Usamos el ORM directamente - es backend-agnostic
+    # Solo procesamos productos que tengan category_id (no None/null)
+    for product in Product.objects.exclude(category__isnull=True).iterator():
         try:
-            product = Product.objects.get(id=product_id)
-            product.categories.add(cat_id)
+            product.categories.add(product.category_id)
         except Exception as e:
-            print(f"Error migrando producto {product_id}: {e}")
+            print(f"Error migrando producto {product.id}: {e}")
 
 
 def backwards_noop(apps, schema_editor):
