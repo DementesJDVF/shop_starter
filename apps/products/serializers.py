@@ -96,62 +96,71 @@ class PImageReadSerializer(serializers.ModelSerializer):
             return str(obj.url_image) if obj.url_image else None
 
 
-# En CreProSerializer, agrega validaciones explícitas de tipo:
 class CreProSerializer(serializers.ModelSerializer):
-    images = PImageWriteSerializer(many=True, required=False)
-    vendor = serializers.PrimaryKeyRelatedField(read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
+     images = PImageWriteSerializer(many=True, required=False)
+     vendor = serializers.PrimaryKeyRelatedField(read_only=True)
+     categories = serializers.PrimaryKeyRelatedField(
+         queryset=Category.objects.all(),
+         many=True,
+         required=False
+     )
 
-    # ✅ Forzar tipos correctos explícitamente
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    stock = serializers.BooleanField()
+     # ✅ Forzar tipos correctos explícitamente
+     price = serializers.DecimalField(max_digits=10, decimal_places=2)
+     stock = serializers.BooleanField()
 
-    class Meta:
-        model = Product
-        fields = [
-            'id', 'vendor', 'category', 'category_name',
-            'name', 'description', 'ai_description', 'price', 'stock',
-            'status', 'rejection_reason', 'is_featured', 'images', 'is_deleted'
-        ]
-        read_only_fields = ['vendor']
+     class Meta:
+         model = Product
+         fields = [
+             'id', 'vendor', 'categories',
+             'name', 'description', 'ai_description', 'price', 'stock',
+             'status', 'rejection_reason', 'is_featured', 'images', 'is_deleted'
+         ]
+         read_only_fields = ['vendor']
 
-    # En serializers.py, en el método create de CreProSerializer:
-    @transaction.atomic
-    def create(self, validated_data):
-        images_data = validated_data.pop('images', [])
-        
-        # ✅ Forzar UUID explícito para evitar datatype mismatch en SQLite
-        import uuid
-        product = Product.objects.create(
-            id=uuid.uuid4(),
-            **validated_data
-        )
-        for img_data in images_data:
-            PImages.objects.create(product=product, **img_data)
-        return product
+     # En serializers.py, en el método create de CreProSerializer:
+     @transaction.atomic
+     def create(self, validated_data):
+         images_data = validated_data.pop('images', [])
+         categories_data = validated_data.pop('categories', [])
 
-    def validate_stock(self, value):
-        """Convierte el booleano del frontend a entero para la base de datos."""
-        return 1 if value else 0
+         # ✅ Forzar UUID explícito para evitar datatype mismatch en SQLite
+         import uuid
+         product = Product.objects.create(
+             id=uuid.uuid4(),
+             **validated_data
+         )
+         product.categories.set(categories_data)
+         for img_data in images_data:
+             PImages.objects.create(product=product, **img_data)
+         return product
 
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        images_data = validated_data.pop('images', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        if images_data is not None:
-            # Opción: borrar imágenes anteriores o solo añadir
-            # Por ahora solo añadimos las nuevas
-            for img_data in images_data:
-                PImages.objects.create(product=instance, **img_data)
-        return instance
+     def validate_stock(self, value):
+         """Convierte el booleano del frontend a entero para la base de datos."""
+         return 1 if value else 0
+
+     @transaction.atomic
+     def update(self, instance, validated_data):
+         images_data = validated_data.pop('images', None)
+         categories_data = validated_data.pop('categories', None)
+         for attr, value in validated_data.items():
+             setattr(instance, attr, value)
+         instance.save()
+         if categories_data is not None:
+             instance.categories.set(categories_data)
+         if images_data is not None:
+             # Opción: borrar imágenes anteriores o solo añadir
+             # Por ahora solo añadimos las nuevas
+             for img_data in images_data:
+                 PImages.objects.create(product=instance, **img_data)
+         return instance
 
 
 class ReadProSerializer(serializers.ModelSerializer):
     """Serializer para LEER productos (el cliente ve la lista/detalle)."""
     images = PImageReadSerializer(many=True, read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    categories = CategorySerializer(many=True, read_only=True)
+    category_names = serializers.SerializerMethodField()
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
     distance = serializers.SerializerMethodField()
     latitude = serializers.SerializerMethodField()
@@ -160,7 +169,7 @@ class ReadProSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'vendor', 'vendor_name', 'category', 'category_name',
+            'id', 'vendor', 'vendor_name', 'categories', 'category_names',
             'name', 'description', 'ai_description', 'price', 'stock',
             'status', 'rejection_reason', 'is_featured', 'images', 'created_at',
             'distance', 'latitude', 'longitude', 'is_deleted'
@@ -170,6 +179,9 @@ class ReadProSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['stock'] = bool(instance.stock > 0)
         return data
+
+    def get_category_names(self, obj):
+        return [cat.name for cat in obj.categories.all()]
 
     def get_distance(self, obj):
         request = self.context.get('request')
