@@ -21,6 +21,7 @@ class ProductFilter(django_filters.FilterSet):
         field_name='categories',
         queryset=Category.objects.all(),
         conjoined=False,  # OR: productos con CUALQUIERA de las categorías
+        distinct=True,  # Evita duplicados por joins M2M múltiples
         label='Categorías (OR)',
     )
 
