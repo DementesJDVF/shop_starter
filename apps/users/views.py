@@ -19,7 +19,8 @@ from .serializers import (
     ProfilePictureSerializer,
 )
 from .throttles import RegisterRateThrottle
-from apps.core.services.email_service import send_user_status_notification
+from apps.core.services.email_service import send_welcome_email
+from apps.users.constants import UserRoles
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
@@ -40,6 +41,8 @@ class RegisterView(generics.CreateAPIView):
             validated_data=serializer.validated_data,
             ip_address=get_client_ip_from_request(request),
         )
+        if user.role == UserRoles.CUSTOMER:
+            send_welcome_email(user)
 
         return Response(
             {
@@ -133,6 +136,9 @@ class ChangeUserStatusView(APIView):
         if old_status != new_status and new_status in [User.Status.ACTIVE, User.Status.BLOCKED]:
             from apps.users.tasks import send_user_status_notification_task
             send_user_status_notification_task.delay(target_user.id)
+        # Send welcome email to vendor upon activation
+        if target_user.role == UserRoles.VENDOR and new_status == User.Status.ACTIVE:
+            send_welcome_email(target_user)
 
         return Response(
             {

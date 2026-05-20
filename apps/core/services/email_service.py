@@ -3,6 +3,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+
 def send_product_status_notification(product):
     """
     Envía un correo electrónico al vendedor informando sobre el cambio de estado de su producto.
@@ -100,4 +101,31 @@ def send_password_reset_email(user, reset_url):
         return True
     except Exception as e:
         print(f"Error enviando correo de recuperación: {e}")
+        return False
+
+def send_welcome_email(user):
+    """
+    Envía un correo de bienvenida al cliente después de crear su cuenta.
+    Ahora incluye un mensaje más amigable y personalizado con el nombre del usuario.
+    """
+    subject = f"¡Bienvenido a ShopStarter, {user.full_name or user.username}!"
+    # Texto plano con saludo personalizado
+    message = (
+        f"Hola {user.full_name or user.username},\n\n"
+        "¡Gracias por registrarte en ShopStarter! Estamos muy contentos de que te unas a nuestra comunidad.\n"
+        "Explora el catálogo, compra y disfruta de la mejor experiencia.\n\n"
+        "¡Éxitos!\n"
+        "ShopStarter"
+    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Error enviando correo de bienvenida: {e}")
         return False
