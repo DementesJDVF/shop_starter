@@ -628,6 +628,7 @@ def nearby_products(request):
     lat = request.GET.get("lat")
     lng = request.GET.get("lng")
     radius = request.GET.get("radius", 5)
+    search_query = request.GET.get("search", "")
 
     try:
         lat = float(lat)
@@ -659,12 +660,19 @@ def nearby_products(request):
     for loc in locations:
         nearby_user_ids.append(loc.user.id)
         user_distances[loc.user.id] = round(loc.distance, 2)
-
-    products = Product.objects.filter(
+    
+    # 2. Aplicar el filtro de nombre si existe
+    products_queryset = Product.objects.filter(
         vendor__in=nearby_user_ids,
         status__in=[Product.ProductStatus.AVAILABLE, Product.ProductStatus.RESERVED, Product.ProductStatus.SOLD],
         stock__gt=0
-    ).select_related('vendor').prefetch_related('categories', 'images')
+    )
+    
+    if search_query:
+        # icontains hace la búsqueda insensible a mayúsculas/minúsculas
+        products_queryset = products_queryset.filter(name__icontains=search_query)
+        
+    products = products_queryset.select_related('vendor').prefetch_related('categories', 'images')
 
     data = []
     for product in products:
