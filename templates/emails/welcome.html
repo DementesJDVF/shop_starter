@@ -1,0 +1,22 @@
+{% extends "emails/base_email.html" %}
+{% block title %}¡Bienvenido a ShopStarter!{% endblock %}
+{% block header %}🚀 ¡Bienvenido a tu nueva tienda!{% endblock %}
+{% block content %}
+<p>Hola {{ user.full_name|default:user.username }},</p>
+<p>¡Nos alegra mucho que te unas a <strong>ShopStarter</strong>! 🎉</p>
+<p>En la siguiente sección te contamos cómo sacarle el máximo provecho a nuestra plataforma:</p>
+<ul class="features">
+    <li>🛍️ <strong>Explora el catálogo</strong> – miles de productos de calidad listos para ti.</li>
+    <li>📦 <strong>Gestión de pedidos</strong> – seguimiento en tiempo real desde la compra hasta la entrega.</li>
+    <li>💳 <strong>Pagos seguros</strong> – integra tu método favorito sin complicaciones.</li>
+    <li>⚙️ <strong>Panel de vendedor</strong> – controla inventario, precios y promociones con un solo clic.</li>
+</ul>
+<p>Para comenzar, visita tu <a href="{{ dashboard_url }}" class="cta">Panel de Control</a> y completa tu perfil.</p>
+<p>Si tienes cualquier duda, nuestro equipo de soporte está siempre disponible en <a href="mailto:support@shopstarter.com">support@shopstarter.com</a>.</p>
+<p>¡Gracias por confiar en nosotros! Estamos seguros de que tendrás una experiencia excelente.</p>
+<p>Con gratitud,</p>
+<p><em>El equipo de ShopStarter</em></p>
+{% endblock %}
+{% block footer %}
+    © {{ year }} ShopStarter – Todos los derechos reservados.
+{% endblock %}

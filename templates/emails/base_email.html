@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}ShopStarter{% endblock %}</title>
+    <style>
+        /* Reset */
+        body, p, h1, h2, h3, ul, li { margin:0; padding:0; }
+        body { font-family: 'Inter', sans-serif; background:#f4f7f9; color:#2d3748; line-height:1.6; }
+        .container { max-width:600px; margin:30px auto; background:#ffffff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; }
+        .header { background:linear-gradient(135deg, #667eea, #764ba2); color:#fff; padding:30px; text-align:center; }
+        .header h1 { font-size:24px; margin-bottom:5px; }
+        .content { padding:30px; }
+        .cta { display:inline-block; background:#667eea; color:#fff; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:600; margin:20px 0; }
+        .footer { background:#f1f5f9; color:#718096; text-align:center; font-size:12px; padding:20px; }
+        .features { list-style:none; margin-top:20px; }
+        .features li { margin-bottom:10px; }
+        @media (max-width:480px) {
+            .container { margin:10px; }
+            .header { padding:20px; }
+            .content { padding:20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{% block header %}Bienvenido a ShopStarter{% endblock %}</h1>
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer">
+            © {{ year }} ShopStarter – Todos los derechos reservados.
+        </div>
+    </div>
+</body>
+</html>
