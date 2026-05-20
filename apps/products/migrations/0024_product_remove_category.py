@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('products', '0024_alter_pimages_moderation_status'),
+        ('products', '0023_product_migrate_categories_data'),
     ]
 
     operations = [
