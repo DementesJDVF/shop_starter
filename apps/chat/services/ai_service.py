@@ -75,6 +75,7 @@ Si no se encontraron productos, dile amablemente que no hay coincidencias exacta
     context_msg = f"Mensaje del cliente: {user_message}\n"
     if image_keywords:
         context_msg += f"[El cliente adjuntó una imagen que el sistema describe como: {image_keywords}]\n"
+        context_msg += "Como se adjuntó una imagen, menciona explícitamente al cliente cuál es el producto más barato (marcado con is_cheapest) y cuál es el más caro (marcado con is_most_expensive) de la lista de productos disponibles para darle opciones de presupuesto.\n"
         
     context_msg += f"\nPRODUCTOS DISPONIBLES EN DB:\n{json.dumps(products_data, ensure_ascii=False)}"
 

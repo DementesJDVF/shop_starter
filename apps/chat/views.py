@@ -71,8 +71,26 @@ class ChatAssistantView(APIView):
         if max_price is not None:
             query &= Q(price__lte=max_price)
 
-        # Obtenemos los 5 mejores resultados
-        found_products = Product.objects.filter(query).distinct()[:5]
+        all_matching = Product.objects.filter(query).distinct()
+        
+        cheapest = None
+        most_expensive = None
+
+        if image and all_matching.exists():
+            cheapest = all_matching.order_by('price').first()
+            most_expensive = all_matching.order_by('-price').first()
+            
+            # Armamos una lista donde cheapest y most_expensive están al inicio
+            selected_products = [cheapest]
+            if most_expensive.id != cheapest.id:
+                selected_products.append(most_expensive)
+            
+            # Completamos hasta 5 con los demás productos
+            other_products = all_matching.exclude(id__in=[p.id for p in selected_products])[:5 - len(selected_products)]
+            found_products = selected_products + list(other_products)
+        else:
+            # Obtenemos los 5 mejores resultados por defecto
+            found_products = all_matching[:5]
 
         # Serializamos minimalista para enviar a Groq y al FrontEnd
         products_json = []
@@ -82,13 +100,21 @@ class ChatAssistantView(APIView):
             img_url = str(main_img.url_image) if main_img and main_img.url_image else None
             
             p_data = {
-                "id": p.id,
+                "id": str(p.id),  # UUID → str para serialización JSON y Groq
                 "name": p.name,
                 "price": float(p.price),
                 "stock": p.stock,
                 "vendor_id": str(p.vendor.id),  # UUID → str para serialización JSON
                 "image_url": img_url
             }
+            
+            # Si se subió imagen, marcamos el más barato y más caro para que la IA lo sepa
+            if image and cheapest and most_expensive:
+                if p.id == cheapest.id:
+                    p_data["is_cheapest"] = True
+                if p.id == most_expensive.id:
+                    p_data["is_most_expensive"] = True
+                    
             products_json.append(p_data)
 
         # 5. LLM: Generar respuesta conversacional
@@ -99,14 +125,17 @@ class ChatAssistantView(APIView):
             reply_text = "Tengo problemas para procesar tu respuesta ahora mismo, pero aquí tienes lo que encontré."
 
         # 6. Registrar evento para el historial de ventas del Vendor (si hay usuario autenticado y productos recomendados)
-        buyer = request.user if request.user.is_authenticated else None
-        for p in found_products:
-            AIRecommendationEvent.objects.create(
-                buyer=buyer,
-                product=p,
-                user_query=message,
-                ai_reasoning=f"Parámetros extraídos: {search_params}"
-            )
+        try:
+            buyer = request.user if request.user.is_authenticated else None
+            for p in found_products:
+                AIRecommendationEvent.objects.create(
+                    buyer=buyer,
+                    product=p,
+                    user_query=message,
+                    ai_reasoning=f"Parámetros extraídos: {search_params}"
+                )
+        except Exception as e:
+            logger.error(f"Error al registrar evento de recomendación en la BD: {e}")
 
         # 7. Respuesta
         return Response({
