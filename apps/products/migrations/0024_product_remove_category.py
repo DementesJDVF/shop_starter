@@ -10,8 +10,18 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='product',
-            name='category',
-        ),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql='ALTER TABLE products_product DROP COLUMN IF EXISTS category_id;',
+                    reverse_sql='ALTER TABLE products_product ADD COLUMN category_id integer NULL;'
+                )
+            ],
+            state_operations=[
+                migrations.RemoveField(
+                    model_name='product',
+                    name='category',
+                ),
+            ]
+        )
     ]
