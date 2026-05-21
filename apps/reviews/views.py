@@ -14,7 +14,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     class IsReviewOwner(permissions.BasePermission):
         """
-        Permite acceso de edición/borrado solo si el usuario es el dueño de la reseña.
+        Permite acceso de edición/borrado solo si el usuario es el dueño de la reseña, maybe.
         """
         def has_object_permission(self, request, view, obj):
             # El usuario debe ser el autor de la reseña
