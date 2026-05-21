@@ -318,9 +318,75 @@ LOGGING = {
             "formatter": "verbose",
         },
     },
-    "root": {
-        "handlers": ["console", "file"],
-        "level": "INFO",
+    "loggers": {
+        "anymail": {"handlers": ["console", "file"], "level": "DEBUG"},
+        "": {"handlers": ["console", "file"], "level": "INFO"},
+    },
+}
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{"
+        }
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "debug.log",
+            "formatter": "verbose"
+        }
+    },
+    "loggers": {
+        "anymail": {"handlers": ["console", "file"], "level": "DEBUG"},
+        "": {"handlers": ["console", "file"], "level": "INFO"}
+    }
+}
+
+
+        "disable_existing_loggers": False,
+        "formatters": {
+            "verbose": {
+                "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+                "style": "{",
+            },
+        },
+        "handlers": {
+            "console": {"class": "logging.StreamHandler"},
+            "file": {
+                "level": "ERROR",
+                "class": "logging.FileHandler",
+                "filename": BASE_DIR / "debug.log",
+                "formatter": "verbose",
+            },
+        },
+        "loggers": {
+            "anymail": {"handlers": ["console", "file"], "level": "DEBUG"},
+            "": {"handlers": ["console", "file"], "level": "INFO"},
+        },
+    }
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "debug.log",
+            "formatter": "verbose",
+        },
+    "loggers": {
+        "anymail": {"handlers": ["console", "file"], "level": "DEBUG"},
+        "": {"handlers": ["console", "file"], "level": "INFO"}
     },
 }
 
