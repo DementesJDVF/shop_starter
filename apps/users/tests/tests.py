@@ -13,7 +13,8 @@ class AuthTests(APITestCase):
             'email': 'test@example.com',
             'password': 'Password123!',
             'password_confirm': 'Password123!',
-            'is_human': True
+            'is_human': True,
+            'terms_accepted': True
         }
         url = reverse("register")
         response = self.client.post(url, data)
@@ -27,7 +28,8 @@ class AuthTests(APITestCase):
             'email': 'test@example.com',
             'password': 'Password123!',
             'password_confirm': 'Password456!',
-            'is_human': True
+            'is_human': True,
+            'terms_accepted': True
         }
         url = reverse("register")
         response = self.client.post(url, data)

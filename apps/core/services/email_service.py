@@ -105,24 +105,34 @@ def send_password_reset_email(user, reset_url):
 
 def send_welcome_email(user):
     """
-    Envía un correo de bienvenida al cliente después de crear su cuenta.
-    Ahora incluye un mensaje más amigable y personalizado con el nombre del usuario.
+    Envía un correo de bienvenida al cliente/vendedor después de crear su cuenta.
+    Usa la plantilla HTML welcome.html para una presentación premium.
     """
+    import datetime
     subject = f"¡Bienvenido a ShopStarter, {user.full_name or user.username}!"
-    # Texto plano con saludo personalizado
-    message = (
-        f"Hola {user.full_name or user.username},\n\n"
-        "¡Gracias por registrarte en ShopStarter! Estamos muy contentos de que te unas a nuestra comunidad.\n"
-        "Explora el catálogo, compra y disfruta de la mejor experiencia.\n\n"
-        "¡Éxitos!\n"
-        "ShopStarter"
-    )
+    
+    frontend_url = getattr(settings, "FRONTEND_URL", "https://shopstarter.online").rstrip("/")
+    if user.role == "VENDEDOR":
+        dashboard_url = f"{frontend_url}/vendedor/dashboard"
+    else:
+        dashboard_url = f"{frontend_url}/cliente/dashboard"
+        
+    context = {
+        'user': user,
+        'dashboard_url': dashboard_url,
+        'year': datetime.datetime.now().year,
+    }
+    
+    html_content = render_to_string('emails/welcome.html', context)
+    text_content = strip_tags(html_content)
+    
     try:
         send_mail(
             subject,
-            message,
+            text_content,
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
+            html_message=html_content,
             fail_silently=False,
         )
         return True

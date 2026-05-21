@@ -41,7 +41,7 @@ class RegisterView(generics.CreateAPIView):
             validated_data=serializer.validated_data,
             ip_address=get_client_ip_from_request(request),
         )
-        if user.role == UserRoles.CUSTOMER:
+        if user.role in [UserRoles.CUSTOMER, UserRoles.VENDOR]:
             send_welcome_email(user)
 
         return Response(

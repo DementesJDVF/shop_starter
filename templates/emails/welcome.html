@@ -4,6 +4,11 @@
 {% block content %}
 <p>Hola {{ user.full_name|default:user.username }},</p>
 <p>¡Nos alegra mucho que te unas a <strong>ShopStarter</strong>! 🎉</p>
+{% if user.role == "VENDEDOR" and user.status == "PENDING" %}
+<div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:15px; border-radius:8px; margin:20px 0; font-size:14px; font-weight:bold;">
+    ⚠️ Tu cuenta de vendedor ha sido creada y actualmente está bajo revisión por parte del administrador. Te enviaremos otra notificación una vez que sea activada para que puedas acceder al Panel de Control e iniciar sesión.
+</div>
+{% endif %}
 <p>En la siguiente sección te contamos cómo sacarle el máximo provecho a nuestra plataforma:</p>
 <ul class="features">
     <li>🛍️ <strong>Explora el catálogo</strong> – miles de productos de calidad listos para ti.</li>
