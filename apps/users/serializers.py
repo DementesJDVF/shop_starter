@@ -39,6 +39,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
         return username
 
+    def validate_phone_number(self, value):
+        if not value:
+            return value
+        cleaned = "".join(c for c in str(value) if c.isdigit())
+        if len(cleaned) == 10 and cleaned.startswith("3"):
+            cleaned = "57" + cleaned
+        return cleaned
+
     def validate(self, attrs):
         if "nombre" in self.initial_data and not attrs.get("full_name"):
             attrs["full_name"] = self.initial_data["nombre"]
@@ -224,6 +232,14 @@ class MyProfileSerializer(serializers.ModelSerializer):
         if value and User.objects.filter(username__iexact=value).exclude(pk=self.instance.pk).exists():
             raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
         return value
+
+    def validate_phone_number(self, value):
+        if not value:
+            return value
+        cleaned = "".join(c for c in str(value) if c.isdigit())
+        if len(cleaned) == 10 and cleaned.startswith("3"):
+            cleaned = "57" + cleaned
+        return cleaned
 
     def update(self, instance, validated_data):
         # Solo permitir actualizar los campos declarados como editables

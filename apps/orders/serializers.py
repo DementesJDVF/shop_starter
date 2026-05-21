@@ -11,11 +11,12 @@ class OrderSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     client_name = serializers.CharField(source='client.username', read_only=True)
     vendor_name = serializers.CharField(source='vendor.username', read_only=True)
+    vendor_phone = serializers.CharField(source='vendor.phone_number', read_only=True)
 
     class Meta:
         model = Order
         fields = [
-            'id', 'client', 'client_name', 'vendor', 'vendor_name',
+            'id', 'client', 'client_name', 'vendor', 'vendor_name', 'vendor_phone',
             'status', 'created_at', 'product', 'product_name', 
             'quantity', 'unit_price', 'total', 'payment_notified'
         ]
