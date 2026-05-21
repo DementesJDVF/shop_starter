@@ -7,11 +7,19 @@ import uuid
 from django.db.models import Avg
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    
+
+    class IsReviewOwner(permissions.BasePermission):
+        """
+        Permite acceso de edición/borrado solo si el usuario es el dueño de la reseña.
+        """
+        def has_object_permission(self, request, view, obj):
+            # El usuario debe ser el autor de la reseña
+            return obj.user == request.user
+
     def get_queryset(self):
         # Soporta filtrar por vendedor vía URL (kwargs) o vía Query Param
         vendor_id = self.kwargs.get('vendor_id') or self.request.query_params.get('vendor')
@@ -60,17 +68,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # Solo lectura es pública, escritura requiere autenticación.
         # Restricción: Los administradores NO pueden colocar reseñas (son solo monitores).
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            from apps.users.constants import UserRoles
-            from rest_framework import exceptions
-            
-            # Política de Neutralidad: Los administradores NO pueden colocar reseñas ni comentarios.
-            if self.request.user.is_authenticated and self.request.user.role == UserRoles.ADMIN:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("Como Administrador debes mantener la neutralidad. No puedes publicar reseñas.")
-
-            return [IsAuthenticated()]
-        return [AllowAny()]
+        # Acciones públicas
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        # Acciones que requieren estar logueado Y ser el dueño (o el permiso que definas)
+        if self.action in ['update', 'partial_update', 'destroy']:
+            # Aquí instanciamos la clase de permiso correctamente
+            return [IsAuthenticated(), self.IsReviewOwner()]
+        # Crear requiere estar logueado (y verificamos que no sea ADMIN dentro del perform_create)
+        return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
         try:
