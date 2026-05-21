@@ -64,7 +64,7 @@ class ChatAssistantView(APIView):
                 # omit commas and short words
                 w = word.replace(',', '').strip()
                 if len(w) > 2:
-                    word_query |= Q(name__icontains=w) | Q(description__icontains=w) | Q(category__name__icontains=w)
+                    word_query |= Q(name__icontains=w) | Q(description__icontains=w) | Q(categories__name__icontains=w)
             if word_query:
                 query &= word_query
 
